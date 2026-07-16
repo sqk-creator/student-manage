@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>学生详情</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#FFFFFF;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+.page-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:linear-gradient(135deg,#0F9487,#35B9AA);
+}
+.back-btn{
+  display:flex;align-items:center;gap:4px;
+  background:rgba(255,255,255,0.15);border:none;cursor:pointer;
+  padding:6px 10px;color:#fff;font-size:14px;border-radius:6px;
+}
+.back-arrow{font-size:18px;color:#fff;}
+.page-title{font-size:18px;font-weight:700;color:#fff;}
+.header-spacer{width:60px;}
+
+.student-hero{
+  margin:0 16px;border-radius:0 0 16px 16px;
+  background:linear-gradient(135deg,#0F9487 0%,#35B9AA 60%,#BEEFDA 100%);
+  padding:20px 18px;margin-bottom:16px;
+  display:flex;align-items:center;gap:18px;
+}
+.hero-avatar{
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(255,255,255,0.25);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  font-size:28px;color:#fff;font-weight:700;
+  border:2px solid rgba(255,255,255,0.3);
+}
+.hero-info{min-width:0;}
+.hero-name{font-size:18px;font-weight:700;color:#fff;}
+.hero-meta{font-size:14px;color:rgba(255,255,255,0.85);margin-top:4px;}
+.hero-status{
+  display:inline-block;margin-top:6px;
+  padding:3px 12px;border-radius:10px;
+  font-size:12px;color:#fff;background:rgba(255,255,255,0.2);
+}
+
+.info-section{
+  margin:0 16px 16px;
+  background:#FFFFFF;
+  border-radius:16px;
+  padding:18px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.section-title{
+  font-size:16px;font-weight:600;color:#1D2129;
+  margin-bottom:14px;
+  display:flex;align-items:center;gap:6px;
+}
+.section-title::before{
+  content:'';width:3px;height:16px;
+  background:#14A89A;border-radius:2px;display:inline-block;
+}
+.info-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:14px;
+}
+.info-item{display:flex;flex-direction:column;gap:4px;}
+.info-label{font-size:12px;color:#86909C;}
+.info-value{font-size:14px;color:#1D2129;}
+
+.score-summary{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:10px;margin-bottom:16px;
+}
+.score-item{
+  background:#F7F8FA;border-radius:12px;
+  padding:14px 10px;text-align:center;
+}
+.score-label{font-size:12px;color:#86909C;}
+.score-value{font-size:22px;font-weight:700;color:#1D2129;margin-top:4px;}
+.score-value.high{color:#14A89A;}
+
+.exam-table{
+  width:100%;border-collapse:collapse;
+}
+.exam-table th,.exam-table td{
+  padding:10px 8px;text-align:left;font-size:14px;
+}
+.exam-table th{color:#86909C;font-weight:400;font-size:12px;border-bottom:1px solid #E5E6EB;}
+.exam-table td{color:#1D2129;border-bottom:1px solid #F2F3F5;}
+.exam-table tr:last-child td{border-bottom:none;}
+.score-highlight{color:#14A89A;font-weight:600;}
+.score-warn{color:#FF6A1A;font-weight:600;}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()">
+      <span class="back-arrow">&#8249;</span>
+      <span>返回</span>
+    </button>
+    <span class="page-title">学生详情</span>
+    <div class="header-spacer"></div>
+  </div>
+
+  <div class="student-hero">
+    <div class="hero-avatar" id="heroAvatar">陈</div>
+    <div class="hero-info">
+      <div class="hero-name" id="heroName">陈小武</div>
+      <div class="hero-meta" id="heroMeta">高三1班 · 20240101</div>
+      <span class="hero-status" id="heroStatus">在校</span>
+    </div>
+  </div>
+
+  <div class="info-section">
+    <div class="section-title">基本信息</div>
+    <div class="info-grid">
+      <div class="info-item"><span class="info-label">姓名</span><span class="info-value" id="infoName">-</span></div>
+      <div class="info-item"><span class="info-label">性别</span><span class="info-value" id="infoGender">-</span></div>
+      <div class="info-item"><span class="info-label">学号</span><span class="info-value" id="infoNo">-</span></div>
+      <div class="info-item"><span class="info-label">班级</span><span class="info-value" id="infoClass">-</span></div>
+      <div class="info-item"><span class="info-label">出生年月</span><span class="info-value" id="infoBirth">-</span></div>
+      <div class="info-item"><span class="info-label">籍贯</span><span class="info-value" id="infoHometown">-</span></div>
+      <div class="info-item"><span class="info-label">班级职务</span><span class="info-value" id="infoRole">-</span></div>
+      <div class="info-item"><span class="info-label">联系电话</span><span class="info-value" id="infoPhone">-</span></div>
+    </div>
+    <div id="infoPhoto" style="display:none;margin-top:10px;">
+      <span class="info-label">照片</span>
+      <img id="studentPhoto" src="" style="width:80px;height:100px;border-radius:10px;object-fit:cover;margin-top:6px;border:1px solid #E5E6EB;" alt="学生照片">
+    </div>
+  </div>
+
+  <div class="info-section">
+    <div class="section-title">成绩记录</div>
+    <div class="score-summary">
+      <div class="score-item">
+        <span class="score-label">考试次数</span>
+        <span class="score-value" id="examCount">0</span>
+      </div>
+      <div class="score-item">
+        <span class="score-label">平均分</span>
+        <span class="score-value high" id="avgTotal">-</span>
+      </div>
+      <div class="score-item">
+        <span class="score-label">最近成绩</span>
+        <span class="score-value" id="lastTotal">-</span>
+      </div>
+    </div>
+    <div style="overflow-x:auto;" id="examTableContainer">
+      <table class="exam-table">
+        <thead><tr><th>考试</th><th>语文</th><th>数学</th><th>英语</th></tr></thead>
+        <tbody id="examTbody"><tr><td colspan="4" style="text-align:center;color:#86909C;font-size:14px;">暂无成绩记录</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const urlParams=new URLSearchParams(window.location.search);
+const studentId=urlParams.get('id')||1;
+
+async function loadStudent(){
+  try{
+    const res=await fetch('/api/public/students/'+studentId);
+    const data=await res.json();
+    const s=data.data||data;
+    const initial=(s.name||'?')[0];
+    const isFemale=s.gender==='female';
+
+    document.getElementById('heroAvatar').textContent=initial;
+    if(isFemale)document.getElementById('heroAvatar').classList.add('female');
+    document.getElementById('heroName').textContent=s.name||'-';
+    document.getElementById('heroMeta').textContent=(s.class_name||'')+' · '+(s.student_no||'');
+    const statusText=s.status==='absent'?'缺勤':'在校';
+    document.getElementById('heroStatus').textContent=statusText;
+
+    document.getElementById('infoName').textContent=s.name||'-';
+    document.getElementById('infoGender').textContent=s.gender||'-';
+    document.getElementById('infoNo').textContent=s.student_no||'-';
+    document.getElementById('infoClass').textContent=s.class_name||'-';
+    document.getElementById('infoBirth').textContent=s.birth_date||'-';
+    document.getElementById('infoHometown').textContent=s.hometown||'-';
+    document.getElementById('infoRole').textContent=s.class_role||'-';
+    document.getElementById('infoPhone').textContent=s.phone||'-';
+    if(s.photo){
+      document.getElementById('infoPhoto').style.display='block';
+      document.getElementById('studentPhoto').src=s.photo;
+    }
+  }catch(e){}
+}
+
+async function loadScores(){
+  try{
+    const res=await fetch('/api/public/scores?student_id='+studentId);
+    const data=await res.json();
+    const scores=data.data||data||[];
+    document.getElementById('examCount').textContent=scores.length;
+
+    if(scores.length===0){
+      document.getElementById('avgTotal').textContent='-';
+      document.getElementById('lastTotal').textContent='-';
+      return;
+    }
+
+    let sumTotal=0;
+    scores.forEach(sc=>{
+      const subjects=['chinese','math','english','physics','chemistry','biology','politics','history','geography'];
+      let total=0;
+      subjects.forEach(s=>total+=(sc[s]||0));
+      sc._total=total;
+      sumTotal+=total;
+    });
+    document.getElementById('avgTotal').textContent=Math.round(sumTotal/scores.length);
+    document.getElementById('lastTotal').textContent=scores[0]._total;
+
+    const tbody=document.getElementById('examTbody');
+    tbody.innerHTML=scores.slice(0,10).map(sc=>{
+      const highlight=(val)=>(val>=135?' score-highlight':(val<72?' score-warn':''));
+      return `<tr>
+        <td>${sc.exam_name||sc.exam_id}</td>
+        <td class="${highlight(sc.chinese||0)}">${sc.chinese||'-'}</td>
+        <td class="${highlight(sc.math||0)}">${sc.math||'-'}</td>
+        <td class="${highlight(sc.english||0)}">${sc.english||'-'}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){}
+}
+
+loadStudent();
+loadScores();
+</script>
+</body>
+</html>

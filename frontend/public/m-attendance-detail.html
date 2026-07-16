@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>考勤详情</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#FFFFFF;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;overflow-x:hidden;
+  display:flex;flex-direction:column;
+}
+.page-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:#FFFFFF;
+  border-bottom:1px solid #E5E6EB;
+}
+.back-btn{
+  display:flex;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;padding:6px 8px;
+  color:#1D2129;font-size:14px;border-radius:6px;
+}
+.back-arrow{font-size:18px;color:#4E5969;}
+.page-title{font-size:18px;font-weight:700;color:#1D2129;}
+.header-spacer{width:60px;}
+
+/* Calendar */
+.calendar-section{
+  margin:12px 16px;padding:14px 12px;
+  background:#fff;border-radius:14px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+}
+.cal-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.cal-nav-btn{
+  width:30px;height:30px;border-radius:50%;
+  border:none;background:#F7F8FA;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:#4E5969;
+}
+.cal-month{font-size:15px;font-weight:700;color:#1D2129;}
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:4px;text-align:center;
+}
+.cal-weekday{
+  font-size:11px;color:#86909C;padding:4px 0;
+}
+.cal-day{
+  aspect-ratio:1;border-radius:8px;
+  display:flex;align-items:center;
+  justify-content:center;font-size:13px;
+  color:#1D2129;position:relative;cursor:default;
+}
+.cal-day-inner{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+}
+.cal-day.other{color:#C9CDD4;}
+.cal-day.today{border:2px solid #14A89A;font-weight:700;}
+.cal-day-badge{
+  position:absolute;top:-6px;right:-10px;
+  font-size:8px;padding:0px 3px;border-radius:3px;
+  line-height:1.4;white-space:nowrap;
+  min-width:14px;text-align:center;
+}
+.cal-day-badge.full{background:#14A89A;color:#fff;}
+.cal-day-badge.absent{background:#FF4D4F;color:#fff;}
+
+/* Timeline */
+.timeline-scroll{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0 16px 40px;
+}
+.tl-date-group{
+  display:flex;gap:12px;position:relative;margin-bottom:16px;
+}
+.tl-line-col{
+  width:12px;flex-shrink:0;position:relative;
+  display:flex;flex-direction:column;align-items:center;
+}
+.tl-line-col::before{
+  content:'';position:absolute;left:50%;top:12px;bottom:0;
+  width:1px;border-left:1.5px dashed #D0D5DD;
+  transform:translateX(-50%);
+}
+.tl-dot{
+  width:12px;height:12px;border-radius:50%;background:#14A89A;
+  flex-shrink:0;z-index:1;
+}
+.tl-date-body{flex:1;min-width:0;}
+.tl-date-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:10px;
+}
+.tl-date-num{font-size:24px;font-weight:800;color:#1D2129;line-height:1;}
+.tl-date-stats{font-size:12px;color:#86909C;line-height:1.5;}
+.tl-date-stats span{margin-right:12px;}
+
+.tl-type-title{
+  padding:6px 12px;font-size:13px;font-weight:600;color:#1D2129;
+  background:#E8F4F2;border-radius:6px;
+  margin-bottom:8px;display:inline-block;
+}
+.tl-record{
+  background:#fff;border-radius:12px;padding:12px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+  margin-bottom:6px;display:flex;align-items:center;gap:8px;
+}
+.tl-record:last-child{margin-bottom:0;}
+.tl-record-cols{
+  flex:1;display:flex;text-align:center;
+}
+.tl-col{flex:1;min-width:0;}
+.tl-col-label{font-size:11px;color:#86909C;margin-bottom:2px;}
+.tl-col-val{font-size:16px;font-weight:700;color:#1D2129;}
+.tl-roster-btn{
+  padding:8px 14px;border:none;border-radius:8px;
+  background:linear-gradient(135deg,#14A89A,#0F9487);
+  color:#fff;font-size:12px;font-weight:600;cursor:pointer;
+  white-space:nowrap;flex-shrink:0;
+}
+
+.tl-empty-card{
+  background:#fff;border-radius:12px;padding:24px 16px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+  text-align:center;
+}
+.tl-empty-icon{
+  width:48px;height:48px;border:2px dashed #D0D5DD;border-radius:12px;
+  margin:0 auto 10px;display:flex;align-items:center;justify-content:center;
+  color:#C0C4CC;font-size:20px;
+}
+.tl-empty-text{font-size:13px;color:#86909C;margin-bottom:12px;}
+.tl-empty-btn{
+  padding:8px 20px;border:none;border-radius:16px;
+  background:linear-gradient(135deg,#14A89A,#0F9487);
+  color:#fff;font-size:13px;font-weight:600;cursor:pointer;
+}
+.tl-no-data{text-align:center;color:#86909C;font-size:13px;padding:30px 0;}
+
+.empty-state{
+  text-align:center;color:#86909C;font-size:14px;
+  padding:30px 0;
+}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()">
+      <span class="back-arrow">&#8249;</span><span>返回</span>
+    </button>
+    <span class="page-title">考勤详情</span>
+    <div class="header-spacer"></div>
+  </div>
+
+  <div class="calendar-section">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="prevMonth()">&#8249;</button>
+      <span class="cal-month" id="calMonth">2026年7月</span>
+      <button class="cal-nav-btn" onclick="nextMonth()">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <div class="timeline-scroll" id="timelineContainer">
+    <div id="timelineList"></div>
+  </div>
+
+</div>
+
+<div id="rosterModal" style="display:none;" class="modal-mask" onclick="closeRoster()">
+  <div class="modal-panel" onclick="event.stopPropagation()">
+    <div class="modal-title" id="rosterTitle">考勤名单</div>
+    <div id="rosterContent"></div>
+  </div>
+</div>
+
+<script>
+var classId=(new URLSearchParams(location.search)).get('id')||'11';
+var allAttendances=[];
+var rosterMap={};
+var calYear,calMonth;
+var dailyStatus={};
+
+(function init(){
+  var now=new Date();
+  calYear=now.getFullYear();
+  calMonth=now.getMonth()+1;
+  loadAll();
+})();
+
+function loadAll(){
+  Promise.all([
+    fetch('/api/public/attendances?class_id='+classId).then(function(r){return r.json();}),
+    fetch('/api/public/attendance-cal-status?class_id='+classId).then(function(r){return r.json();})
+  ]).then(function(results){
+    allAttendances=results[0];
+    dailyStatus=results[1];
+    renderCalendar();
+    renderTimeline();
+  }).catch(function(){});
+}
+
+function renderCalendar(){
+  var today=new Date();
+  var first=new Date(calYear,calMonth-1,1);
+  var last=new Date(calYear,calMonth,0);
+  var startDow=first.getDay();
+  var totalDays=last.getDate();
+  var prevLast=new Date(calYear,calMonth-1,0).getDate();
+
+  document.getElementById('calMonth').textContent=calYear+'年'+calMonth+'月';
+
+  var weekdays=['日','一','二','三','四','五','六'];
+  var html='';
+  for(var i=0;i<7;i++){html+='<div class="cal-weekday">'+weekdays[i]+'</div>';}
+  for(var i=startDow-1;i>=0;i--){
+    html+='<div class="cal-day other">'+(prevLast-i)+'</div>';
+  }
+  for(var d=1;d<=totalDays;d++){
+    var ds=calYear+'-'+('0'+calMonth).slice(-2)+'-'+('0'+d).slice(-2);
+    var st=dailyStatus[ds];
+    var cls='cal-day';
+    var badge='';
+    if(st==='全'){badge='<span class="cal-day-badge full">全</span>';}
+    else if(st==='缺'){badge='<span class="cal-day-badge absent">缺</span>';}
+    if(calYear===today.getFullYear()&&calMonth===today.getMonth()+1&&d===today.getDate()){
+      cls+=' today';
+    }
+    var dayHtml='<span class="cal-day-inner">'+badge+d+'</span>';
+    html+='<div class="'+cls+'">'+dayHtml+'</div>';
+  }
+  var remaining=42-(startDow+totalDays);
+  for(var e=1;e<=remaining;e++){
+    html+='<div class="cal-day other">'+e+'</div>';
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+
+function prevMonth(){
+  if(calMonth===1){calMonth=12;calYear--;}
+  else{calMonth--;}
+  renderCalendar();
+}
+
+function nextMonth(){
+  if(calMonth===12){calMonth=1;calYear++;}
+  else{calMonth++;}
+  renderCalendar();
+}
+
+function renderTimeline(){
+  var byDate={};
+  for(var i=0;i<allAttendances.length;i++){
+    var a=allAttendances[i];
+    if(!byDate[a.date])byDate[a.date]={};
+    if(!byDate[a.date][a.type])byDate[a.date][a.type]=[];
+    byDate[a.date][a.type].push(a);
+  }
+  var dates=Object.keys(byDate).sort().reverse();
+  var listEl=document.getElementById('timelineList');
+  if(dates.length===0){
+    listEl.innerHTML='<div class="tl-no-data">暂无考勤记录</div>';
+    return;
+  }
+  var html='';
+  for(var d=0;d<dates.length;d++){
+    var date=dates[d];
+    var parts=date.split('-');
+    var dateLabel=parts[1]+'/'+parts[2];
+    var map=byDate[date];
+    var teachCount=(map['教学考勤']||[]).length;
+    var exerCount=(map['出操考勤']||[]).length;
+    var isLast=d===dates.length-1;
+    html+='<div class="tl-date-group">';
+    html+='<div class="tl-line-col"><div class="tl-dot"></div></div>';
+    html+='<div class="tl-date-body">';
+    html+='<div class="tl-date-header"><span class="tl-date-num">'+dateLabel+'</span><span class="tl-date-stats"><span>教学考勤 '+teachCount+'次</span><span>出操考勤 '+exerCount+'次</span></span></div>';
+
+    if(teachCount===0&&exerCount===0){
+      html+='<div class="tl-empty-card">';
+      html+='<div class="tl-empty-icon">&#128193;</div>';
+      html+='<div class="tl-empty-text">暂无考勤</div>';
+      html+='<button class="tl-empty-btn" onclick="gotoCreate()">去考勤 &rsaquo;</button>';
+      html+='</div>';
+    }
+
+    var types=['教学考勤','出操考勤'];
+    for(var t=0;t<types.length;t++){
+      var list=map[types[t]]||[];
+      if(list.length===0)continue;
+      html+='<div class="tl-type-title">'+types[t]+'</div>';
+      for(var r=0;r<list.length;r++){
+        var a=list[r];
+        var rate=a.should_attend>0?Math.round(a.actual_attend/a.should_attend*100):100;
+        var timePart=a.created_at?a.created_at.slice(11,16):'--:--';
+        html+='<div class="tl-record">';
+        html+='<div class="tl-record-cols">';
+        html+='<div class="tl-col"><div class="tl-col-label">时间</div><div class="tl-col-val">'+timePart+'</div></div>';
+        html+='<div class="tl-col"><div class="tl-col-label">应出勤</div><div class="tl-col-val">'+a.should_attend+'人</div></div>';
+        html+='<div class="tl-col"><div class="tl-col-label">实出勤</div><div class="tl-col-val">'+a.actual_attend+'人</div></div>';
+        html+='<div class="tl-col"><div class="tl-col-label">出勤率</div><div class="tl-col-val">'+rate+'%</div></div>';
+        html+='</div>';
+        html+='<button class="tl-roster-btn" onclick="showRoster('+a.id+')">考勤名单 &rsaquo;</button>';
+        html+='</div>';
+      }
+    }
+    html+='</div></div>';
+  }
+  listEl.innerHTML=html;
+}
+
+function gotoCreate(){
+  location.href='m-attendance.html?id='+classId;
+}
+
+function showRoster(attId){
+  document.getElementById('rosterModal').style.display='flex';
+  var cached=rosterMap[attId];
+  if(cached){
+    renderRoster(cached);
+    return;
+  }
+  document.getElementById('rosterTitle').textContent='加载中...';
+  document.getElementById('rosterContent').innerHTML='<div class="empty-state">加载中...</div>';
+  fetch('/api/public/attendances/'+attId).then(function(r){return r.json();}).then(function(data){
+    rosterMap[attId]=data;
+    renderRoster(data);
+  }).catch(function(){
+    document.getElementById('rosterContent').innerHTML='<div class="empty-state">加载失败</div>';
+  });
+}
+
+function renderRoster(data){
+  var records=data.records||[];
+  var leave=[],absence=[],late=[];
+  for(var i=0;i<records.length;i++){
+    var r=records[i];
+    if(r.status==='请假')leave.push(r);
+    else if(r.status==='缺勤')absence.push(r);
+    else if(r.status==='迟到')late.push(r);
+  }
+  document.getElementById('rosterTitle').textContent=data.date+' · '+data.type;
+  var html='';
+  var cats=[
+    {name:'请假',list:leave,cls:'请假'},
+    {name:'缺勤',list:absence,cls:'缺勤'},
+    {name:'迟到',list:late,cls:'迟到'}
+  ];
+  var hasAny=false;
+  for(var c=0;c<cats.length;c++){
+    var cat=cats[c];
+    var count=cat.list.length;
+    html+='<div class="roster-category cat-'+cat.cls+'">';
+    html+='<div class="roster-cat-title">'+cat.name+'<span class="roster-count">'+count+'人</span></div>';
+    if(count>0){hasAny=true;}
+    for(var j=0;j<count;j++){
+      var s=cat.list[j];
+      html+='<div class="roster-item">';
+      if(s.photo){html+='<img src="'+s.photo+'" alt="">';}
+      else{html+='<div class="roster-avatar">'+ (s.student_name?s.student_name.charAt(0):'?')+'</div>';}
+      html+='<span class="roster-name">'+s.student_name+'</span>';
+      html+='<span class="roster-no">'+s.student_no+'</span>';
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+  if(!hasAny){html='<div class="empty-state">该考勤全员出勤，无异常记录</div>';}
+  document.getElementById('rosterContent').innerHTML=html;
+}
+
+function closeRoster(){
+  document.getElementById('rosterModal').style.display='none';
+}
+</script>
+</body>
+</html>

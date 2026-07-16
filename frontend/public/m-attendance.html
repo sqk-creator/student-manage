@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>班级考勤</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#FFFFFF;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;overflow-x:hidden;
+  padding-bottom:120px;
+}
+.page-header{
+  position:relative;
+  padding:14px 16px 0;background:#FFFFFF;
+}
+.header-top{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:6px;
+}
+.back-btn{
+  background:none;border:none;cursor:pointer;
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;
+}
+.back-arrow{font-size:22px;color:#1D2129;line-height:1;}
+.header-capsule{
+  width:70px;height:28px;border:1px solid #E5E6EB;border-radius:14px;
+  display:flex;align-items:center;flex-shrink:0;
+}
+.capsule-dot{width:8px;height:8px;border-radius:50%;background:#C9CDD4;margin-left:12px;}
+.capsule-line{width:1px;height:14px;background:#E5E6EB;margin:0 10px;}
+.capsule-circle{width:14px;height:14px;border-radius:50%;border:1.5px solid #C9CDD4;margin-right:8px;}
+
+.header-title-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 0 12px;
+}
+.page-title{font-size:28px;font-weight:900;color:#1D2129;line-height:1.2;margin-left:10px;}
+.header-class-picker select{
+  border:1px solid #E5E6EB;border-radius:6px;
+  padding:6px 28px 6px 10px;font-size:13px;color:#1D2129;
+  background:#F7F8FA;outline:none;cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2386909C'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+}
+
+/* Main Tabs - underline style */
+.main-tabs{
+  display:flex;padding:0 16px;
+  background:#fff;
+}
+.main-tab{
+  flex:1;padding:12px 10px;text-align:center;
+  font-size:16px;font-weight:400;cursor:pointer;
+  border:none;background:transparent;
+  color:#86909C;position:relative;
+}
+.main-tab.active{
+  color:#1D2129;font-weight:700;
+}
+.main-tab.active::after{
+  content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:24px;height:3px;border-radius:2px;
+  background:#14A89A;
+}
+
+/* Sub Tabs - capsule centered */
+.sub-tabs{
+  display:flex;justify-content:center;margin:16px 16px 0;
+}
+.sub-tab-wrap{
+  display:inline-flex;background:#F0F1F2;border-radius:20px;padding:3px;
+}
+.sub-tab{
+  padding:8px 20px;text-align:center;border-radius:18px;
+  font-size:14px;font-weight:500;cursor:pointer;
+  transition:all .2s;border:none;background:transparent;
+  color:#86909C;
+}
+.sub-tab.active{
+  background:#14A89A;color:#fff;
+  font-weight:600;box-shadow:0 2px 6px rgba(20,168,154,0.25);
+}
+
+/* Info Card */
+.info-card{
+  margin:12px 16px;padding:16px 14px;
+  background:#fff;border-radius:14px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+}
+.info-grid{
+  display:flex;gap:12px;
+}
+.info-cell{
+  flex:1;text-align:center;min-width:0;
+}
+.info-cell-label{
+  font-size:12px;color:#86909C;margin-bottom:4px;
+}
+.info-cell-value{
+  font-size:14px;font-weight:600;color:#1D2129;
+}
+.info-cell-value select{
+  width:100%;border:1px solid #E5E6EB;border-radius:6px;
+  padding:4px 6px;font-size:13px;color:#1D2129;
+  background:#F7F8FA;outline:none;text-align:center;
+}
+.info-cell-value input[type="date"]{
+  width:100%;border:1px solid #E5E6EB;border-radius:6px;
+  padding:4px 6px;font-size:13px;color:#1D2129;
+  background:#F7F8FA;outline:none;text-align:center;
+}
+
+/* Status Cards */
+.status-section{padding:0 16px;margin-bottom:8px;}
+.status-card{
+  background:#fff;border-radius:14px;padding:14px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);margin-bottom:10px;
+}
+.status-header{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;
+}
+.status-title{font-size:20px;font-weight:700;color:#1D2129;}
+.status-count{font-size:12px;color:#86909C;font-weight:400;}
+.status-count-num{font-size:20px;font-weight:700;color:#1D2129;}
+.student-grid{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;
+}
+.student-item{
+  display:flex;flex-direction:column;align-items:center;
+  width:56px;text-align:center;
+}
+.student-avatar{
+  width:40px;height:40px;border-radius:50%;object-fit:cover;
+  border:2px solid #F0F0F0;
+}
+.student-avatar-placeholder{
+  width:40px;height:40px;border-radius:50%;
+  background:#E8F4F2;display:flex;align-items:center;
+  justify-content:center;color:#14A89A;font-size:15px;font-weight:600;
+}
+.student-name{
+  font-size:11px;color:#1D2129;margin-top:4px;
+  max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.add-student-item{
+  display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;width:56px;
+}
+.add-student-circle{
+  width:40px;height:40px;border-radius:50%;
+  border:1.5px dashed #C0C4CC;display:flex;align-items:center;
+  justify-content:center;
+  font-size:20px;color:#C0C4CC;
+}
+.add-student-label{
+  font-size:10px;color:#C0C4CC;margin-top:4px;
+}
+.leave-note-btn{
+  margin-top:10px;padding:6px 14px;border:1px solid #FF6A1A;
+  border-radius:8px;background:#FFF7F0;color:#FF6A1A;
+  font-size:12px;cursor:pointer;
+}
+
+/* Stats Bar */
+.stats-bar{
+  display:flex;flex-wrap:wrap;margin:0 16px 12px;
+  background:#fff;border-radius:14px;padding:12px 8px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+}
+.stat-item{
+  flex:1;min-width:50px;text-align:center;padding:4px 0;
+}
+.stat-val{font-size:18px;font-weight:700;color:#1D2129;}
+.stat-label{font-size:11px;color:#86909C;margin-top:2px;}
+
+.submit-section{padding:0 16px;margin-bottom:20px;}
+.submit-btn{
+  width:100%;padding:14px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,#14A89A,#0F9487);
+  color:#fff;font-size:16px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 12px rgba(20,168,154,0.3);
+}
+.submit-btn:active{opacity:.85;}
+
+/* Calendar */
+.calendar-section{
+  margin:12px 16px;padding:14px 12px;
+  background:#fff;border-radius:14px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+}
+.cal-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.cal-nav-btn{
+  width:30px;height:30px;border-radius:50%;
+  border:none;background:#F7F8FA;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:#4E5969;
+}
+.cal-month{font-size:15px;font-weight:700;color:#1D2129;}
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:4px;text-align:center;
+}
+.cal-weekday{font-size:11px;color:#86909C;padding:4px 0;}
+.cal-day{
+  aspect-ratio:1;border-radius:8px;
+  display:flex;align-items:center;
+  justify-content:center;font-size:13px;
+  color:#1D2129;position:relative;cursor:default;
+}
+.cal-day-inner{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+.cal-day.other{color:#C9CDD4;}
+.cal-day.today{border:2px solid #14A89A;font-weight:700;}
+.cal-day-badge{
+  position:absolute;top:-8px;right:-12px;
+  font-size:8px;padding:0px 3px;border-radius:3px;
+  line-height:1.4;white-space:nowrap;
+  min-width:14px;text-align:center;
+}
+.cal-day-badge.full{background:#14A89A;color:#fff;}
+.cal-day-badge.absent{background:#FF4D4F;color:#fff;}
+
+/* Timeline */
+.timeline-scroll{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0 16px 40px;
+}
+.tl-date-group{
+  display:flex;gap:12px;position:relative;margin-bottom:16px;
+}
+.tl-line-col{
+  width:20px;flex-shrink:0;position:relative;
+  display:flex;flex-direction:column;align-items:center;
+}
+.tl-line-col::before{
+  content:'';position:absolute;left:50%;top:18px;bottom:0;
+  width:1px;border-left:1.5px dashed #D0D5DD;
+  transform:translateX(-50%);
+}
+.tl-dot{
+  width:16px;height:16px;border-radius:50%;
+  border:2px solid #14A89A;background:transparent;
+  flex-shrink:0;z-index:1;position:relative;
+  margin-top:3px;
+}
+.tl-dot::after{
+  content:'';position:absolute;top:50%;left:50%;
+  width:6px;height:6px;border-radius:50%;
+  background:#14A89A;
+  transform:translate(-50%,-50%);
+}
+.tl-date-group:first-child{margin-top:10px;}
+.tl-date-body{flex:1;min-width:0;}
+.tl-date-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:10px;
+}
+.tl-date-num{font-size:20px;font-weight:800;color:#1D2129;line-height:1;}
+.tl-date-stats{font-size:12px;color:#86909C;line-height:1.5;}
+.tl-date-stats span{margin-right:12px;}
+
+.tl-type-title{
+  padding:6px 12px;font-size:13px;font-weight:600;color:#1D2129;
+  background:#E8F4F2;border-radius:6px;
+  margin-bottom:8px;display:inline-block;
+}
+.tl-record{
+  background:#fff;border-radius:12px;padding:12px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+  margin-bottom:6px;display:flex;align-items:center;gap:8px;
+}
+.tl-record:last-child{margin-bottom:0;}
+.tl-record-cols{
+  flex:1;display:flex;text-align:center;
+}
+.tl-col{flex:1;min-width:0;}
+.tl-col-label{font-size:11px;color:#86909C;margin-bottom:2px;}
+.tl-col-val{font-size:16px;font-weight:700;color:#1D2129;}
+.tl-roster-btn{
+  padding:8px 14px;border:none;border-radius:8px;
+  background:linear-gradient(135deg,#14A89A,#0F9487);
+  color:#fff;font-size:12px;font-weight:600;cursor:pointer;
+  white-space:nowrap;flex-shrink:0;
+}
+
+.tl-empty-card{
+  background:#fff;border-radius:12px;padding:24px 16px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+  text-align:center;
+}
+.tl-empty-icon{
+  width:48px;height:48px;border:2px dashed #D0D5DD;border-radius:12px;
+  margin:0 auto 10px;display:flex;align-items:center;justify-content:center;
+  color:#C0C4CC;font-size:20px;
+}
+.tl-empty-text{font-size:13px;color:#86909C;margin-bottom:12px;}
+.tl-empty-btn{
+  padding:8px 20px;border:none;border-radius:16px;
+  background:linear-gradient(135deg,#14A89A,#0F9487);
+  color:#fff;font-size:13px;font-weight:600;cursor:pointer;
+}
+.tl-no-data{text-align:center;color:#86909C;font-size:13px;padding:30px 0;}
+
+/* Roster Modal */
+.modal-mask{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.4);z-index:200;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.modal-panel{
+  width:100%;max-width:430px;max-height:80vh;
+  background:#fff;border-radius:20px 20px 0 0;
+  padding:16px;overflow-y:auto;
+}
+.modal-panel-title{font-size:16px;font-weight:700;color:#1D2129;text-align:center;margin-bottom:12px;}
+.roster-category{margin-bottom:14px;}
+.roster-cat-title{font-size:14px;font-weight:700;color:#1D2129;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.roster-count{font-size:12px;color:#86909C;font-weight:400;}
+.roster-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#F7F8FA;margin-bottom:4px;}
+.roster-item img,.roster-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;}
+.roster-avatar{background:#E8F4F2;display:flex;align-items:center;justify-content:center;color:#14A89A;font-size:14px;font-weight:600;}
+.roster-name{font-size:14px;font-weight:500;color:#1D2129;}
+.roster-no{font-size:12px;color:#86909C;}
+.cat-请假 .roster-cat-title{color:#FF6A1A;}
+.cat-缺勤 .roster-cat-title{color:#FF4D4F;}
+.cat-迟到 .roster-cat-title{color:#F5A623;}
+
+/* Picker */
+.picker-list{max-height:40vh;overflow-y:auto;}
+.picker-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F2F3F5;cursor:pointer;}
+.picker-item img,.picker-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;}
+.picker-avatar{background:#E8F4F2;display:flex;align-items:center;justify-content:center;color:#14A89A;font-size:16px;font-weight:600;}
+.picker-name{font-size:14px;font-weight:500;color:#1D2129;}
+.picker-no{font-size:12px;color:#86909C;margin-left:6px;}
+.picker-added{color:#14A89A;font-size:12px;margin-left:auto;}
+
+.empty-state{text-align:center;color:#86909C;font-size:13px;padding:16px 0;}
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.75);color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:999;}
+
+#createTabContent{display:block;}
+#recordTabContent{display:none;flex-direction:column;max-height:calc(100vh - 50px);}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="page-header">
+    <div class="header-top">
+      <button class="back-btn" onclick="history.back()">
+        <span class="back-arrow">&#8249;</span>
+      </button>
+      <div class="header-capsule">
+        <span class="capsule-dot"></span>
+        <span class="capsule-line"></span>
+        <span class="capsule-circle"></span>
+      </div>
+    </div>
+    <div class="header-title-row">
+      <span class="page-title">班级考勤</span>
+      <div class="header-class-picker" id="classInfo">
+        <select id="classSelect" onchange="onClassChange(this.value)" style="border:1px solid #E5E6EB;border-radius:6px;padding:4px 8px;font-size:13px;color:#1D2129;outline:none;"><option value="">请选择</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-tabs">
+    <button class="main-tab active" id="mainTabCreate" onclick="switchMainTab('create')">发起考勤</button>
+    <button class="main-tab" id="mainTabRecord" onclick="switchMainTab('record')">考勤记录</button>
+  </div>
+
+  <!-- ===== 发起考勤 Tab ===== -->
+  <div id="createTabContent">
+
+    <div class="sub-tabs">
+      <div class="sub-tab-wrap">
+        <button class="sub-tab active" id="tabTeaching" onclick="switchType('教学考勤')">教学考勤</button>
+        <button class="sub-tab" id="tabExercise" onclick="switchType('出操考勤')">出操考勤</button>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-grid">
+        <div class="info-cell">
+          <div class="info-cell-label">考勤日期</div>
+          <div class="info-cell-value"><input type="date" id="attDate"></div>
+        </div>
+        <div class="info-cell">
+          <div class="info-cell-label">考勤角色</div>
+          <div class="info-cell-value">
+            <select id="attRole" style="width:100%;border:1px solid #E5E6EB;border-radius:6px;padding:4px 6px;font-size:13px;color:#1D2129;background:#F7F8FA;outline:none;text-align:center;">
+              <option value="老师">老师</option>
+              <option value="学生会">学生会</option>
+              <option value="年级管理">年级管理</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-section" id="statusCards"></div>
+
+    <div class="stats-bar" id="statsBar"></div>
+
+    <div class="submit-section">
+      <button class="submit-btn" onclick="submitAttendance()">提交考勤</button>
+    </div>
+
+  </div>
+
+  <!-- ===== 考勤记录 Tab ===== -->
+  <div id="recordTabContent">
+
+    <div class="calendar-section">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="prevMonth()">&#8249;</button>
+        <span class="cal-month" id="calMonth">2026年7月</span>
+        <button class="cal-nav-btn" onclick="nextMonth()">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="timeline-scroll" id="timelineContainer">
+      <div id="timelineList"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Picker Modal (for create tab) -->
+<div id="pickerModal" style="display:none;" class="modal-mask" onclick="closePicker()">
+  <div class="modal-panel" onclick="event.stopPropagation()">
+    <div class="modal-panel-title">选择学生</div>
+    <div class="picker-list" id="pickerList"></div>
+  </div>
+</div>
+
+<!-- Roster Modal (for record tab) -->
+<div id="rosterModal" style="display:none;" class="modal-mask" onclick="closeRoster()">
+  <div class="modal-panel" onclick="event.stopPropagation()">
+    <div class="modal-panel-title" id="rosterTitle">考勤名单</div>
+    <div id="rosterContent"></div>
+  </div>
+</div>
+
+<script>
+var classId=(new URLSearchParams(location.search)).get('id')||'';
+var attType='教学考勤';
+var allStudents=[];
+var leaveStudents=[],absenceStudents=[],lateStudents=[];
+var addedStudentIds={};
+var currentStatus='';
+var allClasses=[];
+var currentMainTab='create';
+
+// === Record tab state ===
+var allAttendances=[];
+var rosterMap={};
+var calYear,calMonth;
+var dailyStatus={};
+
+(function init(){
+  var now=new Date();
+  calYear=now.getFullYear();
+  calMonth=now.getMonth()+1;
+  document.getElementById('attDate').valueAsDate=new Date();
+
+  var initTab=(new URLSearchParams(location.search)).get('tab');
+  if(initTab==='record'&&classId){
+    document.getElementById('createTabContent').style.display='none';
+    document.getElementById('recordTabContent').style.display='flex';
+    document.getElementById('mainTabCreate').className='main-tab';
+    document.getElementById('mainTabRecord').className='main-tab active';
+    currentMainTab='record';
+  }
+
+  loadClassPicker();
+  if(classId)loadRecordTab();
+})();
+
+// ========== Class Picker ==========
+function loadClassPicker(){
+  fetch('/api/public/classes?teacher_id=2').then(function(r){return r.json();}).then(function(classes){
+    allClasses=classes;
+    if(!classId&&classes.length>0){classId=String(classes[0].id);}
+    var sel=document.getElementById('classSelect');
+    var html='<option value="">请选择班级</option>';
+    for(var i=0;i<classes.length;i++){
+      html+='<option value="'+classes[i].id+'"'+(classId&&classes[i].id==parseInt(classId)?' selected':'')+'>'+classes[i].name+'</option>';
+    }
+    sel.innerHTML=html;
+    if(classId){loadStudents();loadRecordTab();}
+    else{renderCards();renderStats();}
+  }).catch(function(){
+    document.getElementById('classSelect').innerHTML='<option value="">加载失败</option>';
+  });
+}
+
+function onClassChange(cid){
+  if(!cid)return;
+  classId=cid;
+  loadStudents();
+  loadRecordTab();
+}
+
+function loadStudents(){
+  fetch('/api/public/students?class_id='+classId).then(function(r){return r.json();}).then(function(s){
+    allStudents=s;
+    leaveStudents=[];absenceStudents=[];lateStudents=[];addedStudentIds={};
+    renderCards();renderStats();
+  }).catch(function(){});
+}
+
+// ========== Main Tab Switch ==========
+function switchMainTab(tab){
+  currentMainTab=tab;
+  document.getElementById('mainTabCreate').className='main-tab'+(tab==='create'?' active':'');
+  document.getElementById('mainTabRecord').className='main-tab'+(tab==='record'?' active':'');
+  document.getElementById('createTabContent').style.display=tab==='create'?'block':'none';
+  document.getElementById('recordTabContent').style.display=tab==='record'?'flex':'none';
+  if(tab==='create'){renderCards();renderStats();}
+  if(tab==='record'&&classId){loadRecordTab();}
+}
+
+// ========== Create Tab ==========
+function switchType(type){
+  attType=type;
+  document.getElementById('tabTeaching').className='sub-tab'+(type==='教学考勤'?' active':'');
+  document.getElementById('tabExercise').className='sub-tab'+(type==='出操考勤'?' active':'');
+}
+
+function openPicker(status){
+  currentStatus=status;
+  var list=document.getElementById('pickerList');
+  var html='';
+  for(var i=0;i<allStudents.length;i++){
+    var s=allStudents[i];
+    var sid=s.id;
+    var alreadyAdded=!!addedStudentIds[sid];
+    var initials=s.name?s.name.charAt(0):'?';
+    html+='<div class="picker-item" onclick="selectStudent('+sid+')">';
+    if(s.photo){html+='<img src="'+s.photo+'" alt="">';}
+    else{html+='<div class="picker-avatar">'+initials+'</div>';}
+    html+='<span class="picker-name">'+s.name+'</span><span class="picker-no">'+s.student_no+'</span>';
+    if(alreadyAdded){html+='<span class="picker-added">已添加</span>';}
+    html+='</div>';
+  }
+  if(allStudents.length===0){html='<div class="empty-state">请先选择班级</div>';}
+  list.innerHTML=html;
+  document.getElementById('pickerModal').style.display='flex';
+}
+
+function closePicker(){document.getElementById('pickerModal').style.display='none';}
+
+function selectStudent(sid){
+  if(addedStudentIds[sid]){closePicker();return;}
+  var student=null;
+  for(var i=0;i<allStudents.length;i++){if(allStudents[i].id===sid){student=allStudents[i];break;}}
+  if(!student){closePicker();return;}
+  var status=currentStatus;
+  if(status==='请假')leaveStudents.push(student);
+  else if(status==='缺勤')absenceStudents.push(student);
+  else if(status==='迟到')lateStudents.push(student);
+  addedStudentIds[sid]=status;
+  renderCards();renderStats();
+  closePicker();
+}
+
+function removeStudent(sid,status){
+  delete addedStudentIds[sid];
+  if(status==='请假')leaveStudents=leaveStudents.filter(function(s){return s.id!==sid;});
+  else if(status==='缺勤')absenceStudents=absenceStudents.filter(function(s){return s.id!==sid;});
+  else if(status==='迟到')lateStudents=lateStudents.filter(function(s){return s.id!==sid;});
+  renderCards();renderStats();
+}
+
+function renderCards(){
+  var html='';
+  var cards=[
+    {title:'请假',students:leaveStudents,showNote:true},
+    {title:'缺勤',students:absenceStudents,showNote:false},
+    {title:'迟到',students:lateStudents,showNote:false}
+  ];
+  for(var c=0;c<cards.length;c++){
+    var card=cards[c];
+    html+='<div class="status-card">';
+    html+='<div class="status-header"><span class="status-title">'+card.title+'</span><span class="status-count"><span class="status-count-num">'+card.students.length+'</span> 人</span></div>';
+    html+='<div class="student-grid">';
+    for(var j=0;j<card.students.length;j++){
+      var s=card.students[j];
+      html+='<div class="student-item" onclick="removeStudent('+s.id+',\''+card.title+'\')">';
+      if(s.photo){html+='<img class="student-avatar" src="'+s.photo+'" alt="">';}
+      else{html+='<div class="student-avatar-placeholder">'+s.name.charAt(0)+'</div>';}
+      html+='<span class="student-name">'+s.name+'</span>';
+      html+='</div>';
+    }
+    html+='<div class="add-student-item" onclick="openPicker(\''+card.title+'\')">';
+    html+='<div class="add-student-circle">+</div>';
+    html+='<span class="add-student-label">添加</span>';
+    html+='</div>';
+    html+='</div>';
+    if(card.showNote){
+      html+='<button class="leave-note-btn" onclick="alert(\'请假单功能开发中\')">请假单</button>';
+    }
+    html+='</div>';
+  }
+  document.getElementById('statusCards').innerHTML=html;
+}
+
+function renderStats(){
+  var total=allStudents.length;
+  var leave=leaveStudents.length;
+  var absence=absenceStudents.length;
+  var late=lateStudents.length;
+  var should=total;
+  var actual=total-leave-absence;
+  var html='';
+  html+='<div class="stat-item"><div class="stat-val">'+total+'</div><div class="stat-label">总人数</div></div>';
+  html+='<div class="stat-item"><div class="stat-val">'+should+'</div><div class="stat-label">应出'+(attType==='出操考勤'?'操':'勤')+'</div></div>';
+  html+='<div class="stat-item"><div class="stat-val">'+actual+'</div><div class="stat-label">实出'+(attType==='出操考勤'?'操':'勤')+'</div></div>';
+  html+='<div class="stat-item"><div class="stat-val">'+leave+'</div><div class="stat-label">请假</div></div>';
+  html+='<div class="stat-item"><div class="stat-val">'+late+'</div><div class="stat-label">迟到</div></div>';
+  html+='<div class="stat-item"><div class="stat-val">'+absence+'</div><div class="stat-label">缺勤</div></div>';
+  document.getElementById('statsBar').innerHTML=html;
+}
+
+function showToast(msg){
+  var el=document.createElement('div');
+  el.className='toast';el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(function(){el.remove();},2000);
+}
+
+function submitAttendance(){
+  if(!classId){showToast('请先选择班级');return;}
+  var total=allStudents.length;
+  var leave=leaveStudents.length;
+  var absence=absenceStudents.length;
+  var late=lateStudents.length;
+  var should=total;
+  var actual=total-leave-absence;
+  var records=[];
+  for(var i=0;i<leaveStudents.length;i++)records.push({student_id:leaveStudents[i].id,status:'请假'});
+  for(var j=0;j<absenceStudents.length;j++)records.push({student_id:absenceStudents[j].id,status:'缺勤'});
+  for(var k=0;k<lateStudents.length;k++)records.push({student_id:lateStudents[k].id,status:'迟到'});
+  var now=new Date();
+  var m=String(now.getMonth()+1),d=String(now.getDate()),h=String(now.getHours()),mi=String(now.getMinutes()),s=String(now.getSeconds());
+  var submittedAt=now.getFullYear()+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2)+' '+('0'+h).slice(-2)+':'+('0'+mi).slice(-2)+':'+('0'+s).slice(-2);
+  var data={
+    class_id:parseInt(classId),type:attType,
+    date:document.getElementById('attDate').value,
+    role:document.getElementById('attRole').value,
+    total:total,should_attend:should,actual_attend:actual,
+    leave_count:leave,late_count:late,absence_count:absence,
+    submitted_at:submittedAt,records:records
+  };
+  fetch('/api/public/attendances',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(function(r){return r.json();}).then(function(){
+      showToast('考勤提交成功');
+      leaveStudents=[];absenceStudents=[];lateStudents=[];addedStudentIds={};
+      renderCards();renderStats();
+      loadRecordTab();
+    }).catch(function(e){showToast('提交失败: '+e.message);});
+}
+
+// ========== Record Tab ==========
+function loadRecordTab(){
+  Promise.all([
+    fetch('/api/public/attendances?class_id='+classId).then(function(r){return r.json();}),
+    fetch('/api/public/attendance-cal-status?class_id='+classId).then(function(r){return r.json();})
+  ]).then(function(results){
+    allAttendances=results[0];
+    dailyStatus=results[1];
+    renderCalendar();
+    renderTimeline();
+  }).catch(function(){});
+}
+
+function renderCalendar(){
+  var today=new Date();
+  var first=new Date(calYear,calMonth-1,1);
+  var last=new Date(calYear,calMonth,0);
+  var startDow=first.getDay();
+  var totalDays=last.getDate();
+  var prevLast=new Date(calYear,calMonth-1,0).getDate();
+
+  document.getElementById('calMonth').textContent=calYear+'年'+calMonth+'月';
+
+  var weekdays=['日','一','二','三','四','五','六'];
+  var html='';
+  for(var i=0;i<7;i++){html+='<div class="cal-weekday">'+weekdays[i]+'</div>';}
+  for(var i=startDow-1;i>=0;i--){
+    html+='<div class="cal-day other">'+(prevLast-i)+'</div>';
+  }
+  for(var d=1;d<=totalDays;d++){
+    var ds=calYear+'-'+('0'+calMonth).slice(-2)+'-'+('0'+d).slice(-2);
+    var st=dailyStatus[ds];
+    var cls='cal-day';
+    var badge='';
+    if(st==='全'){badge='<span class="cal-day-badge full">全</span>';}
+    else if(st==='缺'){badge='<span class="cal-day-badge absent">缺</span>';}
+    if(calYear===today.getFullYear()&&calMonth===today.getMonth()+1&&d===today.getDate()){
+      cls+=' today';
+    }
+    var dayHtml='<span class="cal-day-inner">'+badge+d+'</span>';
+    html+='<div class="'+cls+'">'+dayHtml+'</div>';
+  }
+  var remaining=42-(startDow+totalDays);
+  for(var e=1;e<=remaining;e++){
+    html+='<div class="cal-day other">'+e+'</div>';
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+
+function prevMonth(){
+  if(calMonth===1){calMonth=12;calYear--;}
+  else{calMonth--;}
+  renderCalendar();
+}
+
+function nextMonth(){
+  if(calMonth===12){calMonth=1;calYear++;}
+  else{calMonth++;}
+  renderCalendar();
+}
+
+function renderTimeline(){
+  var byDate={};
+  for(var i=0;i<allAttendances.length;i++){
+    var a=allAttendances[i];
+    if(!byDate[a.date])byDate[a.date]={};
+    if(!byDate[a.date][a.type])byDate[a.date][a.type]=[];
+    byDate[a.date][a.type].push(a);
+  }
+  var dates=Object.keys(byDate).sort().reverse();
+  var listEl=document.getElementById('timelineList');
+  if(dates.length===0){
+    listEl.innerHTML='<div class="tl-no-data">暂无考勤记录</div>';
+    return;
+  }
+  var html='';
+  for(var d=0;d<dates.length;d++){
+    var date=dates[d];
+    var parts=date.split('-');
+    var dateLabel=parts[1]+'/'+parts[2];
+    var map=byDate[date];
+    var teachCount=(map['教学考勤']||[]).length;
+    var exerCount=(map['出操考勤']||[]).length;
+    html+='<div class="tl-date-group">';
+    html+='<div class="tl-line-col"><div class="tl-dot"></div></div>';
+    html+='<div class="tl-date-body">';
+    html+='<div class="tl-date-header"><span class="tl-date-num">'+dateLabel+'</span>';
+    html+='<span class="tl-date-stats"><span>教学考勤 '+teachCount+'次</span><span>出操考勤 '+exerCount+'次</span></span></div>';
+
+    if(teachCount===0&&exerCount===0){
+      html+='<div class="tl-empty-card">';
+      html+='<div class="tl-empty-icon">&#128193;</div>';
+      html+='<div class="tl-empty-text">暂无考勤</div>';
+      html+='<button class="tl-empty-btn" onclick="switchMainTab(\'create\')">去考勤 &rsaquo;</button>';
+      html+='</div>';
+    }
+
+    var types=['教学考勤','出操考勤'];
+    for(var t=0;t<types.length;t++){
+      var list=map[types[t]]||[];
+      if(list.length===0)continue;
+      html+='<div class="tl-type-title">'+types[t]+'</div>';
+      for(var r=0;r<list.length;r++){
+        var a=list[r];
+        var rate=a.should_attend>0?Math.round(a.actual_attend/a.should_attend*100):100;
+        var timePart=a.created_at?a.created_at.slice(11,16):'--:--';
+        html+='<div class="tl-record">';
+        html+='<div class="tl-record-cols">';
+        html+='<div class="tl-col"><div class="tl-col-label">时间</div><div class="tl-col-val">'+timePart+'</div></div>';
+        html+='<div class="tl-col"><div class="tl-col-label">应出勤</div><div class="tl-col-val">'+a.should_attend+'人</div></div>';
+        html+='<div class="tl-col"><div class="tl-col-label">实出勤</div><div class="tl-col-val">'+a.actual_attend+'人</div></div>';
+        html+='<div class="tl-col"><div class="tl-col-label">出勤率</div><div class="tl-col-val">'+rate+'%</div></div>';
+        html+='</div>';
+        html+='<button class="tl-roster-btn" onclick="showRoster('+a.id+')">考勤名单 &rsaquo;</button>';
+        html+='</div>';
+      }
+    }
+    html+='</div></div>';
+  }
+  listEl.innerHTML=html;
+}
+
+function showRoster(attId){
+  document.getElementById('rosterModal').style.display='flex';
+  var cached=rosterMap[attId];
+  if(cached){renderRoster(cached);return;}
+  document.getElementById('rosterTitle').textContent='加载中...';
+  document.getElementById('rosterContent').innerHTML='<div class="empty-state">加载中...</div>';
+  fetch('/api/public/attendances/'+attId).then(function(r){return r.json();}).then(function(data){
+    rosterMap[attId]=data;renderRoster(data);
+  }).catch(function(){document.getElementById('rosterContent').innerHTML='<div class="empty-state">加载失败</div>';});
+}
+
+function renderRoster(data){
+  var records=data.records||[];
+  var leave=[],absence=[],late=[];
+  for(var i=0;i<records.length;i++){
+    var r=records[i];
+    if(r.status==='请假')leave.push(r);else if(r.status==='缺勤')absence.push(r);else if(r.status==='迟到')late.push(r);
+  }
+  document.getElementById('rosterTitle').textContent=data.date+' · '+data.type;
+  var html='';
+  var cats=[{name:'请假',list:leave,cls:'请假'},{name:'缺勤',list:absence,cls:'缺勤'},{name:'迟到',list:late,cls:'迟到'}];
+  var hasAny=false;
+  for(var c=0;c<cats.length;c++){
+    var cat=cats[c];var count=cat.list.length;
+    html+='<div class="roster-category cat-'+cat.cls+'"><div class="roster-cat-title">'+cat.name+'<span class="roster-count">'+count+'人</span></div>';
+    if(count>0)hasAny=true;
+    for(var j=0;j<count;j++){
+      var s=cat.list[j];
+      html+='<div class="roster-item">';
+      if(s.photo)html+='<img src="'+s.photo+'" alt="">';else html+='<div class="roster-avatar">'+(s.student_name?s.student_name.charAt(0):'?')+'</div>';
+      html+='<span class="roster-name">'+s.student_name+'</span><span class="roster-no">'+s.student_no+'</span></div>';
+    }
+    html+='</div>';
+  }
+  if(!hasAny)html='<div class="empty-state">该考勤全员出勤，无异常记录</div>';
+  document.getElementById('rosterContent').innerHTML=html;
+}
+
+function closeRoster(){document.getElementById('rosterModal').style.display='none';}
+
+renderCards();
+renderStats();
+</script>
+</body>
+</html>

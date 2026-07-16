@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>班级详情</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#FFFFFF;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;overflow-x:hidden;
+  padding-bottom:80px;
+}
+
+/* Top Bar */
+.top-bar{padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;}
+.top-left{display:flex;align-items:center;gap:6px;}
+.back-btn{background:none;border:none;cursor:pointer;padding:0;color:#1D2129;font-size:22px;line-height:1;display:flex;}
+.top-title{font-size:20px;font-weight:700;color:#1D2129;}
+.top-tag{font-size:11px;color:#14A89A;background:rgba(20,168,154,0.08);padding:2px 8px;border-radius:10px;margin-left:4px;}
+.semester-btn{display:flex;align-items:center;gap:4px;background:none;border:none;cursor:pointer;font-size:13px;color:#4E5969;padding:2px 0;}
+.semester-arrow{font-size:10px;color:#86909C;}
+
+/* Weekly Report */
+.weekly-card{
+  margin:8px 16px 12px;
+  background:linear-gradient(135deg,#0F9487,#35B9AA);
+  border-radius:16px;
+  padding:20px 18px 16px;
+  color:#fff;
+  position:relative;overflow:hidden;
+}
+.weekly-card::after{
+  content:'';position:absolute;top:-20%;right:-16%;width:140px;height:140px;
+  background:radial-gradient(circle,rgba(255,255,255,0.1) 0%,transparent 70%);
+  border-radius:50%;
+}
+.weekly-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;position:relative;z-index:1;}
+.weekly-title{font-size:15px;font-weight:600;}
+.weekly-all{font-size:12px;opacity:.75;cursor:pointer;text-decoration:none;color:#fff;}
+.weekly-body{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;}
+.weekly-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;flex:1;}
+.weekly-metric{}
+.weekly-metric-val{font-size:22px;font-weight:700;line-height:1.2;}
+.weekly-metric-unit{font-size:12px;font-weight:400;opacity:.8;}
+.weekly-metric-label{font-size:11px;opacity:.7;margin-top:1px;}
+.weekly-badge-wrap{display:flex;flex-direction:column;align-items:center;margin-left:16px;}
+.weekly-badge{
+  width:70px;height:70px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(255,255,255,0.25),rgba(255,255,255,0.08));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:2px solid rgba(255,255,255,0.25);
+  box-shadow:0 2px 12px rgba(0,0,0,0.1);
+}
+.weekly-badge-grade{font-size:32px;font-weight:700;line-height:1;}
+.weekly-badge-label{font-size:10px;opacity:.8;margin-top:2px;}
+.weekly-msg{
+  display:flex;align-items:center;gap:6px;margin-top:12px;
+  background:rgba(255,255,255,0.15);
+  border-radius:10px;padding:8px 12px;position:relative;z-index:1;
+  font-size:13px;
+}
+.weekly-msg-dot{width:6px;height:6px;border-radius:50%;background:#fff;flex-shrink:0;}
+
+/* Section */
+.section{padding:0 16px;margin-bottom:12px;}
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.section-title{font-size:15px;font-weight:700;color:#1D2129;}
+.section-all{font-size:12px;color:#86909C;cursor:pointer;text-decoration:none;}
+
+/* Student / Teacher Cards */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.func-card{
+  background:#fff;border-radius:14px;padding:16px 14px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.func-info{}
+.func-name{font-size:15px;font-weight:600;color:#1D2129;}
+.func-desc{font-size:12px;color:#86909C;margin-top:2px;}
+.func-arrow{
+  width:28px;height:28px;border-radius:50%;
+  background:rgba(20,168,154,0.08);
+  display:flex;align-items:center;justify-content:center;
+  color:#14A89A;font-size:14px;flex-shrink:0;
+}
+
+/* Approval */
+.approval-card{
+  background:#fff;border-radius:14px;padding:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.approval-row{display:flex;gap:10px;}
+.approval-item{
+  flex:1;background:rgba(20,168,154,0.06);
+  border-radius:10px;padding:12px;text-align:center;
+}
+.approval-num{font-size:22px;font-weight:700;color:#1D2129;}
+.approval-label{font-size:12px;color:#4E5969;margin-top:4px;}
+
+/* Attendance */
+.att-card{
+  background:#fff;border-radius:14px;padding:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.att-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;}
+.att-item{text-align:center;}
+.att-val{font-size:18px;font-weight:700;color:#1D2129;}
+.att-unit{font-size:11px;font-weight:400;color:#4E5969;}
+.att-label{font-size:11px;color:#86909C;margin-top:2px;}
+.att-btns{display:flex;gap:10px;}
+.att-btn{
+  flex:1;padding:11px;border-radius:12px;font-size:14px;font-weight:500;
+  cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.att-btn.primary{background:linear-gradient(135deg,#35B9AA,#0F9487);color:#fff;}
+.att-btn.secondary{background:linear-gradient(135deg,#0F9487,#0D7A6E);color:#fff;}
+.att-btn-arrow{
+  width:20px;height:20px;border-radius:50%;
+  background:rgba(255,255,255,0.25);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;
+}
+
+/* Award */
+.award-card{
+  background:#fff;border-radius:14px;padding:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  display:flex;align-items:center;gap:14px;margin-bottom:10px;
+}
+.award-img{
+  width:56px;height:56px;border-radius:8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex-shrink:0;overflow:hidden;
+}
+.award-img img{width:100%;height:100%;object-fit:contain;}
+.award-img.honor.no-photo{background:linear-gradient(135deg,#FFF9E6,#FFE8B0);}
+.award-img.penalty.no-photo{background:linear-gradient(135deg,#FFF0F0,#FFD6D6);}
+.award-img-icon{font-size:22px;}
+.award-img-label{font-size:9px;color:#B8860B;margin-top:2px;}
+.award-img.penalty .award-img-label{color:#CC3333;}
+.award-name{font-size:15px;font-weight:600;color:#1D2129;}
+.award-date{font-size:12px;color:#86909C;margin-top:2px;}
+.award-type-tag{
+  font-size:11px;padding:2px 8px;border-radius:8px;margin-left:8px;
+}
+.award-type-tag.honor{color:#14A89A;background:rgba(20,168,154,0.08);}
+.award-type-tag.penalty{color:#FF4D4F;background:rgba(255,77,79,0.06);}
+.empty-events{text-align:center;color:#86909C;font-size:13px;padding:20px 0;}
+
+/* Growth */
+.growth-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+.growth-item{flex-shrink:0;}
+.growth-date{font-size:11px;color:#86909C;margin-bottom:4px;}
+.growth-img{
+  width:90px;height:64px;border-radius:10px;
+  background:linear-gradient(135deg,#E8F4F2,#C8E8E0);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:#14A89A;
+}
+
+/* Bottom Tab */
+.bottom-tab{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  background:#fff;border-top:1px solid #E5E6EB;
+  display:flex;justify-content:space-around;align-items:center;
+  padding:8px 0 12px;z-index:100;
+}
+.tab-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  cursor:pointer;padding:4px 16px;position:relative;text-decoration:none;
+}
+.tab-icon{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.tab-icon.active-bg{background:rgba(20,168,154,0.1);}
+.tab-label{font-size:11px;font-weight:500;color:#86909C;}
+.tab-item.active .tab-label{color:#14A89A;}
+.tab-badge{
+  position:absolute;top:-2px;right:10px;
+  min-width:16px;height:16px;background:#FF4D4F;color:#fff;
+  font-size:10px;font-weight:700;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;padding:0 5px;
+}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top-bar">
+    <div class="top-left">
+      <button class="back-btn" onclick="history.back()">&#8249;</button>
+      <span class="top-title" id="topTitle">高三1班</span>
+      <span class="top-tag" id="topTag">文科班</span>
+    </div>
+    <button class="semester-btn">
+      <span>2024年下学期</span>
+      <span class="semester-arrow">&#9660;</span>
+    </button>
+  </div>
+
+  <div class="weekly-card">
+    <div class="weekly-header">
+      <span class="weekly-title">教育行为周报</span>
+      <a class="weekly-all">全部 &gt;</a>
+    </div>
+    <div class="weekly-body">
+      <div class="weekly-metrics">
+        <div class="weekly-metric">
+          <div class="weekly-metric-val">85.9<span class="weekly-metric-unit"> 分</span></div>
+          <div class="weekly-metric-label">班级得分</div>
+        </div>
+        <div class="weekly-metric">
+          <div class="weekly-metric-val">5</div>
+          <div class="weekly-metric-label">年级排名</div>
+        </div>
+        <div class="weekly-metric">
+          <div class="weekly-metric-val">83.2<span class="weekly-metric-unit"> 分</span></div>
+          <div class="weekly-metric-label">学生平均分</div>
+        </div>
+        <div class="weekly-metric">
+          <div class="weekly-metric-val">88.5<span class="weekly-metric-unit"> 分</span></div>
+          <div class="weekly-metric-label">教师平均分</div>
+        </div>
+      </div>
+      <div class="weekly-badge-wrap">
+        <div class="weekly-badge">
+          <span class="weekly-badge-grade">B+</span>
+          <span class="weekly-badge-label">本周评级</span>
+        </div>
+      </div>
+    </div>
+    <div class="weekly-msg">
+      <span class="weekly-msg-dot"></span>
+      表现良好，再接再厉！
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">班级功能</div>
+      <a class="section-all" href="m-student-query.html">全部 &gt;</a>
+    </div>
+    <div class="two-col">
+      <div class="func-card" onclick="location.href='m-class-students.html?id='+classId">
+        <div class="func-info"><div class="func-name">班级学生</div><div class="func-desc" id="studentDesc">学生名单及档案</div></div>
+        <div class="func-arrow">&#8250;</div>
+      </div>
+      <div class="func-card" onclick="location.href='m-class-teachers.html?id='+classId">
+        <div class="func-info"><div class="func-name">班级教师</div><div class="func-desc" id="teacherDesc">教师名单及档案</div></div>
+        <div class="func-arrow">&#8250;</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">班级审批概况</div>
+      <a class="section-all">全部 &gt;</a>
+    </div>
+    <div class="approval-card">
+      <div class="approval-row">
+        <div class="approval-item">
+          <div class="approval-num">2 <span style="font-size:14px;font-weight:400;color:#4E5969;">条</span></div>
+          <div class="approval-label">请假申请 · 待处理</div>
+        </div>
+        <div class="approval-item">
+          <div class="approval-num">1 <span style="font-size:14px;font-weight:400;color:#4E5969;">条</span></div>
+          <div class="approval-label">助学金申请 · 待处理</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">班级考勤管理</div>
+    </div>
+    <div class="att-card">
+      <div class="att-row">
+        <div class="att-item"><div class="att-val" id="attStudents">-<span class="att-unit">人</span></div><div class="att-label">学生人数</div></div>
+        <div class="att-item"><div class="att-val" id="attRate">-<span class="att-unit">%</span></div><div class="att-label">日出勤率</div></div>
+        <div class="att-item"><div class="att-val" id="attExerciseRate">-<span class="att-unit">%</span></div><div class="att-label">日出操率</div></div>
+        <div class="att-item"><div class="att-val" id="attLeave">-<span class="att-unit">人</span></div><div class="att-label">今日请假</div></div>
+      </div>
+      <div class="att-btns">
+        <button class="att-btn primary" onclick="location.href='m-attendance.html?id='+classId">发起考勤 <span class="att-btn-arrow">&#8250;</span></button>
+        <button class="att-btn secondary" onclick="location.href='m-attendance.html?id='+classId+'&tab=record'">考勤详情 <span class="att-btn-arrow">&#8250;</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">班级奖惩</div>
+      <a class="section-all" id="eventCount">共 0 条</a>
+    </div>
+    <div id="eventList"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">班级成长记录</div>
+      <a class="section-all">全部 &gt;</a>
+    </div>
+    <div class="growth-scroll">
+      <div class="growth-item"><div class="growth-date">8月12日</div><div class="growth-img">&#128247;</div></div>
+      <div class="growth-item"><div class="growth-date">8月6日</div><div class="growth-img">&#128247;</div></div>
+      <div class="growth-item"><div class="growth-date">7月28日</div><div class="growth-img">&#128247;</div></div>
+      <div class="growth-item"><div class="growth-date">7月15日</div><div class="growth-img">&#128247;</div></div>
+    </div>
+  </div>
+
+  <div class="bottom-tab">
+    <div class="tab-item active">
+      <div class="tab-icon active-bg">&#11088;</div>
+      <span class="tab-label">去评分</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon">&#128221;</div>
+      <span class="tab-label">去考勤</span>
+    </div>
+    <div class="tab-item">
+      <span class="tab-badge">3</span>
+      <div class="tab-icon">&#9989;</div>
+      <span class="tab-label">去审批</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon">&#128206;</div>
+      <span class="tab-label">发记录</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var classId=(new URLSearchParams(location.search)).get('id')||'1';
+var studentCount=0;
+
+(function(){
+  fetch('/api/public/classes/'+classId).then(function(r){return r.json();}).then(function(c){
+    document.getElementById('topTitle').textContent=c.name||'高三1班';
+    document.getElementById('topTag').textContent=c.type||'文科班';
+    studentCount=c.student_count||0;
+    document.getElementById('attStudents').innerHTML=studentCount+'<span class="att-unit">人</span>';
+    document.getElementById('studentDesc').textContent='共 '+studentCount+' 名学生';
+    var teachers=c.teachers||[];
+    if(teachers.length>0){
+      var names=teachers.map(function(t){
+        var subj=t.subject||'';
+        return t.name+(subj?'('+subj.split(',').join('、')+')':'');
+      }).join('、');
+      document.getElementById('teacherDesc').textContent=names;
+    }else{
+      document.getElementById('teacherDesc').textContent='暂无教师';
+    }
+  }).catch(function(){});
+  fetch('/api/public/attendance-summary?class_id='+classId).then(function(r){return r.json();}).then(function(s){
+    document.getElementById('attRate').innerHTML=(s.has_teaching?s.teach_rate:'-')+'<span class="att-unit">%</span>';
+    document.getElementById('attExerciseRate').innerHTML=(s.has_exercise?s.exer_rate:'-')+'<span class="att-unit">%</span>';
+    document.getElementById('attLeave').innerHTML=s.leave_total+'<span class="att-unit">人</span>';
+  }).catch(function(){});
+  fetch('/api/public/classes/'+classId+'/events').then(function(r){return r.json();}).then(function(events){
+    var list=document.getElementById('eventList');
+    document.getElementById('eventCount').textContent='共 '+events.length+' 条';
+    if(!events||events.length===0){
+      list.innerHTML='<div class="empty-events">暂无奖惩记录</div>';
+      return;
+    }
+    var html='';
+    for(var i=0;i<events.length;i++){
+      var e=events[i];
+      var isHonor=e.type!=='处罚';
+      var typeLabel=isHonor?'&#127942;':'&#9888;';
+      var imgTypeClass=isHonor?'honor':'penalty';
+      var imgContent=e.photo?'<img src="'+e.photo+'" alt="">':'<span class="award-img-icon">'+typeLabel+'</span><span class="award-img-label">'+e.type+'</span>';
+      html+='<div class="award-card">';
+      html+='<div class="award-img '+imgTypeClass+(e.photo?'':' no-photo')+'">'+imgContent+'</div>';
+      html+='<div>';
+      html+='<div class="award-name">'+e.name+'<span class="award-type-tag '+imgTypeClass+'">'+e.type+'</span></div>';
+      html+='<div class="award-date">'+e.date+'</div>';
+      html+='</div></div>';
+    }
+    list.innerHTML=html;
+  }).catch(function(){
+    document.getElementById('eventList').innerHTML='<div class="empty-events">暂无奖惩记录</div>';
+  });
+})();
+</script>
+</body>
+</html>

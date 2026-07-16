@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>学生查询</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#FFFFFF;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+.page-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:#FFFFFF;
+  border-bottom:1px solid #E5E6EB;
+}
+.back-btn{
+  display:flex;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;padding:6px 8px;
+  color:#1D2129;font-size:14px;border-radius:6px;
+}
+.back-btn:active{background:rgba(20,168,154,0.06);}
+.back-arrow{font-size:18px;color:#4E5969;}
+.page-title{font-size:18px;font-weight:700;color:#1D2129;}
+.header-spacer{width:60px;}
+
+.search-bar{
+  margin:12px 16px;
+  display:flex;align-items:center;gap:8px;
+  background:#FFFFFF;
+  border-radius:24px;padding:8px 14px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+}
+.search-icon{
+  width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+  color:#86909C;
+}
+.search-input{
+  flex:1;border:none;outline:none;
+  font-size:14px;color:#1D2129;background:transparent;
+}
+.search-input::placeholder{color:#86909C;}
+.search-btn{
+  background:linear-gradient(135deg,#0F9487,#35B9AA);
+  color:#fff;border:none;border-radius:18px;
+  padding:8px 18px;font-size:14px;font-weight:500;cursor:pointer;
+}
+.search-btn:active{opacity:.85;}
+
+.filter-row{
+  display:flex;gap:8px;padding:0 16px;margin-bottom:14px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+}
+.filter-chip{
+  flex-shrink:0;padding:7px 14px;border-radius:18px;
+  font-size:14px;color:#4E5969;
+  background:#FFFFFF;border:1px solid #E5E6EB;cursor:pointer;
+  white-space:nowrap;transition:all .2s;
+}
+.filter-chip.active{
+  background:rgba(20,168,154,0.08);border-color:#14A89A;color:#14A89A;
+}
+
+.student-list{padding:0 16px 100px;}
+.student-item{
+  display:flex;align-items:center;gap:14px;
+  background:#FFFFFF;border-radius:14px;
+  padding:14px;margin-bottom:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+  cursor:pointer;transition:all .2s;
+}
+.student-item:active{box-shadow:0 2px 12px rgba(20,168,154,0.08);}
+.s-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,#BEEFDA,#35B9AA);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  font-size:16px;color:#0F9487;font-weight:600;
+}
+.s-avatar.female{background:linear-gradient(135deg,#FFD4E5,#FF90B3);color:#D63384;}
+.s-info{flex:1;min-width:0;}
+.s-name{font-size:16px;font-weight:600;color:#1D2129;}
+.s-meta{font-size:14px;color:#4E5969;margin-top:2px;}
+.s-detail-info{
+  font-size:12px;color:#86909C;margin-top:2px;
+  display:flex;gap:8px;
+}
+.s-arrow{color:#86909C;font-size:18px;}
+.s-status-badge{
+  padding:3px 10px;border-radius:10px;
+  font-size:12px;color:#14A89A;
+  background:rgba(20,168,154,0.08);
+}
+.s-status-badge.absent{
+  color:#FF6A1A;background:rgba(255,106,26,0.08);
+}
+
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;color:#86909C;
+}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.6;}
+.empty-text{font-size:14px;}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()">
+      <span class="back-arrow">&#8249;</span>
+      <span>返回</span>
+    </button>
+    <span class="page-title">学生查询</span>
+    <div class="header-spacer"></div>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#86909C" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+    <input class="search-input" type="text" placeholder="搜索学生姓名或学号" id="searchInput">
+    <button class="search-btn" onclick="loadStudents()">搜索</button>
+  </div>
+
+  <div class="filter-row" id="filterRow">
+    <div class="filter-chip active" onclick="filterStudents('all',this)">全部</div>
+  </div>
+
+  <div class="student-list" id="studentList">
+    <div class="empty-state">
+      <div class="empty-icon">&#128269;</div>
+      <div class="empty-text">输入姓名或学号搜索学生</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function loadStudents(){
+  const keyword=document.getElementById('searchInput').value.trim();
+  try{
+    const params=new URLSearchParams();
+    params.set('teacher_id','2');
+    if(keyword)params.set('keyword',keyword);
+    if(currentClassId&&currentClassId!=='all')params.set('class_id',currentClassId);
+    const res=await fetch('/api/public/students?'+params);
+    const data=await res.json();
+    renderList(data.data||data);
+  }catch(e){renderList([]);}
+}
+let currentClassId='all';
+(function initClassFilter(){
+  var p=new URLSearchParams(location.search);
+  if(p.get('class_id')) currentClassId=p.get('class_id');
+  fetch('/api/public/classes?teacher_id=2').then(function(r){return r.json();}).then(function(classes){
+    var row=document.getElementById('filterRow');
+    for(var i=0;i<classes.length;i++){
+      var c=classes[i];
+      var chip=document.createElement('div');
+      chip.className='filter-chip'+(String(c.id)===currentClassId?' active':'');
+      chip.textContent=c.name;
+      chip.onclick=(function(cid,el){return function(){filterStudents(cid,el);};})(c.id,chip);
+      row.appendChild(chip);
+    }
+    if(currentClassId!=='all'){
+      document.querySelector('#filterRow .filter-chip:first-child').classList.remove('active');
+    }
+    loadStudents();
+  }).catch(function(){loadStudents();});
+})();
+function filterStudents(classId,el){
+  currentClassId=classId;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  loadStudents();
+}
+function renderList(students){
+  const container=document.getElementById('studentList');
+  if(!students||students.length===0){
+    container.innerHTML='<div class="empty-state"><div class="empty-icon">&#128270;</div><div class="empty-text">未找到匹配的学生</div></div>';
+    return;
+  }
+  container.innerHTML=students.map(s=>{
+    const initial=(s.name||'?')[0];
+    const isFemale=s.gender==='female';
+    return `
+    <div class="student-item" onclick="location.href='m-student-detail.html?id=${s.id}'">
+      <div class="s-avatar ${isFemale?'female':''}">${initial}</div>
+      <div class="s-info">
+        <div class="s-name">${s.name||'未知'}</div>
+        <div class="s-meta">${s.class_name||''} · ${s.student_no||''}</div>
+        <div class="s-detail-info">${s.gender||''}</div>
+      </div>
+      <span class="s-status-badge ${s.status==='absent'?'absent':''}">${s.status==='absent'?'缺勤':'在校'}</span>
+      <span class="s-arrow">&#8250;</span>
+    </div>`;
+  }).join('');
+}
+document.getElementById('searchInput').addEventListener('keydown',function(e){if(e.key==='Enter')loadStudents();});
+loadStudents();
+</script>
+</body>
+</html>

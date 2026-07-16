@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>班级学生</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#FFFFFF;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;overflow-x:hidden;
+  padding-bottom:80px;
+}
+.page-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:#FFFFFF;
+  border-bottom:1px solid #E5E6EB;
+}
+.back-btn{
+  display:flex;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;padding:6px 8px;
+  color:#1D2129;font-size:14px;border-radius:6px;
+}
+.back-arrow{font-size:18px;color:#4E5969;}
+.page-title{font-size:18px;font-weight:700;color:#1D2129;}
+.header-spacer{width:60px;}
+
+.class-info{
+  margin:12px 16px;padding:12px 16px;
+  background:#FFFFFF;border-radius:14px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+  display:flex;align-items:center;gap:12px;
+}
+.class-avatar{
+  width:44px;height:44px;border-radius:12px;
+  background:linear-gradient(135deg,#0F9487,#35B9AA);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:18px;font-weight:700;flex-shrink:0;
+}
+.class-name{font-size:16px;font-weight:600;color:#1D2129;}
+.class-meta{font-size:13px;color:#86909C;margin-top:2px;}
+
+.student-list{padding:0 16px 100px;}
+.student-item{
+  display:flex;align-items:center;gap:12px;
+  background:#FFFFFF;border-radius:14px;
+  padding:14px;margin-bottom:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+  cursor:pointer;transition:all .2s;
+}
+.student-item:active{box-shadow:0 2px 12px rgba(20,168,154,0.08);}
+.s-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,#BEEFDA,#35B9AA);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  font-size:16px;color:#0F9487;font-weight:600;
+}
+.s-avatar.female{background:linear-gradient(135deg,#FFD4E5,#FF90B3);color:#D63384;}
+.s-info{flex:1;min-width:0;}
+.s-name{font-size:16px;font-weight:600;color:#1D2129;}
+.s-meta{font-size:13px;color:#4E5969;margin-top:2px;}
+.s-arrow{color:#86909C;font-size:18px;}
+
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;color:#86909C;
+}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.6;}
+.empty-text{font-size:14px;}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()">
+      <span class="back-arrow">&#8249;</span>
+      <span>返回</span>
+    </button>
+    <span class="page-title">班级学生</span>
+    <div class="header-spacer"></div>
+  </div>
+
+  <div class="class-info">
+    <div class="class-avatar" id="classAvatar">班</div>
+    <div>
+      <div class="class-name" id="className">加载中...</div>
+      <div class="class-meta" id="classMeta"></div>
+    </div>
+  </div>
+
+  <div class="student-list" id="studentList">
+    <div class="empty-state">
+      <div class="empty-icon">&#128101;</div>
+      <div class="empty-text">加载中...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var id=(new URLSearchParams(location.search)).get('id');
+if(!id){document.getElementById('studentList').innerHTML='<div class="empty-state"><div class="empty-icon">&#9888;</div><div class="empty-text">缺少班级参数</div></div>';}
+
+fetch('/api/public/classes/'+id).then(function(r){return r.json();}).then(function(c){
+  document.getElementById('classAvatar').textContent=(c.name||'班').charAt(0);
+  document.getElementById('className').textContent=c.name||'';
+  document.getElementById('classMeta').textContent=(c.grade||'')+' '+(c.type||'')+' · 共'+(c.student_count||0)+'人';
+
+  var students=c.students||[];
+  if(students.length===0){
+    document.getElementById('studentList').innerHTML='<div class="empty-state"><div class="empty-icon">&#128101;</div><div class="empty-text">暂无学生</div></div>';
+    return;
+  }
+  var html='';
+  for(var i=0;i<students.length;i++){
+    var s=students[i];
+    var initial=(s.name||'?')[0];
+    var isFemale=s.gender==='female';
+    html+='<div class="student-item" onclick="location.href=\'m-student-detail.html?id='+s.id+'\'">';
+    html+='<div class="s-avatar '+(isFemale?'female':'')+'">'+initial+'</div>';
+    html+='<div class="s-info"><div class="s-name">'+s.name+'</div><div class="s-meta">'+s.student_no+' · '+(s.gender||'')+'</div></div>';
+    html+='<span class="s-arrow">&#8250;</span></div>';
+  }
+  document.getElementById('studentList').innerHTML=html;
+}).catch(function(){
+  document.getElementById('studentList').innerHTML='<div class="empty-state"><div class="empty-icon">&#9888;</div><div class="empty-text">加载失败</div></div>';
+});
+</script>
+</body>
+</html>

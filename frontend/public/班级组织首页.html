@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>班级组织</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#FFFFFF;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+
+.top-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:#FFFFFF;
+}
+.left-group{display:flex;align-items:center;gap:8px;}
+.avatar{
+  width:40px;height:40px;border-radius:50%;
+  background:linear-gradient(135deg,#35B9AA,#0F9487);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:#fff;font-weight:600;
+}
+.username{font-size:16px;font-weight:700;color:#1D2129;}
+.nickname{
+  font-size:12px;color:#86909C;background:#F2F3F5;
+  padding:2px 8px;border-radius:10px;margin-left:4px;
+}
+.right-group{
+  display:flex;align-items:center;gap:0;
+  background:#FFFFFF;border:1px solid #E5E6EB;
+  border-radius:20px;padding:6px 4px;
+}
+.right-group .icon-btn{
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  border:none;background:transparent;cursor:pointer;border-radius:50%;
+  color:#4E5969;font-size:16px;
+}
+.right-group .icon-btn:hover{color:#14A89A;}
+.right-group .divider{
+  width:1px;height:18px;background:#E5E6EB;margin:0 2px;
+}
+
+.banner{
+  margin:8px 16px 16px;
+  border-radius:16px;
+  position:relative;overflow:hidden;
+}
+.banner-carousel{
+  width:100%;position:relative;overflow:hidden;border-radius:16px;
+}
+.banner-track{
+  display:flex;transition:transform .4s ease;
+}
+.banner-slide{
+  min-width:100%;position:relative;
+}
+.banner-slide-img{
+  width:100%;height:160px;object-fit:cover;display:block;
+}
+.banner-dots{
+  display:flex;justify-content:center;gap:6px;
+  position:absolute;bottom:12px;left:0;right:0;z-index:2;
+}
+.banner-dot{
+  width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.5);
+  cursor:pointer;transition:all .3s;
+}
+.banner-dot.active{background:#fff;width:18px;border-radius:3px;}
+
+.banner-fallback{
+  padding:20px 18px;
+  background:linear-gradient(135deg,#0F9487 0%,#35B9AA 60%,#BEEFDA 100%);
+  position:relative;overflow:hidden;
+}
+.banner-fallback::before{
+  content:'';position:absolute;top:-30%;right:-20%;width:180px;height:180px;
+  background:radial-gradient(circle,rgba(255,255,255,0.15) 0%,transparent 70%);
+  border-radius:50%;
+}
+.banner-content{position:relative;z-index:1;}
+.banner-illustration{
+  display:flex;align-items:flex-end;justify-content:center;
+  margin-bottom:14px;gap:8px;min-height:56px;
+}
+.illus-book{
+  width:36px;height:28px;
+  background:linear-gradient(135deg,rgba(255,255,255,0.9),rgba(255,255,255,0.7));
+  border-radius:6px 6px 0 0;position:relative;
+}
+.illus-book::after{
+  content:'';position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  width:0;height:0;
+  border-left:7px solid transparent;border-right:7px solid transparent;
+  border-bottom:12px solid rgba(255,255,255,0.9);
+}
+.illus-people{display:flex;gap:3px;align-items:flex-end;}
+.illus-person{
+  width:7px;height:20px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0.5));
+  border-radius:4px 4px 0 0;
+}
+.illus-person.tall{height:26px;}
+.illus-person.med{height:20px;}
+.banner-title{
+  font-size:18px;font-weight:700;color:#FFFFFF;text-align:center;
+  margin-bottom:6px;
+}
+.banner-sub{
+  font-size:14px;color:rgba(255,255,255,0.85);text-align:center;
+}
+
+.quick-actions{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:10px;padding:0 16px;margin-bottom:16px;
+}
+.action-item{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  cursor:pointer;position:relative;padding:4px 0;
+}
+.action-icon{
+  width:48px;height:48px;
+  background:none;
+  border-radius:0;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+  overflow:visible;
+  position:relative;
+}
+.action-item:active .action-icon{transform:scale(0.95);}
+.action-icon img{width:48px;height:48px;object-fit:contain;display:block;}
+.action-label{font-size:14px;color:#1D2129;}
+.badge{
+  position:absolute;top:-6px;right:-6px;
+  min-width:18px;height:18px;
+  background:#FF6A1A;
+  color:#fff;font-size:10px;font-weight:700;
+  border-radius:9px;display:flex;align-items:center;justify-content:center;
+  padding:0 5px;z-index:2;
+}
+
+.announcement-card{
+  margin:0 16px 20px;
+  background:#FFFFFF;
+  border-radius:16px;
+  padding:18px 16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.ann-title{
+  font-size:16px;font-weight:600;color:#1D2129;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.ann-title::before{
+  content:'';width:3px;height:16px;
+  background:#14A89A;border-radius:2px;display:inline-block;
+}
+.ann-body{
+  font-size:14px;color:#4E5969;line-height:1.6;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;margin-bottom:12px;
+}
+.ann-footer{
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  font-size:12px;color:#86909C;cursor:pointer;
+}
+.ann-footer::after{content:'\203A';font-size:14px;color:#86909C;}
+
+.my-classes{padding:0 16px 100px;}
+.section-title{
+  font-size:18px;font-weight:700;color:#1D2129;margin-bottom:14px;
+}
+.class-card{
+  background:#FFFFFF;
+  border-radius:16px;
+  padding:18px 16px 16px;
+  margin-bottom:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  cursor:pointer;transition:all .2s;
+}
+.class-card:active{box-shadow:0 2px 12px rgba(20,168,154,0.08);}
+.class-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;
+}
+.class-name-group{display:flex;align-items:center;gap:8px;}
+.class-name{font-size:18px;font-weight:700;color:#1D2129;}
+.class-tag{
+  font-size:12px;color:#14A89A;
+  background:rgba(20,168,154,0.08);
+  padding:3px 10px;border-radius:10px;
+}
+.arrow-icon{
+  width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+  color:#86909C;font-size:18px;
+}
+.class-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;}
+.stat-item{text-align:center;}
+.stat-value{font-size:18px;font-weight:700;color:#1D2129;display:block;}
+.stat-unit{font-size:14px;font-weight:400;color:#4E5969;}
+.stat-label{font-size:12px;color:#86909C;margin-top:3px;display:block;}
+
+.bottom-tab{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  background:#FFFFFF;
+  border-top:1px solid #E5E6EB;
+  display:flex;justify-content:space-around;align-items:center;
+  padding:8px 0 12px;z-index:100;
+}
+.tab-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  cursor:pointer;padding:4px 20px;position:relative;text-decoration:none;
+}
+.tab-icon{width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
+.tab-icon svg{width:22px;height:22px;}
+.tab-label{font-size:12px;font-weight:500;color:#86909C;}
+.tab-item.active .tab-label{color:#14A89A;}
+.tab-item.active .tab-icon svg{stroke:#14A89A;fill:rgba(20,168,154,0.08);}
+.tab-badge{
+  position:absolute;top:-2px;right:10px;
+  min-width:18px;height:18px;
+  background:#FF6A1A;color:#fff;
+  font-size:10px;font-weight:700;
+  border-radius:9px;display:flex;align-items:center;justify-content:center;
+  padding:0 5px;
+}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top-bar">
+    <div class="left-group">
+      <div class="avatar">陈</div>
+      <span class="username">陈小武</span>
+      <span class="nickname">小武</span>
+    </div>
+    <div class="right-group">
+      <button class="icon-btn" aria-label="更多">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+      </button>
+      <div class="divider"></div>
+      <button class="icon-btn" aria-label="设置">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="banner" id="bannerContainer">
+    <div class="banner-fallback">
+      <div class="banner-content">
+        <div class="banner-illustration">
+          <div class="illus-book"></div>
+          <div class="illus-people">
+            <div class="illus-person tall"></div>
+            <div class="illus-person med"></div>
+            <div class="illus-person tall"></div>
+          </div>
+        </div>
+        <div class="banner-title">高校学生教育发展大会</div>
+        <div class="banner-sub">2024年10月 · 学术报告厅</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-actions">
+    <div class="action-item" onclick="location.href='m-student-query.html'">
+      <div class="action-icon"><img src="imgs/icon-search.webp" alt="学生查询"></div>
+      <span class="action-label">学生查询</span>
+    </div>
+    <div class="action-item" onclick="location.href='m-attendance.html'">
+      <div class="action-icon"><img src="imgs/icon-attendance.webp" alt="发起考勤"></div>
+      <span class="action-label">发起考勤</span>
+    </div>
+    <div class="action-item">
+      <div class="action-icon"><img src="imgs/icon-score.webp" alt="发起评分"></div>
+      <span class="action-label">发起评分</span>
+    </div>
+    <div class="action-item">
+      <div class="action-icon"><span class="badge">5</span><img src="imgs/icon-approval.webp" alt="我的审批"></div>
+      <span class="action-label">我的审批</span>
+    </div>
+  </div>
+
+  <div class="announcement-card">
+    <div class="ann-title">公告</div>
+    <div class="ann-body">本年度校运会举行的相关通知，请各位班主任老师及时查收并通知到各班级学生，做好参赛准备与报名工作。</div>
+    <div class="ann-footer">3条未阅</div>
+  </div>
+
+  <div class="my-classes">
+    <div class="section-title">我的班级</div>
+    <div id="classList"></div>
+  </div>
+
+  <div class="bottom-tab">
+    <div class="tab-item active">
+      <div class="tab-icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" opacity="0.15"><rect x="4" y="4" width="16" height="16" rx="4"/></svg></div>
+      <span class="tab-label">班级组织</span>
+    </div>
+    <div class="tab-item">
+      <span class="tab-badge">5</span>
+      <div class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#86909C" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+      <span class="tab-label">工作台</span>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#86909C" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-8 8-8s8 4 8 8"/></svg></div>
+      <span class="tab-label">我的</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var currentIndex=0,timer=null;
+  function buildCarousel(banners){
+    var container=document.getElementById('bannerContainer');
+    if(!banners||banners.length===0){
+      container.innerHTML='<div class="banner-fallback"><div class="banner-content"><div class="banner-illustration"><div class="illus-book"></div><div class="illus-people"><div class="illus-person tall"></div><div class="illus-person med"></div><div class="illus-person tall"></div></div></div><div class="banner-title">高校学生教育发展大会</div><div class="banner-sub">2024年10月 · 学术报告厅</div></div></div>';
+      return;
+    }
+    if(banners.length===1){
+      container.innerHTML='<div class="banner-slide"><img class="banner-slide-img" src="'+banners[0].image_url+'" alt="'+banners[0].title+'" style="height:160px;object-fit:cover;border-radius:16px;width:100%;display:block;"></div>';
+      return;
+    }
+    var slides=banners.map(function(b,i){return '<div class="banner-slide" style="min-width:100%"><img class="banner-slide-img" src="'+b.image_url+'" alt="'+b.title+'"></div>';}).join('');
+    var dots='<div class="banner-dots">'+banners.map(function(_,i){return '<div class="banner-dot'+(i===0?' active':'')+'" data-idx="'+i+'"></div>';}).join('')+'</div>';
+    container.innerHTML='<div class="banner-carousel"><div class="banner-track" id="bannerTrack">'+slides+'</div>'+dots+'</div>';
+    var track=document.getElementById('bannerTrack');
+    function goTo(idx){
+      currentIndex=idx;
+      track.style.transform='translateX(-'+(idx*100)+'%)';
+      var dotsEl=document.querySelectorAll('.banner-dot');
+      for(var i=0;i<dotsEl.length;i++){dotsEl[i].classList.toggle('active',i===idx);}
+    }
+    var dotEls=document.querySelectorAll('.banner-dot');
+    for(var d=0;d<dotEls.length;d++){
+      dotEls[d].addEventListener('click',function(){
+        goTo(parseInt(this.dataset.idx));resetTimer();
+      });
+    }
+    var touchStartX=0;
+    track.addEventListener('touchstart',function(e){touchStartX=e.touches[0].clientX;});
+    track.addEventListener('touchend',function(e){
+      var diff=touchStartX-e.changedTouches[0].clientX;
+      if(Math.abs(diff)>40){if(diff>0)currentIndex=(currentIndex+1)%banners.length;else currentIndex=(currentIndex-1+banners.length)%banners.length;goTo(currentIndex);}
+      resetTimer();
+    });
+    function resetTimer(){clearInterval(timer);timer=setInterval(function(){currentIndex=(currentIndex+1)%banners.length;goTo(currentIndex);},3000);}
+    resetTimer();
+  }
+  fetch('/api/banners/enabled').then(function(r){return r.json();}).then(function(data){buildCarousel(data);}).catch(function(){});
+  function loadClasses(){
+    fetch('/api/public/classes?teacher_id=2').then(function(r){return r.json();}).then(function(classes){
+      fetch('/api/public/attendance-summary').then(function(r2){return r2.json();}).then(function(summaries){
+        var index={};
+        for(var s=0;s<summaries.length;s++){
+          index[summaries[s].class_id]=summaries[s];
+        }
+        var html='';
+        for(var i=0;i<classes.length;i++){
+          var c=classes[i];
+          var classType=c.type||'';
+          var s=index[c.id]||{total:0,has_teaching:false,teach_rate:0,has_exercise:false,exer_rate:0,leave_total:0};
+          var teachRate=s.has_teaching?s.teach_rate:'-';
+          var exerRate=s.has_exercise?s.exer_rate:'-';
+          html+='<div class="class-card" onclick="location.href=\'m-class-detail.html?id='+c.id+'\'"><div class="class-header"><div class="class-name-group"><span class="class-name">'+c.name+'</span>'+(classType?'<span class="class-tag">'+classType+'</span>':'')+'</div><span class="arrow-icon">&#8250;</span></div><div class="class-stats"><div class="stat-item"><span class="stat-value">'+(c.student_count||0)+'<span class="stat-unit">人</span></span><span class="stat-label">学生人数</span></div><div class="stat-item"><span class="stat-value">'+teachRate+'<span class="stat-unit">%</span></span><span class="stat-label">日出勤率</span></div><div class="stat-item"><span class="stat-value">'+exerRate+'<span class="stat-unit">%</span></span><span class="stat-label">日出操率</span></div><div class="stat-item"><span class="stat-value">'+s.leave_total+'<span class="stat-unit">人</span></span><span class="stat-label">今日请假</span></div></div></div>';
+        }
+        document.getElementById('classList').innerHTML=html||'<div style="text-align:center;padding:40px;color:#86909C;font-size:14px;">暂无班级</div>';
+      }).catch(function(){renderClassesNoAtt(classes);});
+    }).catch(function(){
+      document.getElementById('classList').innerHTML='<div style="text-align:center;padding:40px;color:#86909C;font-size:14px;">暂无班级</div>';
+    });
+  }
+  function renderClassesNoAtt(classes){
+    var html='';
+    for(var i=0;i<classes.length;i++){
+      var c=classes[i];
+      var classType=c.type||'';
+      html+='<div class="class-card" onclick="location.href=\'m-class-detail.html?id='+c.id+'\'"><div class="class-header"><div class="class-name-group"><span class="class-name">'+c.name+'</span>'+(classType?'<span class="class-tag">'+classType+'</span>':'')+'</div><span class="arrow-icon">&#8250;</span></div><div class="class-stats"><div class="stat-item"><span class="stat-value">'+(c.student_count||0)+'<span class="stat-unit">人</span></span><span class="stat-label">学生人数</span></div><div class="stat-item"><span class="stat-value">-<span class="stat-unit">%</span></span><span class="stat-label">日出勤率</span></div><div class="stat-item"><span class="stat-value">-<span class="stat-unit">%</span></span><span class="stat-label">日出操率</span></div><div class="stat-item"><span class="stat-value">0<span class="stat-unit">人</span></span><span class="stat-label">今日请假</span></div></div></div>';
+    }
+    document.getElementById('classList').innerHTML=html||'<div style="text-align:center;padding:40px;color:#86909C;font-size:14px;">暂无班级</div>';
+  }
+  loadClasses();
+})();
+</script>
+</body>
+</html>

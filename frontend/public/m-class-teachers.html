@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>班级教师</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#FFFFFF;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;overflow-x:hidden;
+  padding-bottom:80px;
+}
+.page-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:#FFFFFF;
+  border-bottom:1px solid #E5E6EB;
+}
+.back-btn{
+  display:flex;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;padding:6px 8px;
+  color:#1D2129;font-size:14px;border-radius:6px;
+}
+.back-arrow{font-size:18px;color:#4E5969;}
+.page-title{font-size:18px;font-weight:700;color:#1D2129;}
+.header-spacer{width:60px;}
+
+.class-info{
+  margin:12px 16px;padding:12px 16px;
+  background:#FFFFFF;border-radius:14px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+  display:flex;align-items:center;gap:12px;
+}
+.class-avatar{
+  width:44px;height:44px;border-radius:12px;
+  background:linear-gradient(135deg,#0F9487,#35B9AA);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:18px;font-weight:700;flex-shrink:0;
+}
+.class-name{font-size:16px;font-weight:600;color:#1D2129;}
+.class-meta{font-size:13px;color:#86909C;margin-top:2px;}
+
+.teacher-list{padding:0 16px 100px;}
+.teacher-item{
+  display:flex;align-items:center;gap:12px;
+  background:#FFFFFF;border-radius:14px;
+  padding:14px;margin-bottom:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+}
+    .t-avatar{
+      width:44px;height:44px;border-radius:50%;
+      background:linear-gradient(135deg,#E8F4F2,#C8E8E0);
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;overflow:hidden;
+      font-size:24px;
+    }
+    .t-avatar img{width:100%;height:100%;object-fit:cover;}
+    .honor-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+    .honor-tag{
+      padding:2px 8px;border-radius:8px;
+      font-size:11px;color:#FF6A1A;
+      background:rgba(255,106,26,0.06);
+    }
+.t-info{flex:1;min-width:0;}
+.t-name{font-size:16px;font-weight:600;color:#1D2129;}
+.t-role{font-size:13px;color:#4E5969;margin-top:2px;}
+.t-role-badge{
+  padding:3px 10px;border-radius:10px;
+  font-size:12px;color:#14A89A;
+  background:rgba(20,168,154,0.08);
+}
+.t-role-badge.head{color:#FF6A1A;background:rgba(255,106,26,0.08);}
+
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;color:#86909C;
+}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.6;}
+.empty-text{font-size:14px;}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()">
+      <span class="back-arrow">&#8249;</span>
+      <span>返回</span>
+    </button>
+    <span class="page-title">班级教师</span>
+    <div class="header-spacer"></div>
+  </div>
+
+  <div class="class-info">
+    <div class="class-avatar" id="classAvatar">班</div>
+    <div>
+      <div class="class-name" id="className">加载中...</div>
+      <div class="class-meta" id="classMeta"></div>
+    </div>
+  </div>
+
+  <div class="teacher-list" id="teacherList">
+    <div class="empty-state">
+      <div class="empty-icon">&#128100;</div>
+      <div class="empty-text">加载中...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var id=(new URLSearchParams(location.search)).get('id');
+if(!id){document.getElementById('teacherList').innerHTML='<div class="empty-state"><div class="empty-icon">&#9888;</div><div class="empty-text">缺少班级参数</div></div>';}
+
+fetch('/api/public/classes/'+id).then(function(r){return r.json();}).then(function(c){
+  document.getElementById('classAvatar').textContent=(c.name||'班').charAt(0);
+  document.getElementById('className').textContent=c.name||'';
+  document.getElementById('classMeta').textContent=(c.grade||'')+' '+(c.type||'')+' · 共'+(c.teachers&&c.teachers.length||0)+'位教师';
+
+  var teachers=c.teachers||[];
+  if(teachers.length===0){
+    document.getElementById('teacherList').innerHTML='<div class="empty-state"><div class="empty-icon">&#128100;</div><div class="empty-text">暂无教师</div></div>';
+    return;
+  }
+  renderTeachers(teachers);
+}).catch(function(){
+  document.getElementById('teacherList').innerHTML='<div class="empty-state"><div class="empty-icon">&#9888;</div><div class="empty-text">加载失败</div></div>';
+});
+
+function renderTeachers(teachers){
+  var promises=[];
+  for(var i=0;i<teachers.length;i++){
+    var t=teachers[i];
+    if(t.teacher_id){ promises.push(fetch('/api/public/teachers/'+t.teacher_id+'/honors').then(function(r){return r.json();})) }
+    else { promises.push(Promise.resolve([])); }
+  }
+  Promise.all(promises).then(function(honorsArr){
+    var html='';
+    for(var i=0;i<teachers.length;i++){
+      var t=teachers[i];
+      var isHead=t.role==='班主任';
+      var subj=t.subject||'';
+      var subjText=subj?subj.split(',').join('、'):'';
+      var photoHtml = t.teacher_photo ? '<img src="'+t.teacher_photo+'" alt="">' : '&#128100;';
+      html+='<div class="teacher-item">';
+      html+='<div class="t-avatar">'+photoHtml+'</div>';
+      html+='<div class="t-info"><div class="t-name">'+t.name+'</div><div class="t-role">'+(subjText||t.role)+'</div>';
+      var honors=honorsArr[i]||[];
+      if(honors.length>0){
+        html+='<div class="honor-tags">';
+        for(var h=0;h<honors.length;h++){
+          var hn=honors[h];
+          html+='<span class="honor-tag">'+(hn.name||'')+(hn.date?' · '+hn.date:'')+'</span>';
+        }
+        html+='</div>';
+      }
+      html+='</div>';
+      html+='<span class="t-role-badge '+(isHead?'head':'')+'">'+t.role+'</span></div>';
+    }
+    document.getElementById('teacherList').innerHTML=html;
+  });
+}
+</script>
+</body>
+</html>

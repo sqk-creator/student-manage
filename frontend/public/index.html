@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学生管理系统 - 选择入口</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  background:#080c18;color:#e0ecff;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+  background:radial-gradient(ellipse at 30% 20%,rgba(30,80,180,0.12) 0%,transparent 50%),
+             radial-gradient(ellipse at 70% 80%,rgba(60,130,255,0.06) 0%,transparent 50%);
+  pointer-events:none;
+}
+.container{
+  text-align:center;padding:40px 24px;max-width:700px;width:100%;position:relative;z-index:1;
+}
+.title{
+  font-size:32px;font-weight:800;letter-spacing:1px;margin-bottom:8px;
+  background:linear-gradient(135deg,#a0d0ff,#5088ff,#3060dd);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.subtitle{
+  font-size:14px;color:rgba(150,180,220,0.5);margin-bottom:48px;letter-spacing:2px;
+}
+.entries{
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;
+}
+@media(max-width:560px){.entries{grid-template-columns:1fr;gap:16px;}}
+.entry-card{
+  background:linear-gradient(160deg,rgba(14,24,52,0.9),rgba(20,36,68,0.85));
+  border:1px solid rgba(50,120,200,0.15);
+  border-radius:20px;padding:40px 28px;cursor:pointer;text-decoration:none;
+  color:inherit;position:relative;overflow:hidden;
+  transition:all .3s;display:flex;flex-direction:column;align-items:center;gap:16px;
+}
+.entry-card:hover{
+  border-color:rgba(80,160,255,0.35);
+  box-shadow:0 0 40px rgba(30,80,200,0.2);
+  transform:translateY(-2px);
+}
+.entry-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(80,160,255,0.4),transparent);
+}
+.entry-card.miniapp::after{
+  content:'';position:absolute;bottom:0;left:20%;right:20%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(100,200,255,0.2),transparent);
+}
+.entry-card.admin::after{
+  content:'';position:absolute;bottom:0;left:20%;right:20%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,180,50,0.2),transparent);
+}
+.entry-icon{
+  width:72px;height:72px;border-radius:20px;display:flex;
+  align-items:center;justify-content:center;position:relative;z-index:1;
+}
+.entry-icon.miniapp{
+  background:linear-gradient(135deg,#0a1e45,#163a7a);
+  border:1.5px solid rgba(60,140,255,0.25);
+  box-shadow:0 0 24px rgba(40,100,220,0.2);
+}
+.entry-icon.admin{
+  background:linear-gradient(135deg,#1e1a0a,#4a3a10);
+  border:1.5px solid rgba(200,150,40,0.25);
+  box-shadow:0 0 24px rgba(200,150,40,0.15);
+}
+.entry-icon svg{width:34px;height:34px;}
+.entry-label{
+  font-size:20px;font-weight:700;position:relative;z-index:1;letter-spacing:.5px;
+}
+.entry-desc{
+  font-size:13px;color:rgba(150,180,220,0.45);line-height:1.6;max-width:220px;
+  position:relative;z-index:1;
+}
+.entry-badge{
+  position:absolute;top:16px;right:16px;
+  font-size:10px;padding:3px 10px;border-radius:10px;z-index:2;
+  letter-spacing:.5px;
+}
+.entry-badge.miniapp{
+  background:rgba(40,100,220,0.2);color:rgba(120,180,255,0.7);border:1px solid rgba(60,140,255,0.15);
+}
+.entry-badge.admin{
+  background:rgba(200,150,40,0.15);color:rgba(220,180,80,0.7);border:1px solid rgba(200,150,40,0.15);
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1 class="title">学生管理系统</h1>
+  <p class="subtitle">STUDENT MANAGEMENT SYSTEM</p>
+  <div class="entries">
+    <a class="entry-card miniapp" href="/班级组织首页.html">
+      <span class="entry-badge miniapp">移动端</span>
+      <div class="entry-icon miniapp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(120,180,255,0.8)" stroke-width="1.5">
+          <rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12" y2="18.01"/>
+        </svg>
+      </div>
+      <span class="entry-label">小程序端</span>
+      <span class="entry-desc">移动端班级组织首页，快捷查看班级信息、考勤、公告等</span>
+    </a>
+    <a class="entry-card admin" href="/admin/">
+      <span class="entry-badge admin">PC 端</span>
+      <div class="entry-icon admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(220,180,80,0.8)" stroke-width="1.5">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <span class="entry-label">管理后台</span>
+      <span class="entry-desc">PC 端管理控制台，班级/学生/考试/成绩全功能管理</span>
+    </a>
+  </div>
+</div>
+</body>
+</html>
