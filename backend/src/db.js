@@ -95,6 +95,18 @@ db.exec(`
     UNIQUE(student_id, exam_id)
   );
 
+  CREATE TABLE IF NOT EXISTS exam_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id INTEGER NOT NULL,
+    group_name VARCHAR(100) NOT NULL DEFAULT '',
+    semester VARCHAR(20) NOT NULL DEFAULT '',
+    exam_date VARCHAR(20) NOT NULL DEFAULT '',
+    total_score REAL NOT NULL DEFAULT 0,
+    remark VARCHAR(200) NOT NULL DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS banners (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title VARCHAR(100) NOT NULL DEFAULT '',
@@ -169,5 +181,18 @@ try { db.exec('CREATE TABLE IF NOT EXISTS teacher_honors (id INTEGER PRIMARY KEY
 try { db.exec('CREATE TABLE IF NOT EXISTS class_events (id INTEGER PRIMARY KEY AUTOINCREMENT, class_id INTEGER NOT NULL, type VARCHAR(20) NOT NULL DEFAULT \'荣誉\', name VARCHAR(200) NOT NULL, date VARCHAR(50) NOT NULL DEFAULT \'\', photo VARCHAR(500) NOT NULL DEFAULT \'\', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE)'); } catch (_) {}
 try { db.exec('CREATE TABLE IF NOT EXISTS attendances (id INTEGER PRIMARY KEY AUTOINCREMENT, class_id INTEGER NOT NULL, type VARCHAR(20) NOT NULL DEFAULT \'教学考勤\', date VARCHAR(20) NOT NULL DEFAULT \'\', role VARCHAR(50) NOT NULL DEFAULT \'老师\', total INTEGER NOT NULL DEFAULT 0, should_attend INTEGER NOT NULL DEFAULT 0, actual_attend INTEGER NOT NULL DEFAULT 0, leave_count INTEGER NOT NULL DEFAULT 0, late_count INTEGER NOT NULL DEFAULT 0, absence_count INTEGER NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE)'); } catch (_) {}
 try { db.exec('CREATE TABLE IF NOT EXISTS attendance_records (id INTEGER PRIMARY KEY AUTOINCREMENT, attendance_id INTEGER NOT NULL, student_id INTEGER NOT NULL, status VARCHAR(10) NOT NULL DEFAULT \'缺勤\', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (attendance_id) REFERENCES attendances(id) ON DELETE CASCADE, FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE, UNIQUE(attendance_id, student_id))'); } catch (_) {}
+
+// 迁移：为 exams 表添加新字段
+try { db.exec('ALTER TABLE exams ADD COLUMN group_id INTEGER REFERENCES exam_groups(id) ON DELETE SET NULL'); } catch (_) {}
+try { db.exec('ALTER TABLE exams ADD COLUMN exam_name VARCHAR(100) NOT NULL DEFAULT \'\''); } catch (_) {}
+try { db.exec('ALTER TABLE exams ADD COLUMN exam_time VARCHAR(20) NOT NULL DEFAULT \'\''); } catch (_) {}
+try { db.exec('ALTER TABLE exams ADD COLUMN total_score REAL NOT NULL DEFAULT 0'); } catch (_) {}
+try { db.exec('ALTER TABLE exams ADD COLUMN remark VARCHAR(200) NOT NULL DEFAULT \'\''); } catch (_) {}
+
+// 迁移：为 scores 表添加新字段
+try { db.exec('ALTER TABLE scores ADD COLUMN level VARCHAR(10) NOT NULL DEFAULT \'\''); } catch (_) {}
+try { db.exec('ALTER TABLE scores ADD COLUMN single_rank INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+try { db.exec('ALTER TABLE scores ADD COLUMN remark VARCHAR(200) NOT NULL DEFAULT \'\''); } catch (_) {}
+try { db.exec('ALTER TABLE scores ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP'); } catch (_) {}
 
 module.exports = db;
