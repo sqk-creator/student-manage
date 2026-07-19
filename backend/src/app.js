@@ -8,6 +8,8 @@ const authRoutes = require('./routes/auth');
 const classRoutes = require('./routes/classes');
 const studentRoutes = require('./routes/students');
 const examRoutes = require('./routes/exams');
+const examGroupRoutes = require('./routes/exam-groups');
+const scoreRoutes = require('./routes/scores');
 const bannerRoutes = require('./routes/banners');
 const teacherProfileRoutes = require('./routes/teacher-profiles');
 const teacherHonorsRoutes = require('./routes/teacher-honors');
@@ -82,9 +84,9 @@ app.get('/api/public/scores', (req, res) => {
   const { student_id } = req.query;
   if (!student_id) return res.json([]);
   const scores = db.prepare(`
-    SELECT sc.*, e.name as exam_name, e.subject
+    SELECT sc.*, e.exam_name, e.exam_name as name, e.subject
     FROM scores sc JOIN exams e ON sc.exam_id = e.id
-    WHERE sc.student_id = ? ORDER BY e.exam_date DESC
+    WHERE sc.student_id = ? ORDER BY e.exam_time DESC, e.exam_date DESC
   `).all(student_id);
   res.json(scores);
 });
@@ -100,11 +102,13 @@ app.get('/api/public/classes/:id/events', (req, res) => {
 });
 app.get('/api/public/attendances', (req, res) => {
   const db = require('./db');
-  const { class_id } = req.query;
-  let sql = 'SELECT a.*, c.name as class_name FROM attendances a JOIN classes c ON a.class_id = c.id';
+  const { class_id, date, start_date, end_date } = req.query;
+  let sql = 'SELECT a.*, c.name as class_name FROM attendances a JOIN classes c ON a.class_id = c.id WHERE 1=1';
   const params = [];
-  if (class_id) { sql += ' WHERE a.class_id = ?'; params.push(class_id); }
-  sql += ' ORDER BY a.date DESC';
+  if (class_id) { sql += ' AND a.class_id = ?'; params.push(class_id); }
+  if (date) { sql += ' AND a.date = ?'; params.push(date); }
+  if (start_date && end_date) { sql += ' AND a.date BETWEEN ? AND ?'; params.push(start_date, end_date); }
+  sql += ' ORDER BY a.date DESC, a.created_at DESC';
   res.json(db.prepare(sql).all(...params));
 });
 app.get('/api/public/attendances/:id', (req, res) => {
@@ -199,6 +203,79 @@ app.get('/api/public/attendance-cal-status', (req, res) => {
   }
   res.json(result);
 });
+app.get('/api/public/students/:id/attendance-stats', (req, res) => {
+  const db = require('./db');
+  const { id } = req.params;
+  const { month } = req.query;
+
+  const s = db.prepare('SELECT id, class_id FROM students WHERE id = ?').get(id);
+  if (!s) return res.status(404).json({ error: '学生不存在' });
+
+  const now = new Date();
+  const year = month ? parseInt(month.substring(0, 4)) : now.getFullYear();
+  const mon = month ? parseInt(month.substring(5, 7)) : (now.getMonth() + 1);
+  const startDate = `${year}-${String(mon).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, mon, 0).getDate();
+  const endDate = `${year}-${String(mon).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const stats = db.prepare(`
+    SELECT
+      COUNT(CASE WHEN a.type != '出操考勤' THEN 1 END) as should_attend,
+      COUNT(CASE WHEN a.type != '出操考勤' AND ar.status NOT IN ('缺勤','请假') THEN 1 END) as actual_attend,
+      COUNT(CASE WHEN a.type = '出操考勤' THEN 1 END) as should_exercise,
+      COUNT(CASE WHEN a.type = '出操考勤' AND ar.status NOT IN ('缺勤','请假') THEN 1 END) as actual_exercise,
+      COUNT(CASE WHEN a.type != '出操考勤' AND ar.status = '请假' THEN 1 END) as leave_count,
+      COUNT(CASE WHEN a.type != '出操考勤' AND ar.status = '迟到' THEN 1 END) as late_count,
+      COUNT(CASE WHEN a.type != '出操考勤' AND ar.status = '缺勤' THEN 1 END) as absence_count
+    FROM attendance_records ar
+    JOIN attendances a ON ar.attendance_id = a.id
+    WHERE ar.student_id = ? AND a.date BETWEEN ? AND ?
+  `).get(id, startDate, endDate);
+
+  const attendanceRate = stats.should_attend > 0
+    ? Math.round((stats.actual_attend / stats.should_attend) * 100) : 0;
+  const exerciseRate = stats.should_exercise > 0
+    ? Math.round((stats.actual_exercise / stats.should_exercise) * 100) : 0;
+
+  let todayStatus = '今日暂未出勤';
+  const todayRecord = db.prepare(`
+    SELECT ar.status FROM attendance_records ar
+    JOIN attendances a ON ar.attendance_id = a.id
+    WHERE ar.student_id = ? AND a.date = ?
+  `).get(id, today);
+
+  if (todayRecord) {
+    todayStatus = todayRecord.status === '缺勤' || todayRecord.status === '请假' || todayRecord.status === '迟到'
+      ? '今日缺勤' : '今日已出勤';
+  } else {
+    const todayAttendance = db.prepare(`
+      SELECT ar.id FROM attendance_records ar
+      JOIN attendances a ON ar.attendance_id = a.id
+      WHERE a.class_id = ? AND a.date = ?
+      LIMIT 1
+    `).get(s.class_id, today);
+    if (todayAttendance) {
+      todayStatus = '今日已出勤';
+    }
+  }
+
+  res.json({
+    student_id: parseInt(id),
+    month: `${year}-${String(mon).padStart(2, '0')}`,
+    should_attend: stats.should_attend,
+    actual_attend: stats.actual_attend,
+    should_exercise: stats.should_exercise,
+    actual_exercise: stats.actual_exercise,
+    leave_count: stats.leave_count,
+    late_count: stats.late_count,
+    absence_count: stats.absence_count,
+    attendance_rate: attendanceRate,
+    exercise_rate: exerciseRate,
+    today_status: todayStatus
+  });
+});
 app.use('/api/banners', authMiddleware, bannerRoutes);
 app.use('/api/classes', authMiddleware, classRoutes);
 
@@ -214,6 +291,8 @@ app.post('/api/students/upload-photo', authMiddleware, photoUpload.single('file'
 
 app.use('/api/students', authMiddleware, studentRoutes);
 app.use('/api/exams', authMiddleware, examRoutes);
+app.use('/api/exam-groups', authMiddleware, examGroupRoutes);
+app.use('/api/scores', authMiddleware, scoreRoutes);
 app.use('/api/teacher-profiles', authMiddleware, teacherProfileRoutes);
 app.use('/api/teacher-profiles/:teacherId/honors', authMiddleware, teacherHonorsRoutes);
 app.use('/api/classes/:classId/events', authMiddleware, classEventsRoutes);
