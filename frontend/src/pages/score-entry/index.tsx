@@ -38,6 +38,11 @@ export default function ScoreEntry() {
 
   return (
     <div>
+      <div style={{ marginBottom: 16, fontSize: 13, color: '#86909C' }}>
+        <a href="/admin/score-exam-list" style={{ color: '#14A89A', textDecoration: 'none' }}>考试管理</a>
+        <span style={{ margin: '0 6px' }}>&gt;</span>
+        <span style={{ color: '#1D2129' }}>成绩录入</span>
+      </div>
       <div className="card">
         <div className="card-title">{examName} - 成绩录入</div>
         {students.length === 0 ? <div className="empty-state">该班级暂无学生</div> : (

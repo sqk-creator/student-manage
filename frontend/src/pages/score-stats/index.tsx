@@ -32,6 +32,11 @@ export default function ScoreStats() {
 
   return (
     <div>
+      <div style={{ marginBottom: 16, fontSize: 13, color: '#86909C' }}>
+        <a href="/admin/score-exam-list" style={{ color: '#14A89A', textDecoration: 'none' }}>考试管理</a>
+        <span style={{ margin: '0 6px' }}>&gt;</span>
+        <span style={{ color: '#1D2129' }}>成绩统计</span>
+      </div>
       <div style={{marginBottom:20}}>
         <span style={{fontSize:20,fontWeight:700,color:'#262626'}}>{examName || exam?.name}</span>
         {exam?.subject && <span className="tag tag-blue" style={{marginLeft:12}}>{exam.subject}</span>}

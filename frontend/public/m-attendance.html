@@ -4,49 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>班级考勤</title>
+<link rel="stylesheet" href="mobile-header.css">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{
-  background:#FFFFFF;
-  font-family:system-ui,-apple-system,sans-serif;
-  display:flex;justify-content:center;
-  min-height:100vh;
-}
-.app{
-  width:100%;max-width:430px;
-  background:#F1F8F7;
-  min-height:100vh;
-  position:relative;overflow-x:hidden;
-  padding-bottom:120px;
-}
-.page-header{
-  position:relative;
-  padding:14px 16px 0;background:#FFFFFF;
-}
-.header-top{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:6px;
-}
-.back-btn{
-  background:none;border:none;cursor:pointer;
-  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
-  border-radius:50%;
-}
-.back-arrow{font-size:22px;color:#1D2129;line-height:1;}
-.header-capsule{
-  width:70px;height:28px;border:1px solid #E5E6EB;border-radius:14px;
-  display:flex;align-items:center;flex-shrink:0;
-}
-.capsule-dot{width:8px;height:8px;border-radius:50%;background:#C9CDD4;margin-left:12px;}
-.capsule-line{width:1px;height:14px;background:#E5E6EB;margin:0 10px;}
-.capsule-circle{width:14px;height:14px;border-radius:50%;border:1.5px solid #C9CDD4;margin-right:8px;}
-
-.header-title-row{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 0 12px;
-}
-.page-title{font-size:28px;font-weight:900;color:#1D2129;line-height:1.2;margin-left:10px;}
-.header-class-picker select{
+.header-right-slot select{
   border:1px solid #E5E6EB;border-radius:6px;
   padding:6px 28px 6px 10px;font-size:13px;color:#1D2129;
   background:#F7F8FA;outline:none;cursor:pointer;
@@ -54,28 +14,6 @@ body{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2386909C'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;
 }
-
-/* Main Tabs - underline style */
-.main-tabs{
-  display:flex;padding:0 16px;
-  background:#fff;
-}
-.main-tab{
-  flex:1;padding:12px 10px;text-align:center;
-  font-size:16px;font-weight:400;cursor:pointer;
-  border:none;background:transparent;
-  color:#86909C;position:relative;
-}
-.main-tab.active{
-  color:#1D2129;font-weight:700;
-}
-.main-tab.active::after{
-  content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
-  width:24px;height:3px;border-radius:2px;
-  background:#14A89A;
-}
-
-/* Sub Tabs - capsule centered */
 .sub-tabs{
   display:flex;justify-content:center;margin:16px 16px 0;
 }
@@ -359,12 +297,12 @@ body{
 <body>
 <div class="app">
 
-  <div class="page-header">
+  <div class="page-header mode-page">
     <div class="header-top">
       <button class="back-btn" onclick="history.back()">
         <span class="back-arrow">&#8249;</span>
       </button>
-      <div class="header-capsule">
+      <div class="capsule">
         <span class="capsule-dot"></span>
         <span class="capsule-line"></span>
         <span class="capsule-circle"></span>
@@ -372,15 +310,14 @@ body{
     </div>
     <div class="header-title-row">
       <span class="page-title">班级考勤</span>
-      <div class="header-class-picker" id="classInfo">
+      <div class="header-right-slot" id="classInfo">
         <select id="classSelect" onchange="onClassChange(this.value)" style="border:1px solid #E5E6EB;border-radius:6px;padding:4px 8px;font-size:13px;color:#1D2129;outline:none;"><option value="">请选择</option></select>
       </div>
     </div>
-  </div>
-
-  <div class="main-tabs">
-    <button class="main-tab active" id="mainTabCreate" onclick="switchMainTab('create')">发起考勤</button>
-    <button class="main-tab" id="mainTabRecord" onclick="switchMainTab('record')">考勤记录</button>
+    <div class="main-tabs">
+      <button class="main-tab active" id="mainTabCreate" onclick="switchMainTab('create')">发起考勤</button>
+      <button class="main-tab" id="mainTabRecord" onclick="switchMainTab('record')">考勤记录</button>
+    </div>
   </div>
 
   <!-- ===== 发起考勤 Tab ===== -->

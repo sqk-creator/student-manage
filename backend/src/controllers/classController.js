@@ -38,31 +38,36 @@ exports.get = (req, res) => {
 };
 
 exports.create = (req, res) => {
-  const { name, grade, type } = req.body;
+  const { name, grade, type, grade_id } = req.body;
   if (!name || !name.trim()) return res.status(422).json({ error: '班级名称为必填项' });
 
   const existing = db.prepare('SELECT id FROM classes WHERE name = ? AND teacher_id = ?').get(name.trim(), req.teacherId);
   if (existing) return res.status(409).json({ error: '班级名称已存在' });
 
-  // 确保教师存在
   const teacher = db.prepare('SELECT id FROM teachers WHERE id = ?').get(req.teacherId);
   if (!teacher) {
     db.prepare('INSERT INTO teachers (id, openid, name) VALUES (?, ?, ?)').run(req.teacherId, 'wx_' + req.teacherId, '');
   }
 
-  const result = db.prepare('INSERT INTO classes (name, grade, type, teacher_id) VALUES (?, ?, ?, ?)')
-    .run(name.trim(), grade || '', type || '', req.teacherId);
+  const result = db.prepare('INSERT INTO classes (name, grade, type, grade_id, teacher_id) VALUES (?, ?, ?, ?, ?)')
+    .run(name.trim(), grade || '', type || '', grade_id || null, req.teacherId);
   const cls = db.prepare('SELECT * FROM classes WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(cls);
 };
 
 exports.update = (req, res) => {
-  const { name, grade, type } = req.body;
+  const { name, grade, type, grade_id } = req.body;
   const cls = db.prepare('SELECT * FROM classes WHERE id = ? AND teacher_id = ?').get(req.params.id, req.teacherId);
   if (!cls) return res.status(404).json({ error: '班级不存在' });
 
-  db.prepare('UPDATE classes SET name = ?, grade = ?, type = ? WHERE id = ?')
-    .run(name || cls.name, grade !== undefined ? grade : cls.grade, type !== undefined ? type : cls.type, req.params.id);
+  db.prepare('UPDATE classes SET name = ?, grade = ?, type = ?, grade_id = ? WHERE id = ?')
+    .run(
+      name || cls.name,
+      grade !== undefined ? grade : cls.grade,
+      type !== undefined ? type : cls.type,
+      grade_id !== undefined ? grade_id : cls.grade_id,
+      req.params.id
+    );
   const updated = db.prepare('SELECT * FROM classes WHERE id = ?').get(req.params.id);
   res.json(updated);
 };

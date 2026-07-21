@@ -1,0 +1,116 @@
+/*
+ * Mobile PageHeader - Shared header styles for mobile HTML pages
+ * Primary color: #14A89A (mobile app teal theme)
+ *
+ * Two layout modes:
+ *   mode="nav"  - Compact single-row: back arrow + centered title + capsule on same line
+ *   mode="page" - Multi-row: back arrow top row, large title + right slot below, optional tabs
+ *
+ * Usage:
+ *   <!-- Nav mode (student detail, simple pages) -->
+ *   <div class="page-header mode-nav">
+ *     <div class="header-top">
+ *       <button class="back-btn"><span class="back-arrow">&#8249;</span></button>
+ *       <span class="header-label">Page Title</span>
+ *       <div class="capsule">...</div>
+ *     </div>
+ *   </div>
+ *
+ *   <!-- Page mode (attendance, class students) -->
+ *   <div class="page-header mode-page">
+ *     <div class="header-top">
+ *       <button class="back-btn"><span class="back-arrow">&#8249;</span></button>
+ *       <span class="header-label">Sub Title</span>
+ *       <div class="capsule">...</div>
+ *     </div>
+ *     <div class="header-title-row">
+ *       <span class="page-title">Main Title</span>
+ *       <div class="header-right-slot">...</div>
+ *     </div>
+ *     <div class="main-tabs">...</div>
+ *   </div>
+ */
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#F1F8F7;
+  font-family:system-ui,-apple-system,sans-serif;
+  display:flex;justify-content:center;
+  min-height:100vh;
+}
+.app{
+  width:100%;max-width:430px;
+  background:#F1F8F7;
+  min-height:100vh;
+  position:relative;overflow-x:hidden;
+  padding-bottom:120px;
+}
+
+/* Page Header - sticky white card */
+.page-header{
+  position:sticky;top:0;z-index:100;
+  background:#FFFFFF;
+  padding:14px 16px 0;
+}
+
+/* Top row: back arrow + optional center label + capsule */
+.header-top{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;position:relative;
+}
+.back-btn{
+  background:none;border:none;cursor:pointer;
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;flex-shrink:0;
+  margin-left:-6px;
+}
+.back-arrow{font-size:22px;color:#1D2129;line-height:1;}
+.header-label{
+  font-size:16px;font-weight:500;color:#1D2129;
+  position:absolute;left:50%;transform:translateX(-50%);
+}
+.capsule{
+  width:70px;height:28px;border:1px solid #E5E6EB;border-radius:14px;
+  display:flex;align-items:center;flex-shrink:0;
+}
+.capsule-dot{width:8px;height:8px;border-radius:50%;background:#C9CDD4;margin-left:12px;}
+.capsule-line{width:1px;height:14px;background:#E5E6EB;margin:0 10px;}
+.capsule-circle{width:14px;height:14px;border-radius:50%;border:1.5px solid #C9CDD4;margin-right:8px;}
+
+/* Title row: page title + right slot (page mode only) */
+.header-title-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 0 12px;
+}
+.page-title{
+  font-size:28px;font-weight:900;color:#1D2129;line-height:1.2;
+  margin-left:10px;
+}
+.header-right-slot{flex-shrink:0;}
+
+/* Main Tabs - underline style (page mode only) */
+.main-tabs{display:flex;}
+.main-tab{
+  flex:1;padding:12px 10px;text-align:center;
+  font-size:16px;font-weight:400;cursor:pointer;
+  border:none;background:transparent;
+  color:#86909C;position:relative;
+}
+.main-tab.active{color:#1D2129;font-weight:700;}
+.main-tab.active::after{
+  content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:24px;height:3px;border-radius:2px;
+  background:#14A89A;
+}
+
+/* ---- nav mode: compact single-row ---- */
+.page-header.mode-nav{position:relative;}
+.page-header.mode-nav .header-top{margin-bottom:0;padding:0 0 14px;}
+.page-header.mode-nav .header-label{font-size:17px;font-weight:600;}
+.page-header.mode-nav .main-tabs{display:none;}
+
+/* ---- page mode: multi-row with large title (default) ---- */
+.page-header.mode-page .header-top{margin-bottom:8px;}
+.page-header.mode-page .header-title-row{display:flex;}
+.page-header.mode-page .main-tabs{display:flex;}
+
+@media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}

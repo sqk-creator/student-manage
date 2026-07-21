@@ -15,6 +15,8 @@ const teacherProfileRoutes = require('./routes/teacher-profiles');
 const teacherHonorsRoutes = require('./routes/teacher-honors');
 const classEventsRoutes = require('./routes/class-events');
 const attendanceRoutes = require('./routes/attendances');
+const studentCommentRoutes = require('./routes/student-comments');
+const gradeRoutes = require('./routes/grades');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -276,6 +278,14 @@ app.get('/api/public/students/:id/attendance-stats', (req, res) => {
     today_status: todayStatus
   });
 });
+app.get('/api/public/grades', (req, res) => {
+  const db = require('./db');
+  res.json(db.prepare('SELECT * FROM grades WHERE status = 1 ORDER BY sort ASC').all());
+});
+app.get('/api/public/grade/list', (req, res) => {
+  const db = require('./db');
+  res.json(db.prepare('SELECT * FROM grades WHERE status = 1 ORDER BY sort ASC').all());
+});
 app.use('/api/banners', authMiddleware, bannerRoutes);
 app.use('/api/classes', authMiddleware, classRoutes);
 
@@ -297,6 +307,8 @@ app.use('/api/teacher-profiles', authMiddleware, teacherProfileRoutes);
 app.use('/api/teacher-profiles/:teacherId/honors', authMiddleware, teacherHonorsRoutes);
 app.use('/api/classes/:classId/events', authMiddleware, classEventsRoutes);
 app.use('/api/attendances', authMiddleware, attendanceRoutes);
+app.use('/api/students/:studentId/comments', authMiddleware, studentCommentRoutes);
+app.use('/api/grades', authMiddleware, gradeRoutes);
 
 app.use((err, req, res, _next) => {
   console.error(err);

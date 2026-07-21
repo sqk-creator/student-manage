@@ -18,9 +18,11 @@ exports.list = (req, res) => {
 
   if (student_id) {
     const scores = db.prepare(`
-      SELECT sc.*, e.subject, e.exam_name, e.total_score as exam_total, s.name as student_name, s.student_no
+      SELECT sc.*, e.subject, e.exam_name, e.exam_time, e.exam_date, e.total_score as total_score,
+        eg.semester, eg.group_name, s.name as student_name, s.student_no
       FROM scores sc
       JOIN exams e ON sc.exam_id = e.id
+      LEFT JOIN exam_groups eg ON e.group_id = eg.id
       JOIN students s ON sc.student_id = s.id
       WHERE sc.student_id = ?
       ORDER BY e.exam_time DESC, e.exam_date DESC

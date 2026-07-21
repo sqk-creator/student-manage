@@ -13,8 +13,20 @@ exports.list = (req, res) => {
   const { class_id, group_id } = req.query;
   let sql = 'SELECT * FROM exams WHERE 1=1';
   const params = [];
-  if (class_id) { sql += ' AND class_id = ?'; params.push(class_id); }
-  if (group_id) { sql += ' AND group_id = ?'; params.push(group_id); }
+  if (class_id) {
+    const cls = db.prepare('SELECT grade_id FROM classes WHERE id = ?').get(class_id);
+    if (cls && cls.grade_id) {
+      sql += ' AND (e.class_id = ? OR e.group_id IN (SELECT id FROM exam_groups WHERE scope_type = \'grade\' AND grade_id = ?))';
+      params.push(class_id, cls.grade_id);
+    } else {
+      sql += ' AND class_id = ?';
+      params.push(class_id);
+    }
+    sql = sql.replace('SELECT ', 'SELECT e.*, ');
+    sql = sql.replace('FROM exams', 'FROM exams e');
+  } else {
+    if (group_id) { sql += ' AND group_id = ?'; params.push(group_id); }
+  }
   sql += ' ORDER BY exam_time DESC, exam_date DESC';
   res.json(db.prepare(sql).all(...params));
 };

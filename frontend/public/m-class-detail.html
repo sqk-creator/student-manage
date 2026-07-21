@@ -258,7 +258,7 @@ body{
         <div class="func-info"><div class="func-name">班级学生</div><div class="func-desc" id="studentDesc">学生名单及档案</div></div>
         <div class="func-arrow">&#8250;</div>
       </div>
-      <div class="func-card" onclick="location.href='m-class-teachers.html?id='+classId">
+      <div class="func-card" onclick="location.href='m-class-students.html?id='+classId+'&tab=teachers'">
         <div class="func-info"><div class="func-name">班级教师</div><div class="func-desc" id="teacherDesc">教师名单及档案</div></div>
         <div class="func-arrow">&#8250;</div>
       </div>
@@ -291,8 +291,8 @@ body{
     <div class="att-card">
       <div class="att-row">
         <div class="att-item"><div class="att-val" id="attStudents">-<span class="att-unit">人</span></div><div class="att-label">学生人数</div></div>
-        <div class="att-item"><div class="att-val" id="attRate">-<span class="att-unit">%</span></div><div class="att-label">日出勤率</div></div>
-        <div class="att-item"><div class="att-val" id="attExerciseRate">-<span class="att-unit">%</span></div><div class="att-label">日出操率</div></div>
+        <div class="att-item"><div class="att-val" id="attRate">暂无</div><div class="att-label">今日出勤</div></div>
+        <div class="att-item"><div class="att-val" id="attExerciseRate">暂无</div><div class="att-label">今日出操</div></div>
         <div class="att-item"><div class="att-val" id="attLeave">-<span class="att-unit">人</span></div><div class="att-label">今日请假</div></div>
       </div>
       <div class="att-btns">
@@ -368,8 +368,8 @@ var studentCount=0;
     }
   }).catch(function(){});
   fetch('/api/public/attendance-summary?class_id='+classId).then(function(r){return r.json();}).then(function(s){
-    document.getElementById('attRate').innerHTML=(s.has_teaching?s.teach_rate:'-')+'<span class="att-unit">%</span>';
-    document.getElementById('attExerciseRate').innerHTML=(s.has_exercise?s.exer_rate:'-')+'<span class="att-unit">%</span>';
+    document.getElementById('attRate').innerHTML=s.has_teaching?(s.teach_rate+'<span class="att-unit">%</span>'):'暂无';
+    document.getElementById('attExerciseRate').innerHTML=s.has_exercise?(s.exer_rate+'<span class="att-unit">%</span>'):'暂无';
     document.getElementById('attLeave').innerHTML=s.leave_total+'<span class="att-unit">人</span>';
   }).catch(function(){});
   fetch('/api/public/classes/'+classId+'/events').then(function(r){return r.json();}).then(function(events){

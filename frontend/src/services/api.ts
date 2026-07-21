@@ -55,10 +55,10 @@ export const api = {
     return request('/classes');
   },
 
-  createClass(name: string, grade?: string, type?: string) {
+  createClass(name: string, grade?: string, type?: string, grade_id?: number) {
     return request('/classes', {
       method: 'POST',
-      body: JSON.stringify({ name, grade, type })
+      body: JSON.stringify({ name, grade, type, grade_id })
     });
   },
 
@@ -93,6 +93,23 @@ export const api = {
 
   deleteClass(id: number) {
     return request(`/classes/${id}`, { method: 'DELETE' });
+  },
+
+  getGrades(params?: { status?: number }) {
+    const qs = params?.status !== undefined ? `?status=${params.status}` : '';
+    return request(`/grades${qs}`);
+  },
+
+  createGrade(data: { grade_name: string; sort?: number }) {
+    return request('/grades', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  updateGrade(id: number, data: { grade_name?: string; sort?: number; status?: number }) {
+    return request(`/grades/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  deleteGrade(id: number) {
+    return request(`/grades/${id}`, { method: 'DELETE' });
   },
 
   getStudents(classId: number) {
@@ -137,6 +154,67 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data)
     });
+  },
+
+  getExamsByQuery(params?: { class_id?: number; group_id?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.class_id) qs.set('class_id', String(params.class_id));
+    if (params?.group_id) qs.set('group_id', String(params.group_id));
+    const q = qs.toString();
+    return request(`/exams${q ? '?' + q : ''}`);
+  },
+
+  createExamByQuery(data: any) {
+    return request('/exams', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  updateExam(id: number, data: any) {
+    return request(`/exams/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  deleteExam(id: number) {
+    return request(`/exams/${id}`, { method: 'DELETE' });
+  },
+
+  getExamGroups(params?: { class_id?: number; grade_id?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.class_id) qs.set('class_id', String(params.class_id));
+    if (params?.grade_id) qs.set('grade_id', String(params.grade_id));
+    const q = qs.toString();
+    return request(`/exam-groups${q ? '?' + q : ''}`);
+  },
+
+  getExamGroup(id: number) {
+    return request(`/exam-groups/${id}`);
+  },
+
+  createExamGroup(data: any) {
+    return request('/exam-groups', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  updateExamGroup(id: number, data: any) {
+    return request(`/exam-groups/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  deleteExamGroup(id: number) {
+    return request(`/exam-groups/${id}`, { method: 'DELETE' });
+  },
+
+  getExamGroupStats(id: number) {
+    return request(`/exam-groups/${id}/stats`);
+  },
+
+  getScores(params?: { student_id?: number; exam_id?: number; group_id?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.student_id) qs.set('student_id', String(params.student_id));
+    if (params?.exam_id) qs.set('exam_id', String(params.exam_id));
+    if (params?.group_id) qs.set('group_id', String(params.group_id));
+    const q = qs.toString();
+    return request(`/scores${q ? '?' + q : ''}`);
+  },
+
+  batchSaveScores(data: { exam_id: number; scores: { student_id: number; score: number }[] }) {
+    return request('/scores/batch', { method: 'POST', body: JSON.stringify(data) });
   },
 
   getExamScores(examId: number) {
@@ -300,5 +378,17 @@ export const api = {
 
   deleteAttendance(id: number) {
     return request(`/attendances/${id}`, { method: 'DELETE' });
+  },
+
+  getStudentComments(studentId: number) {
+    return request(`/students/${studentId}/comments`);
+  },
+
+  createStudentComment(studentId: number, data: { teacher_name?: string; comment: string; semester?: string }) {
+    return request(`/students/${studentId}/comments`, { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  deleteStudentComment(studentId: number, id: number) {
+    return request(`/students/${studentId}/comments/${id}`, { method: 'DELETE' });
   }
 };

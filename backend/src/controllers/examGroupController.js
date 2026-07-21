@@ -1,28 +1,32 @@
 const db = require('../db');
 
 exports.list = (req, res) => {
-  const { class_id } = req.query;
-  let sql = 'SELECT eg.*, c.name as class_name FROM exam_groups eg JOIN classes c ON eg.class_id = c.id WHERE 1=1';
+  const { class_id, grade_id } = req.query;
+  let sql = 'SELECT eg.*, c.name as class_name, g.grade_name FROM exam_groups eg LEFT JOIN classes c ON eg.class_id = c.id LEFT JOIN grades g ON eg.grade_id = g.id WHERE 1=1';
   const params = [];
-  if (class_id) { sql += ' AND eg.class_id = ?'; params.push(class_id); }
+  if (class_id) { sql += ' AND (eg.class_id = ? OR (eg.scope_type = \'grade\' AND eg.grade_id = (SELECT grade_id FROM classes WHERE id = ?)))'; params.push(class_id, class_id); }
+  if (grade_id) { sql += ' AND eg.grade_id = ?'; params.push(grade_id); }
   sql += ' ORDER BY eg.exam_date DESC, eg.created_at DESC';
   res.json(db.prepare(sql).all(...params));
 };
 
 exports.getById = (req, res) => {
   const group = db.prepare(
-    'SELECT eg.*, c.name as class_name FROM exam_groups eg JOIN classes c ON eg.class_id = c.id WHERE eg.id = ?'
+    'SELECT eg.*, c.name as class_name, g.grade_name FROM exam_groups eg LEFT JOIN classes c ON eg.class_id = c.id LEFT JOIN grades g ON eg.grade_id = g.id WHERE eg.id = ?'
   ).get(req.params.id);
   if (!group) return res.status(404).json({ error: '考试批次不存在' });
   res.json(group);
 };
 
 exports.create = (req, res) => {
-  const { class_id, group_name, semester, exam_date, total_score, remark } = req.body;
-  if (!class_id || !group_name || !group_name.trim()) return res.status(422).json({ error: '班级和批次名称为必填项' });
+  const { class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark } = req.body;
+  if (!group_name || !group_name.trim()) return res.status(422).json({ error: '批次名称为必填项' });
+  const scope = scope_type || 'class';
+  if (scope === 'grade' && !grade_id) return res.status(422).json({ error: '年级模式下年级为必填项' });
+  if (scope === 'class' && !class_id) return res.status(422).json({ error: '班级模式下班级为必填项' });
   const result = db.prepare(
-    'INSERT INTO exam_groups (class_id, group_name, semester, exam_date, total_score, remark) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(class_id, group_name.trim(), semester || '', exam_date || '', total_score || 0, remark || '');
+    'INSERT INTO exam_groups (class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(class_id || 0, grade_id || null, scope, group_name.trim(), semester || '', exam_date || '', total_score || 0, remark || '');
   res.status(201).json(db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(result.lastInsertRowid));
 };
 
@@ -30,10 +34,13 @@ exports.update = (req, res) => {
   const { id } = req.params;
   const existing = db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: '考试批次不存在' });
-  const { group_name, semester, exam_date, total_score, remark } = req.body;
+  const { class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark } = req.body;
   db.prepare(
-    'UPDATE exam_groups SET group_name = ?, semester = ?, exam_date = ?, total_score = ?, remark = ? WHERE id = ?'
+    'UPDATE exam_groups SET class_id = ?, grade_id = ?, scope_type = ?, group_name = ?, semester = ?, exam_date = ?, total_score = ?, remark = ? WHERE id = ?'
   ).run(
+    class_id !== undefined ? class_id : existing.class_id,
+    grade_id !== undefined ? grade_id : existing.grade_id,
+    scope_type || existing.scope_type,
     group_name || existing.group_name,
     semester !== undefined ? semester : existing.semester,
     exam_date || existing.exam_date,

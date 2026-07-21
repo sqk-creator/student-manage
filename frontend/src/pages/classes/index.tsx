@@ -3,27 +3,39 @@ import { api } from '../../services/api';
 
 export default function Classes() {
   const [classes, setClasses] = useState<any[]>([]);
+  const [grades, setGrades] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
   const [grade, setGrade] = useState('');
+  const [gradeId, setGradeId] = useState<number>(0);
   const [type, setType] = useState('');
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState(0);
   const [editName, setEditName] = useState('');
   const [editGrade, setEditGrade] = useState('');
+  const [editGradeId, setEditGradeId] = useState<number>(0);
   const [editType, setEditType] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadClasses(); }, []);
+  useEffect(() => { loadAll(); }, []);
 
-  const loadClasses = async () => {
-    try { setClasses(await api.getClasses()); } catch {} finally { setLoading(false); }
+  const loadAll = async () => {
+    try {
+      const [cls, grds] = await Promise.all([api.getClasses(), api.getGrades()]);
+      setClasses(cls); setGrades(grds);
+    } catch {} finally { setLoading(false); }
   };
+
+  const loadClasses = async () => { setClasses(await api.getClasses()); };
 
   const handleCreate = async () => {
     if (!name.trim()) return alert('请输入班级名称');
-    try { await api.createClass(name.trim(), grade || undefined, type || undefined); setName(''); setGrade(''); setType(''); setShowAdd(false); loadClasses(); }
-    catch (e: any) { alert(e.message); }
+    try {
+      const gid = gradeId || null;
+      const gname = gradeId ? grades.find(g => g.id === gradeId)?.grade_name || grade : grade;
+      await api.createClass(name.trim(), gname || undefined, type || undefined, gid || undefined);
+      setName(''); setGrade(''); setGradeId(0); setType(''); setShowAdd(false); loadClasses();
+    } catch (e: any) { alert(e.message); }
   };
 
   const handleDelete = async (id: number) => {
@@ -32,12 +44,13 @@ export default function Classes() {
   };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setEditName(c.name); setEditGrade(c.grade || ''); setEditType(c.type || ''); setShowEdit(true);
+    setEditId(c.id); setEditName(c.name); setEditGrade(c.grade || ''); setEditGradeId(c.grade_id || 0); setEditType(c.type || ''); setShowEdit(true);
   };
 
   const handleUpdate = async () => {
     if (!editName.trim()) return alert('请输入班级名称');
-    try { await api.updateClass(editId, { name: editName.trim(), grade: editGrade, type: editType }); setShowEdit(false); loadClasses(); }
+    const data: any = { name: editName.trim(), grade: editGrade, type: editType, grade_id: editGradeId || null };
+    try { await api.updateClass(editId, data); setShowEdit(false); loadClasses(); }
     catch (e: any) { alert(e.message); }
   };
 
@@ -65,11 +78,16 @@ export default function Classes() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">年级</label>
-                <select className="form-select" value={grade} onChange={e => setGrade(e.target.value)}>
+                <select className="form-select" value={gradeId || (gradeId ? '' : grade)}
+                  onChange={e => {
+                    const v = e.target.value;
+                    if (v.startsWith('g_')) setGradeId(Number(v.substring(2)));
+                    else { setGradeId(0); setGrade(v); }
+                  }}>
                   <option value="">请选择</option>
-                  <option value="高一">高一</option>
-                  <option value="高二">高二</option>
-                  <option value="高三">高三</option>
+                  {grades.map(g => (
+                    <option key={g.id} value={`g_${g.id}`}>{g.grade_name}</option>
+                  ))}
                 </select>
               </div>
               <div className="form-group">
@@ -98,15 +116,20 @@ export default function Classes() {
               <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} />
             </div>
             <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">年级</label>
-                <select className="form-select" value={editGrade} onChange={e => setEditGrade(e.target.value)}>
-                  <option value="">请选择</option>
-                  <option value="高一">高一</option>
-                  <option value="高二">高二</option>
-                  <option value="高三">高三</option>
-                </select>
-              </div>
+                <div className="form-group">
+                  <label className="form-label">年级</label>
+                  <select className="form-select" value={editGradeId ? `g_${editGradeId}` : editGrade}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v.startsWith('g_')) setEditGradeId(Number(v.substring(2)));
+                      else { setEditGradeId(0); setEditGrade(v); }
+                    }}>
+                    <option value="">请选择</option>
+                    {grades.map(g => (
+                      <option key={g.id} value={`g_${g.id}`}>{g.grade_name}</option>
+                    ))}
+                  </select>
+                </div>
               <div className="form-group">
                 <label className="form-label">类型</label>
                 <select className="form-select" value={editType} onChange={e => setEditType(e.target.value)}>

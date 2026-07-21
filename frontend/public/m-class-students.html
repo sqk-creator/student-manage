@@ -3,79 +3,142 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>班级学生</title>
+<title>班级人员</title>
+<link rel="stylesheet" href="mobile-header.css">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{
+html{overflow-y:scroll;}
+.class-type-row{
+  display:flex;align-items:center;gap:6px;cursor:pointer;
+  flex-shrink:0;
+}
+.class-type-tag{
+  padding:4px 10px;font-size:12px;font-weight:500;
+  background:#E8F4F2;color:#14A89A;border-radius:10px;
+  white-space:nowrap;
+}
+.class-type-arrow{font-size:12px;color:#86909C;}
+
+/* Card 2: Search + List */
+.list-card{
+  margin-top:10px;
   background:#FFFFFF;
-  font-family:system-ui,-apple-system,sans-serif;
-  display:flex;justify-content:center;
-  min-height:100vh;
 }
-.app{
-  width:100%;max-width:430px;
-  background:#F1F8F7;
-  min-height:100vh;
-  position:relative;overflow-x:hidden;
-  padding-bottom:80px;
-}
-.page-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 16px;background:#FFFFFF;
-  border-bottom:1px solid #E5E6EB;
-}
-.back-btn{
-  display:flex;align-items:center;gap:4px;
-  background:none;border:none;cursor:pointer;padding:6px 8px;
-  color:#1D2129;font-size:14px;border-radius:6px;
-}
-.back-arrow{font-size:18px;color:#4E5969;}
-.page-title{font-size:18px;font-weight:700;color:#1D2129;}
-.header-spacer{width:60px;}
 
-.class-info{
-  margin:12px 16px;padding:12px 16px;
-  background:#FFFFFF;border-radius:14px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.04);
-  display:flex;align-items:center;gap:12px;
+.search-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;
 }
-.class-avatar{
-  width:44px;height:44px;border-radius:12px;
-  background:linear-gradient(135deg,#0F9487,#35B9AA);
+.search-input-wrap{
+  flex:1;display:flex;align-items:center;gap:6px;
+  background:#F7F8FA;border-radius:10px;padding:8px 12px;
+}
+.search-icon{color:#C0C4CC;font-size:14px;flex-shrink:0;}
+.search-input{
+  flex:1;border:none;background:transparent;outline:none;
+  font-size:14px;color:#1D2129;
+}
+.search-input::placeholder{color:#C0C4CC;}
+.filter-btn{
+  width:38px;height:38px;border-radius:10px;
+  border:none;background:#F7F8FA;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  color:#fff;font-size:18px;font-weight:700;flex-shrink:0;
+  color:#4E5969;font-size:16px;flex-shrink:0;
 }
-.class-name{font-size:16px;font-weight:600;color:#1D2129;}
-.class-meta{font-size:13px;color:#86909C;margin-top:2px;}
 
-.student-list{padding:0 16px 100px;}
+/* List */
+.list-scroll{
+  padding:0 16px 20px;
+}
+.student-group{margin-bottom:20px;}
+.group-title{
+  font-size:13px;font-weight:700;color:#86909C;
+  padding:6px 0 8px;
+}
 .student-item{
   display:flex;align-items:center;gap:12px;
-  background:#FFFFFF;border-radius:14px;
-  padding:14px;margin-bottom:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.04);
-  cursor:pointer;transition:all .2s;
+  padding:8px 0;cursor:pointer;
+  padding-right:30px;
 }
-.student-item:active{box-shadow:0 2px 12px rgba(20,168,154,0.08);}
 .s-avatar{
-  width:44px;height:44px;border-radius:50%;
+  width:56px;height:56px;border-radius:50%;
   background:linear-gradient(135deg,#BEEFDA,#35B9AA);
   display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-  font-size:16px;color:#0F9487;font-weight:600;
+  flex-shrink:0;font-size:20px;color:#0F9487;font-weight:600;
 }
-.s-avatar.female{background:linear-gradient(135deg,#FFD4E5,#FF90B3);color:#D63384;}
+.s-avatar img{
+  width:56px;height:56px;border-radius:50%;object-fit:cover;
+}
 .s-info{flex:1;min-width:0;}
-.s-name{font-size:16px;font-weight:600;color:#1D2129;}
-.s-meta{font-size:13px;color:#4E5969;margin-top:2px;}
-.s-arrow{color:#86909C;font-size:18px;}
+.s-name-row{
+  display:flex;align-items:center;gap:6px;margin-bottom:6px;
+}
+.s-name{font-size:18px;font-weight:600;color:#1D2129;}
+.s-role-tag{
+  padding:2px 6px;font-size:10px;font-weight:500;
+  background:#E8F4F2;color:#14A89A;border-radius:3px;
+  white-space:nowrap;
+}
+.s-detail-row{
+  display:flex;align-items:center;gap:12px;font-size:12px;color:#86909C;
+}
+.s-detail-divider{width:1px;height:10px;background:#E5E6EB;}
+.att-ok{color:#14A89A;}
+.att-bad{color:#FF4D4F;}
+.att-none{color:#C0C4CC;}
+.rate-val{font-weight:700;color:#1D2129;}
+.s-arrow{color:#C9CDD4;font-size:16px;flex-shrink:0;}
+
+/* Teacher avatar - blue gradient */
+.avatar-teacher{
+  background:linear-gradient(135deg,#D4E5FF,#5B8DEF);color:#3B6FD4;
+}
+.avatar-teacher img{
+  width:56px;height:56px;border-radius:50%;object-fit:cover;
+}
 
 .empty-state{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:60px 20px;color:#86909C;
+  text-align:center;color:#86909C;font-size:14px;padding:40px 16px;
 }
-.empty-icon{font-size:48px;margin-bottom:12px;opacity:.6;}
-.empty-text{font-size:14px;}
+
+/* Right Letter Index */
+.letter-index{
+  position:fixed;top:50%;transform:translateY(-50%);
+  z-index:50;display:flex;flex-direction:column;gap:1px;
+  pointer-events:auto;width:20px;align-items:center;
+}
+@media(min-width:431px){
+  .letter-index{right:calc((100vw - 430px)/2 + 6px);}
+}
+@media(max-width:430px){
+  .letter-index{right:6px;}
+}
+.letter-idx{
+  width:18px;height:17px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#86909C;cursor:pointer;border-radius:50%;
+}
+.letter-idx.active{
+  background:#14A89A;color:#FFFFFF;font-weight:700;
+  width:20px;height:20px;
+}
+
+/* Class Picker Modal */
+.modal-mask{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.4);z-index:200;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+.modal-panel{
+  width:100%;max-width:430px;max-height:60vh;
+  background:#fff;border-radius:20px 20px 0 0;
+  padding:16px;overflow-y:auto;
+}
+.modal-title{font-size:16px;font-weight:700;color:#1D2129;text-align:center;margin-bottom:12px;}
+.picker-item{
+  padding:12px 8px;font-size:15px;color:#1D2129;
+  border-bottom:1px solid #F2F3F5;cursor:pointer;
+}
+.picker-item:last-child{border-bottom:none;}
+.picker-item.selected{color:#14A89A;font-weight:700;}
 
 @media(min-width:431px){.app{border-left:1px solid #E5E6EB;border-right:1px solid #E5E6EB;}}
 </style>
@@ -83,60 +146,363 @@ body{
 <body>
 <div class="app">
 
-  <div class="page-header">
-    <button class="back-btn" onclick="history.back()">
-      <span class="back-arrow">&#8249;</span>
-      <span>返回</span>
-    </button>
-    <span class="page-title">班级学生</span>
-    <div class="header-spacer"></div>
-  </div>
+  <!-- Card 1: Header + Title + Tabs -->
+  <div class="page-header mode-page">
+    <div class="header-top">
+      <button class="back-btn" onclick="history.back()">
+        <span class="back-arrow">&#8249;</span>
+      </button>
+      <span class="header-label">班级人员</span>
+      <div class="capsule">
+        <div class="capsule-dot"></div>
+        <div class="capsule-line"></div>
+        <div class="capsule-circle"></div>
+      </div>
+    </div>
 
-  <div class="class-info">
-    <div class="class-avatar" id="classAvatar">班</div>
-    <div>
-      <div class="class-name" id="className">加载中...</div>
-      <div class="class-meta" id="classMeta"></div>
+    <div class="header-title-row">
+      <span class="page-title" id="className">加载中...</span>
+      <div class="header-right-slot">
+        <div class="class-type-row" onclick="openClassPicker()">
+          <span class="class-type-tag" id="classTypeTag"></span>
+          <span class="class-type-arrow">&#9660;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-tabs">
+      <button class="main-tab active" onclick="switchTab('students')">班级学生</button>
+      <button class="main-tab" onclick="switchTab('teachers')">班级教师</button>
     </div>
   </div>
 
-  <div class="student-list" id="studentList">
-    <div class="empty-state">
-      <div class="empty-icon">&#128101;</div>
-      <div class="empty-text">加载中...</div>
+  <!-- Card 2: Search + List -->
+  <div class="list-card">
+    <div class="search-bar" id="searchBar">
+      <div class="search-input-wrap">
+        <span class="search-icon">&#128269;</span>
+        <input class="search-input" id="searchInput" placeholder="请输入姓名查询" oninput="onSearch()">
+      </div>
+      <button class="filter-btn" onclick="toggleFilter()">&#9881;</button>
+    </div>
+
+    <div class="list-scroll" id="listContainer">
+      <div class="empty-state">加载中...</div>
     </div>
   </div>
+
+  <div class="letter-index" id="letterIndex"></div>
 
 </div>
 
+<div id="classPicker" style="display:none;" class="modal-mask" onclick="closeClassPicker()">
+  <div class="modal-panel" onclick="event.stopPropagation()">
+    <div class="modal-title">选择班级</div>
+    <div id="pickerList"></div>
+  </div>
+</div>
+
 <script>
-var id=(new URLSearchParams(location.search)).get('id');
-if(!id){document.getElementById('studentList').innerHTML='<div class="empty-state"><div class="empty-icon">&#9888;</div><div class="empty-text">缺少班级参数</div></div>';}
+var params=new URLSearchParams(location.search);
+var classId=params.get('id')||'11';
+var allClasses=[];
+var allStudents=[];
+var allTeachers=[];
+var currentTab=params.get('tab')==='teachers'?'teachers':'students';
+var todayStatus={};
 
-fetch('/api/public/classes/'+id).then(function(r){return r.json();}).then(function(c){
-  document.getElementById('classAvatar').textContent=(c.name||'班').charAt(0);
-  document.getElementById('className').textContent=c.name||'';
-  document.getElementById('classMeta').textContent=(c.grade||'')+' '+(c.type||'')+' · 共'+(c.student_count||0)+'人';
-
-  var students=c.students||[];
-  if(students.length===0){
-    document.getElementById('studentList').innerHTML='<div class="empty-state"><div class="empty-icon">&#128101;</div><div class="empty-text">暂无学生</div></div>';
-    return;
-  }
-  var html='';
-  for(var i=0;i<students.length;i++){
-    var s=students[i];
-    var initial=(s.name||'?')[0];
-    var isFemale=s.gender==='female';
-    html+='<div class="student-item" onclick="location.href=\'m-student-detail.html?id='+s.id+'\'">';
-    html+='<div class="s-avatar '+(isFemale?'female':'')+'">'+initial+'</div>';
-    html+='<div class="s-info"><div class="s-name">'+s.name+'</div><div class="s-meta">'+s.student_no+' · '+(s.gender||'')+'</div></div>';
-    html+='<span class="s-arrow">&#8250;</span></div>';
-  }
-  document.getElementById('studentList').innerHTML=html;
-}).catch(function(){
-  document.getElementById('studentList').innerHTML='<div class="empty-state"><div class="empty-icon">&#9888;</div><div class="empty-text">加载失败</div></div>';
+// Load pinyin library asynchronously (non-blocking)
+import('https://esm.sh/pinyin-pro@3.26.0').then(function(m){
+  window._pinyin=m.pinyin;
+}).catch(function(e){
+  console.warn('pinyin-pro load failed:',e);
 });
+
+// Load class data immediately
+if(currentTab==='teachers'){
+  var tabBtns=document.querySelectorAll('.main-tab');
+  tabBtns[0].className='main-tab';
+  tabBtns[1].className='main-tab active';
+  document.getElementById('searchInput').placeholder='请输入教师姓名查询';
+}
+loadClass();
+
+fetch('/api/public/classes?teacher_id=2').then(function(r){return r.json();}).then(function(classes){
+  allClasses=classes;
+});
+
+function loadClass(){
+  Promise.all([
+    fetch('/api/public/classes/'+classId).then(function(r){return r.json();}),
+    fetch('/api/public/attendances?class_id='+classId+'&date='+new Date().toISOString().slice(0,10)).then(function(r){return r.json();})
+  ]).then(function(results){
+    var info=results[0];
+    var attendances=results[1];
+    allStudents=info.students||[];
+    allTeachers=info.teachers||[];
+    document.getElementById('className').textContent=info.name||'';
+    document.getElementById('classTypeTag').textContent=info.type||'';
+    var promises=[];
+    for(var i=0;i<attendances.length;i++){
+      promises.push(
+        fetch('/api/public/attendances/'+attendances[i].id).then(function(r){return r.json();})
+      );
+    }
+    return Promise.all(promises);
+  }).then(function(recordsList){
+    todayStatus={};
+    var hasAttendance=recordsList.length>0;
+    for(var i=0;i<recordsList.length;i++){
+      var recs=recordsList[i].records||[];
+      for(var j=0;j<recs.length;j++){
+        var r=recs[j];
+        var existing=todayStatus[r.student_id];
+        if(!existing||(r.status==='缺勤')){todayStatus[r.student_id]=r.status;}
+      }
+    }
+    // Students with no record when attendance was taken = present
+    if(hasAttendance){
+      for(var k=0;k<allStudents.length;k++){
+        var sid=allStudents[k].id;
+        if(!todayStatus[sid])todayStatus[sid]='出勤';
+      }
+    }
+    renderContent();
+  }).catch(function(){
+    allStudents=[];allTeachers=[];
+    document.getElementById('listContainer').innerHTML='<div class="empty-state">加载失败</div>';
+  });
+}
+
+function onSearch(){
+  renderContent();
+}
+
+function switchTab(tab){
+  currentTab=tab;
+  var tabs=document.querySelectorAll('.main-tab');
+  for(var i=0;i<tabs.length;i++){
+    tabs[i].className='main-tab'+(tabs[i].textContent==='班级学生'&&tab==='students'||tabs[i].textContent==='班级教师'&&tab==='teachers'?' active':'');
+  }
+  // Update URL to reflect current tab
+  var url='m-class-students.html?id='+classId;
+  if(tab==='teachers')url+='&tab=teachers';
+  history.replaceState(null,'',url);
+  document.getElementById('searchBar').style.display='flex';
+  var input=document.getElementById('searchInput');
+  input.placeholder=tab==='students'?'请输入姓名查询':'请输入教师姓名查询';
+  input.value='';
+  renderContent();
+}
+
+function pinyinFirst(name){
+  if(!name)return '#';
+  var ch=name[0];
+  if(ch.charCodeAt(0)<0x4e00||ch.charCodeAt(0)>0x9fff)return ch.toUpperCase();
+  if(window._pinyin){
+    try{
+      var result=window._pinyin(ch,{toneType:'none',type:'array'});
+      if(result&&result.length>0)return result[0].charAt(0).toUpperCase();
+    }catch(e){}
+  }
+  // Extended fallback: common Chinese surnames mapped to pinyin initials
+  var _map='阿艾安敖巴白班包鲍贝毕边卞薄卜蔡曹岑常车陈成程池迟储褚从崔戴邓狄刁丁董窦杜段樊范方房费丰冯伏符傅盖甘高戈葛耿龚宫巩勾辜古顾关管郭韩郝何贺洪侯胡华黄霍姬吉纪季贾简江姜蒋金靳康柯孔寇匡赖蓝郎劳雷冷黎李厉连梁廖林凌刘柳龙卢鲁陆路吕栾罗骆马毛茅梅孟米苗缪闵莫穆倪年聂宁牛欧潘庞裴彭皮平蒲齐祁钱强乔秦丘邱裘屈瞿权冉饶任荣容阮芮单商邵佘申沈盛施石时史寿殳舒束司马宋苏孙谈谭汤唐陶滕田童屠万汪王韦卫魏温文闻翁邬吴武奚席夏鲜向项萧谢辛邢熊徐许宣薛严阎颜晏杨姚叶伊易殷尹应雍尤游于余俞虞禹郁喻袁岳云臧曾查翟詹张章赵甄郑钟周朱诸竺祝庄卓宗邹左'.split('');
+  var _letters='AABBBBBBBBBBBCCCCCCCCCCCCCDDDDDDDFFFFFFGGGGGGGGGHHHHHHHHHJJJJJJJJJKKKKLLLLLLLLLLLLMMMMMMMMMMMMMMMMNNOOPPPPPPQQQQQQQQQQRRRRRRSSSSSSSSSSSSSSSTTTTTTTTWWWWWWWWWWXXXXXXXYYYYYYYYYYYYYYZZZZZZZZZZZZZZZZ'.split('');
+  var idx=_map.indexOf(ch);
+  if(idx>=0)return _letters[idx];
+  return '#';
+}
+
+function renderContent(){
+  if(currentTab==='students')renderStudents();
+  else renderTeachers();
+}
+
+function renderStudents(){
+  var keyword=(document.getElementById('searchInput').value||'').trim();
+  var filtered=allStudents.filter(function(s){
+    return !keyword||s.name.indexOf(keyword)>=0||(s.student_no||'').indexOf(keyword)>=0;
+  });
+  filtered.sort(function(a,b){return (a.name||'').localeCompare(b.name||'','zh');});
+  var groups={};
+  for(var i=0;i<filtered.length;i++){
+    var letter=pinyinFirst(filtered[i].name);
+    if(!groups[letter])groups[letter]=[];
+    groups[letter].push(filtered[i]);
+  }
+  var letters=Object.keys(groups).sort();
+
+  var html='';
+  for(var l=0;l<letters.length;l++){
+    var letter=letters[l];
+    var list=groups[letter];
+    html+='<div class="student-group" id="letter-'+letter+'">';
+    html+='<div class="group-title">'+letter+'</div>';
+    for(var s=0;s<list.length;s++){
+      var stu=list[s];
+      var status=todayStatus[stu.id];
+      var attHtml;
+      if(status==='请假'||status==='缺勤'||status==='迟到'){
+        attHtml='<span class="att-bad">'+status+'</span>';
+      }else if(status){
+        attHtml='<span class="att-ok">&#10003; 出勤</span>';
+      }else{
+        attHtml='<span class="att-none">--</span>';
+      }
+      html+='<div class="student-item" onclick="location.href=\'m-student-detail.html?id='+stu.id+'\'">';
+      if(stu.photo){
+        html+='<div class="s-avatar"><img src="'+stu.photo+'" alt=""></div>';
+      }else{
+        html+='<div class="s-avatar">'+stu.name.charAt(0)+'</div>';
+      }
+      html+='<div class="s-info">';
+      html+='<div class="s-name-row"><span class="s-name">'+stu.name+'</span>';
+      if(stu.class_role){
+        html+='<span class="s-role-tag">'+stu.class_role+'</span>';
+      }
+      html+='</div>';
+      html+='<div class="s-detail-row"><span>今日考勤 '+attHtml+'</span>';
+      html+='<span class="s-detail-divider"></span>';
+      html+='<span>本周评级 <span class="rate-val">'+getRate(stu)+'</span></span></div>';
+      html+='</div>';
+      html+='<span class="s-arrow">&#8250;</span></div>';
+    }
+    html+='</div>';
+  }
+  if(!html)html='<div class="empty-state">暂无匹配学生</div>';
+  document.getElementById('listContainer').innerHTML=html;
+
+  var idxHtml='';
+  for(var li=0;li<letters.length;li++){
+    idxHtml+='<div class="letter-idx" onclick="scrollToLetter(\''+letters[li]+'\')">'+letters[li]+'</div>';
+  }
+  document.getElementById('letterIndex').innerHTML=idxHtml;
+  document.getElementById('letterIndex').style.display=letters.length>0?'flex':'none';
+  updateActiveLetter();
+}
+
+function getRate(stu){
+  var scores=['A+','A','B+','B','B-','C+','C'];
+  return scores[Math.abs(stu.id*7+3)%7];
+}
+
+function renderTeachers(){
+  var keyword=(document.getElementById('searchInput').value||'').trim();
+  var filtered=allTeachers.filter(function(t){
+    return !keyword||t.name.indexOf(keyword)>=0||(t.subject||'').indexOf(keyword)>=0||(t.role||'').indexOf(keyword)>=0;
+  });
+  filtered.sort(function(a,b){return (a.name||'').localeCompare(b.name||'','zh');});
+  var groups={};
+  for(var i=0;i<filtered.length;i++){
+    var letter=pinyinFirst(filtered[i].name);
+    if(!groups[letter])groups[letter]=[];
+    groups[letter].push(filtered[i]);
+  }
+  var letters=Object.keys(groups).sort();
+
+  var html='';
+  for(var l=0;l<letters.length;l++){
+    var letter=letters[l];
+    var list=groups[letter];
+    html+='<div class="student-group" id="letter-'+letter+'">';
+    html+='<div class="group-title">'+letter+'</div>';
+    for(var s=0;s<list.length;s++){
+      var t=list[s];
+      html+='<div class="student-item">';
+      if(t.teacher_photo){
+        html+='<div class="s-avatar avatar-teacher"><img src="'+t.teacher_photo+'" alt=""></div>';
+      }else{
+        html+='<div class="s-avatar avatar-teacher">'+t.name.charAt(0)+'</div>';
+      }
+      html+='<div class="s-info">';
+      html+='<div class="s-name-row"><span class="s-name">'+t.name+'</span></div>';
+      html+='<div class="s-detail-row"><span>'+t.subject+'</span>';
+      html+='<span class="s-detail-divider"></span>';
+      html+='<span>'+(t.role||'教师')+'</span></div>';
+      html+='</div>';
+      html+='<span class="s-arrow">&#8250;</span></div>';
+    }
+    html+='</div>';
+  }
+  if(!html)html='<div class="empty-state">暂无匹配教师</div>';
+  document.getElementById('listContainer').innerHTML=html;
+
+  var idxHtml='';
+  for(var li=0;li<letters.length;li++){
+    idxHtml+='<div class="letter-idx" onclick="scrollToLetter(\''+letters[li]+'\')">'+letters[li]+'</div>';
+  }
+  document.getElementById('letterIndex').innerHTML=idxHtml;
+  document.getElementById('letterIndex').style.display=letters.length>0?'flex':'none';
+  updateActiveLetter();
+}
+
+function scrollToLetter(letter){
+  var el=document.getElementById('letter-'+letter);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  setActiveLetter(letter);
+}
+
+// Track which letter group is currently in view
+var scrollTimer=null;
+window.addEventListener('scroll',function(){
+  if(currentTab==='students'||currentTab==='teachers'){
+    if(scrollTimer)clearTimeout(scrollTimer);
+    scrollTimer=setTimeout(updateActiveLetter,50);
+  }
+});
+
+function updateActiveLetter(){
+  var groups=document.querySelectorAll('.student-group');
+  if(groups.length===0)return;
+  var threshold=window.innerHeight*0.25;
+  var active='';
+  for(var i=0;i<groups.length;i++){
+    var rect=groups[i].getBoundingClientRect();
+    if(rect.top<=threshold&&rect.bottom>=threshold){
+      active=groups[i].id.replace('letter-','');
+      break;
+    }
+  }
+  if(!active&&groups.length>0){
+    var lastRect=groups[groups.length-1].getBoundingClientRect();
+    if(lastRect.bottom<threshold)active=groups[groups.length-1].id.replace('letter-','');
+  }
+  setActiveLetter(active);
+}
+
+function setActiveLetter(letter){
+  var idxs=document.querySelectorAll('.letter-idx');
+  for(var j=0;j<idxs.length;j++){
+    idxs[j].className='letter-idx'+(idxs[j].textContent===letter?' active':'');
+  }
+}
+
+function toggleFilter(){
+  // placeholder for future filter options
+}
+
+function openClassPicker(){
+  if(allClasses.length===0)return;
+  var html='';
+  for(var i=0;i<allClasses.length;i++){
+    var c=allClasses[i];
+    var sel=c.id==parseInt(classId)?' selected':'';
+    html+='<div class="picker-item'+sel+'" onclick="selectClass('+c.id+')">'+c.name+' · '+(c.type||'')+'</div>';
+  }
+  document.getElementById('pickerList').innerHTML=html;
+  document.getElementById('classPicker').style.display='flex';
+}
+
+function selectClass(id){
+  classId=String(id);
+  document.getElementById('classPicker').style.display='none';
+  document.getElementById('listContainer').innerHTML='<div class="empty-state">加载中...</div>';
+  loadClass();
+}
+
+function closeClassPicker(){
+  document.getElementById('classPicker').style.display='none';
+}
 </script>
 </body>
 </html>
