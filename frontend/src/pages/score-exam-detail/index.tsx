@@ -12,9 +12,10 @@ export default function ScoreExamDetail() {
   const [scores, setScores] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
 
   const [infoForm, setInfoForm] = useState({
-    subject: '', exam_name: '', class_id: 0, group_id: null as number | null,
+    subject: '', subject_id: null as number | null, exam_name: '', class_id: 0, group_id: null as number | null,
     exam_time: '', total_score: 100, remark: ''
   });
   const [savingInfo, setSavingInfo] = useState(false);
@@ -45,8 +46,12 @@ export default function ScoreExamDetail() {
       const stuList = await api.getStudents(examData.class_id).catch(() => []);
       setStudents(stuList);
 
+      const subs = await api.getSubjects().catch(() => []);
+      setSubjects(subs);
+
       setInfoForm({
         subject: examData.subject || '',
+        subject_id: examData.subject_id || null,
         exam_name: examData.exam_name || examData.name || '',
         class_id: examData.class_id,
         group_id: examData.group_id || null,
@@ -58,9 +63,10 @@ export default function ScoreExamDetail() {
   };
 
   const handleSaveInfo = async () => {
-    if (!infoForm.subject.trim() || !infoForm.exam_name.trim()) return alert('科目和考试名称不能为空');
+    const subName = infoForm.subject_id ? (subjects.find((s: any) => s.id === infoForm.subject_id)?.subject_name || '') : infoForm.subject;
+    if (!subName.trim() || !infoForm.exam_name.trim()) return alert('科目和考试名称不能为空');
     setSavingInfo(true);
-    try { await api.updateExam(examId, infoForm); loadAll(); }
+    try { await api.updateExam(examId, { ...infoForm, subject: subName }); loadAll(); }
     catch (e: any) { alert(e.message); }
     finally { setSavingInfo(false); }
   };
@@ -118,8 +124,14 @@ export default function ScoreExamDetail() {
         <div className="form-row">
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">科目 <span style={{ color: '#F53F3F' }}>*</span></label>
-            <input className="form-input" value={infoForm.subject}
-              onChange={e => setInfoForm({ ...infoForm, subject: e.target.value })} />
+            <select className="form-select" value={infoForm.subject_id ?? ''} onChange={e => {
+              const id = e.target.value ? Number(e.target.value) : null;
+              const sub = subjects.find((s: any) => s.id === id);
+              setInfoForm({ ...infoForm, subject_id: id, subject: sub ? sub.subject_name : '' });
+            }}>
+              <option value="">请选择科目</option>
+              {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.subject_name}</option>)}
+            </select>
           </div>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">考试名称 <span style={{ color: '#F53F3F' }}>*</span></label>

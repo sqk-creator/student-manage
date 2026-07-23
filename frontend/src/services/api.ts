@@ -47,8 +47,11 @@ export const api = {
     });
   },
 
-  getClasses() {
-    return request('/classes');
+  getClasses(params?: { grade_id?: number; type?: string }) {
+    const qs: string[] = [];
+    if (params?.grade_id) qs.push(`grade_id=${params.grade_id}`);
+    if (params?.type) qs.push(`type=${params.type}`);
+    return request(`/classes${qs.length ? '?' + qs.join('&') : ''}`);
   },
 
   getAllClasses() {
@@ -110,6 +113,23 @@ export const api = {
 
   deleteGrade(id: number) {
     return request(`/grades/${id}`, { method: 'DELETE' });
+  },
+
+  getSubjects(params?: { status?: number }) {
+    const qs = params?.status !== undefined ? `?status=${params.status}` : '';
+    return request(`/subjects${qs}`);
+  },
+
+  createSubject(data: { subject_name: string; sort?: number }) {
+    return request('/subjects', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  updateSubject(id: number, data: { subject_name?: string; sort?: number; status?: number }) {
+    return request(`/subjects/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  deleteSubject(id: number) {
+    return request(`/subjects/${id}`, { method: 'DELETE' });
   },
 
   getStudents(classId: number) {

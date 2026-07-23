@@ -18,6 +18,7 @@ import ScoreGroupDetail from './pages/score-group-detail/index';
 import ScoreExamDetail from './pages/score-exam-detail/index';
 import ScoreReport from './pages/score-report/index';
 import ScoreStudentArchive from './pages/score-student-archive/index';
+import Subjects from './pages/subjects/index';
 import './app.scss';
 
 const adminRoutes: Record<string, { component: React.FC; title: string }> = {
@@ -25,6 +26,7 @@ const adminRoutes: Record<string, { component: React.FC; title: string }> = {
   '/admin/dashboard': { component: Dashboard, title: '仪表盘' },
   '/admin/classes': { component: Classes, title: '班级管理' },
   '/admin/grades': { component: Grades, title: '年级管理' },
+  '/admin/subjects': { component: Subjects, title: '科目管理' },
   '/admin/class-detail': { component: ClassDetail, title: '班级详情' },
   '/admin/student-detail': { component: StudentDetail, title: '学生详情' },
   '/admin/student-mgmt': { component: StudentMgmt, title: '学生管理' },
@@ -44,10 +46,13 @@ function Sidebar({ current, onNav }: { current: string; onNav: (path: string) =>
   const items = [
     { path: '/admin/dashboard', label: '仪表盘', icon: '◇' },
     { path: '/admin/classes', label: '班级管理', icon: '☰' },
-    { path: '/admin/grades', label: '年级管理', icon: '♢' },
     { path: '/admin/student-mgmt', label: '学生管理', icon: '◎' },
     { path: '/admin/teacher-mgmt', label: '教师管理', icon: '◆' },
     { path: '/admin/attendance-mgmt', label: '考勤管理', icon: '◉' },
+  ];
+  const configItems = [
+    { path: '/admin/grades', label: '年级管理', icon: '♢' },
+    { path: '/admin/subjects', label: '科目管理', icon: '♢' },
   ];
   const scoreItems = [
     { path: '/admin/score-exam-list', label: '考试管理', icon: '◈' },
@@ -71,6 +76,18 @@ function Sidebar({ current, onNav }: { current: string; onNav: (path: string) =>
           <a
             key={item.path}
             className={`nav-item ${current === item.path || (current === '/admin/' && item.path === '/admin/dashboard') ? 'active' : ''}`}
+            onClick={e => { e.preventDefault(); onNav(item.path); }}
+            href={item.path}
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span className="nav-label">{item.label}</span>
+          </a>
+        ))}
+        <div className="nav-group-title">基本配置</div>
+        {configItems.map(item => (
+          <a
+            key={item.path}
+            className={`nav-item ${current === item.path ? 'active' : ''}`}
             onClick={e => { e.preventDefault(); onNav(item.path); }}
             href={item.path}
           >

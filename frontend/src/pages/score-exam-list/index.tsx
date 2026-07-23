@@ -6,6 +6,7 @@ interface ExamGroupRow {
   id: number;
   name: string;
   class_name: string;
+  grade_name: string;
   class_id: number;
   subject_info: string;
   subject_count: number;
@@ -15,6 +16,7 @@ interface ExamGroupRow {
   semester: string;
   scope_type: string;
   grade_id: number | null;
+  exam_type: string;
 }
 
 interface ExamRow {
@@ -40,12 +42,14 @@ interface FormData {
   semester: string;
   exam_date: string;
   subject: string;
+  subject_id: number | null;
   exam_name: string;
   exam_time: string;
   total_score: number;
   remark: string;
   scope_type: string;
   grade_id: number | null;
+  exam_type: string;
 }
 
 const PAGE_SIZE = 10;
@@ -56,6 +60,7 @@ export default function ScoreExamList() {
   const [classes, setClasses] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
 
   const [filterClass, setFilterClass] = useState('');
   const [filterSemester, setFilterSemester] = useState('');
@@ -72,8 +77,8 @@ export default function ScoreExamList() {
 
   const [form, setForm] = useState<FormData>({
     class_id: 0, group_id: null, group_name: '', semester: '',
-    exam_date: '', subject: '', exam_name: '', exam_time: '',
-    total_score: 100, remark: '', scope_type: 'class', grade_id: null
+    exam_date: '', subject: '', subject_id: null, exam_name: '', exam_time: '',
+    total_score: 100, remark: '', scope_type: 'class', grade_id: null, exam_type: 'comprehensive'
   });
 
   const [sortKey, setSortKey] = useState('');
@@ -87,15 +92,17 @@ export default function ScoreExamList() {
 
   const loadData = async () => {
     try {
-      const [classesRes, groupsRes, examsRes, gradesRes] = await Promise.all([
+      const [classesRes, groupsRes, examsRes, gradesRes, subjectsRes] = await Promise.all([
         api.getClasses(),
         api.getExamGroups(),
         api.getExamsByQuery(),
-        api.getGrades()
+        api.getGrades(),
+        api.getSubjects()
       ]);
       setClasses(classesRes);
       setGroups(groupsRes);
       setGrades(gradesRes);
+      setSubjects(subjectsRes);
 
       const classMap: Record<number, string> = {};
       classesRes.forEach((c: any) => { classMap[c.id] = c.name; });
@@ -111,7 +118,8 @@ export default function ScoreExamList() {
           _type: 'group',
           id: g.id,
           name: g.group_name,
-          class_name: g.class_name || classMap[g.class_id] || '',
+          class_name: g.scope_type === 'grade' ? ((g.grade_name || '') + '年级') : (g.class_name || classMap[g.class_id] || ''),
+          grade_name: g.grade_name || '',
           class_id: g.class_id,
           subject_info: subExams.map((e: any) => e.subject).join('、'),
           subject_count: subExams.length,
@@ -219,7 +227,7 @@ export default function ScoreExamList() {
   };
 
   const resetForm = () => {
-    setForm({ class_id: 0, group_id: null, group_name: '', semester: '', exam_date: '', subject: '', exam_name: '', exam_time: '', total_score: 100, remark: '', scope_type: 'class', grade_id: null });
+    setForm({ class_id: 0, group_id: null, group_name: '', semester: '', exam_date: '', subject: '', subject_id: null, exam_name: '', exam_time: '', total_score: 100, remark: '', scope_type: 'class', grade_id: null, exam_type: 'comprehensive' });
     setEditId(null);
   };
 
@@ -242,7 +250,7 @@ export default function ScoreExamList() {
       setForm({
         class_id: g.class_id, group_id: null, group_name: g.name, semester: g.semester,
         exam_date: g.exam_time, subject: '', exam_name: '', exam_time: '',
-        total_score: g.total_score, remark: '', scope_type: g.scope_type || 'class', grade_id: g.grade_id || null
+        total_score: g.total_score, remark: '', scope_type: g.scope_type || 'class', grade_id: g.grade_id || null, exam_type: g.exam_type || 'comprehensive'
       });
       setShowBatchForm(true);
     } else {
@@ -250,8 +258,8 @@ export default function ScoreExamList() {
       setEditId(e.id); setEditType('exam');
       setForm({
         class_id: e.class_id, group_id: e.group_id, group_name: '', semester: '',
-        exam_date: '', subject: e.subject_info, exam_name: e.name, exam_time: e.exam_time,
-        total_score: e.total_score, remark: ''
+        exam_date: '', subject: e.subject_info, subject_id: e.subject_id || null, exam_name: e.name, exam_time: e.exam_time,
+        total_score: e.total_score, remark: '', scope_type: 'class', grade_id: null
       });
       setShowExamForm(true);
     }
@@ -266,7 +274,8 @@ export default function ScoreExamList() {
       semester: form.semester,
       exam_date: form.exam_date,
       total_score: form.total_score,
-      remark: form.remark
+      remark: form.remark,
+      exam_type: form.scope_type === 'grade' ? form.exam_type : 'comprehensive'
     };
     try {
       if (editId && editType === 'group') {
@@ -285,6 +294,7 @@ export default function ScoreExamList() {
       class_id: form.class_id || classes[0]?.id,
       group_id: form.group_id || null,
       subject: form.subject,
+      subject_id: form.subject_id,
       exam_name: form.exam_name,
       exam_time: form.exam_time,
       total_score: form.total_score,
@@ -518,6 +528,7 @@ export default function ScoreExamList() {
                 </select>
               </div>
             ) : (
+              <>
               <div className="form-group">
                 <label className="form-label">年级 <span style={{ color: '#F53F3F' }}>*</span></label>
                 <select className="form-select" value={form.grade_id ?? ''} onChange={e => setForm({ ...form, grade_id: e.target.value ? Number(e.target.value) : null })}>
@@ -525,6 +536,15 @@ export default function ScoreExamList() {
                   {grades.map((g: any) => <option key={g.id} value={g.id}>{g.grade_name}</option>)}
                 </select>
               </div>
+              <div className="form-group">
+                <label className="form-label">考试类型 <span style={{ color: '#F53F3F' }}>*</span></label>
+                <select className="form-select" value={form.exam_type} onChange={e => setForm({ ...form, exam_type: e.target.value })}>
+                  <option value="comprehensive">综合</option>
+                  <option value="liberal_arts">文科</option>
+                  <option value="science">理科</option>
+                </select>
+              </div>
+              </>
             )}
             <div className="form-group">
               <label className="form-label">批次名称 <span style={{ color: '#F53F3F' }}>*</span></label>
@@ -575,7 +595,14 @@ export default function ScoreExamList() {
             </div>
             <div className="form-group">
               <label className="form-label">科目 <span style={{ color: '#F53F3F' }}>*</span></label>
-              <input className="form-input" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder="如：语文、数学、英语" />
+              <select className="form-select" value={form.subject_id ?? ''} onChange={e => {
+                const id = e.target.value ? Number(e.target.value) : null;
+                const sub = subjects.find((s: any) => s.id === id);
+                setForm({ ...form, subject_id: id, subject: sub ? sub.subject_name : '' });
+              }}>
+                <option value="">请选择科目</option>
+                {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.subject_name}</option>)}
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">考试名称 <span style={{ color: '#F53F3F' }}>*</span></label>

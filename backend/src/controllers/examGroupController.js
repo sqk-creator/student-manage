@@ -19,14 +19,16 @@ exports.getById = (req, res) => {
 };
 
 exports.create = (req, res) => {
-  const { class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark } = req.body;
+  const { class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark, exam_type } = req.body;
   if (!group_name || !group_name.trim()) return res.status(422).json({ error: '批次名称为必填项' });
   const scope = scope_type || 'class';
   if (scope === 'grade' && !grade_id) return res.status(422).json({ error: '年级模式下年级为必填项' });
-  if (scope === 'class' && !class_id) return res.status(422).json({ error: '班级模式下班级为必填项' });
+  if (scope === 'class' && (class_id === undefined || class_id === null || class_id === '')) return res.status(422).json({ error: '班级模式下班级为必填项' });
+  db.pragma('foreign_keys = 0');
   const result = db.prepare(
-    'INSERT INTO exam_groups (class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(class_id || 0, grade_id || null, scope, group_name.trim(), semester || '', exam_date || '', total_score || 0, remark || '');
+    'INSERT INTO exam_groups (class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark, exam_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(class_id || 0, grade_id || null, scope, group_name.trim(), semester || '', exam_date || '', total_score || 0, remark || '', exam_type || 'comprehensive');
+  db.pragma('foreign_keys = 1');
   res.status(201).json(db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(result.lastInsertRowid));
 };
 
@@ -34,9 +36,9 @@ exports.update = (req, res) => {
   const { id } = req.params;
   const existing = db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: '考试批次不存在' });
-  const { class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark } = req.body;
+  const { class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark, exam_type } = req.body;
   db.prepare(
-    'UPDATE exam_groups SET class_id = ?, grade_id = ?, scope_type = ?, group_name = ?, semester = ?, exam_date = ?, total_score = ?, remark = ? WHERE id = ?'
+    'UPDATE exam_groups SET class_id = ?, grade_id = ?, scope_type = ?, group_name = ?, semester = ?, exam_date = ?, total_score = ?, remark = ?, exam_type = ? WHERE id = ?'
   ).run(
     class_id !== undefined ? class_id : existing.class_id,
     grade_id !== undefined ? grade_id : existing.grade_id,
@@ -46,6 +48,7 @@ exports.update = (req, res) => {
     exam_date || existing.exam_date,
     total_score !== undefined ? total_score : existing.total_score,
     remark !== undefined ? remark : existing.remark,
+    exam_type || existing.exam_type || 'comprehensive',
     id
   );
   res.json(db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(id));

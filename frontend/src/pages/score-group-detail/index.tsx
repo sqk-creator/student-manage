@@ -4,10 +4,14 @@ import { api } from '../../services/api';
 interface ExamItem {
   id: number;
   subject: string;
+  subject_id: number | null;
   exam_name: string;
   exam_time: string;
   total_score: number;
   remark: string;
+  expected_count: number;
+  entered_count: number;
+  avg_score: number | null;
 }
 
 export default function ScoreGroupDetail() {
@@ -24,8 +28,12 @@ export default function ScoreGroupDetail() {
   const [savingInfo, setSavingInfo] = useState(false);
 
   const [showAddExam, setShowAddExam] = useState(false);
-  const [examForm, setExamForm] = useState({ subject: '', exam_name: '', exam_time: '', total_score: 100, remark: '' });
+  const [examForm, setExamForm] = useState({ subject: '', subject_id: null as number | null, exam_name: '', exam_time: '', total_score: 100, remark: '' });
   const [editExamId, setEditExamId] = useState<number | null>(null);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [showBatchAdd, setShowBatchAdd] = useState(false);
+  const [batchForm, setBatchForm] = useState({ selectedIds: [] as number[], exam_time: '', total_score: 100, remark: '' });
+  const [batchSaving, setBatchSaving] = useState(false);
 
   const batchTotalRef = useRef<HTMLInputElement>(null);
 
@@ -35,16 +43,18 @@ export default function ScoreGroupDetail() {
 
   const loadAll = async () => {
     try {
-      const [grp, cls, st] = await Promise.all([
+      const [grp, cls, st, subs] = await Promise.all([
         api.getExamGroup(groupId),
         api.getClasses(),
-        api.getExamGroupStats(groupId).catch(() => null)
+        api.getExamGroupStats(groupId).catch(() => null),
+        api.getSubjects()
       ]);
       const examList = await api.getExamsByQuery({ group_id: groupId });
       setGroup(grp);
       setExams(examList || []);
       setClasses(cls);
       setStats(st);
+      setSubjects(subs);
       setInfoForm({
         group_name: grp.group_name,
         class_id: grp.class_id,
@@ -67,24 +77,52 @@ export default function ScoreGroupDetail() {
   };
 
   const handleAddExam = async () => {
-    if (!examForm.subject.trim() || !examForm.exam_name.trim()) return alert('科目和考试名称为必填');
+    const subName = examForm.subject_id ? (subjects.find((s: any) => s.id === examForm.subject_id)?.subject_name || '') : examForm.subject;
+    if (!subName.trim() || !examForm.exam_name.trim()) return alert('科目和考试名称为必填');
     try {
+      const data = { ...examForm, subject: examForm.subject || subName };
+      const classId = group.scope_type === 'grade' ? 0 : group.class_id;
       if (editExamId) {
-        await api.updateExam(editExamId, examForm);
+        await api.updateExam(editExamId, data);
       } else {
-        await api.createExamByQuery({ ...examForm, class_id: group.class_id, group_id: groupId });
+        await api.createExamByQuery({ ...data, class_id: classId, group_id: groupId });
       }
       setShowAddExam(false);
       setEditExamId(null);
-      setExamForm({ subject: '', exam_name: '', exam_time: '', total_score: 100, remark: '' });
+      setExamForm({ subject: '', subject_id: null, exam_name: '', exam_time: '', total_score: 100, remark: '' });
       loadAll();
     } catch (e: any) { alert(e.message); }
+  };
+
+  const handleBatchAdd = async () => {
+    if (batchForm.selectedIds.length === 0) return alert('请至少选择一个科目');
+    setBatchSaving(true);
+    try {
+      const classId = group.scope_type === 'grade' ? 0 : group.class_id;
+      for (const subId of batchForm.selectedIds) {
+        const sub = subjects.find((s: any) => s.id === subId);
+        if (sub) {
+          await api.createExamByQuery({
+            subject: sub.subject_name, subject_id: subId,
+            exam_name: sub.subject_name,
+            exam_time: batchForm.exam_time,
+            total_score: batchForm.total_score,
+            remark: batchForm.remark,
+            class_id: classId, group_id: groupId
+          });
+        }
+      }
+      setShowBatchAdd(false);
+      setBatchForm({ selectedIds: [], exam_time: '', total_score: 100, remark: '' });
+      loadAll();
+    } catch (e: any) { alert(e.message); }
+    finally { setBatchSaving(false); }
   };
 
   const openEditExam = (exam: ExamItem) => {
     setEditExamId(exam.id);
     setExamForm({
-      subject: exam.subject, exam_name: exam.exam_name,
+      subject: exam.subject, subject_id: exam.subject_id || null, exam_name: exam.exam_name,
       exam_time: exam.exam_time || '', total_score: exam.total_score || 100,
       remark: exam.remark || ''
     });
@@ -166,11 +204,17 @@ export default function ScoreGroupDetail() {
               onChange={e => setInfoForm({ ...infoForm, group_name: e.target.value })} />
           </div>
           <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">所属班级</label>
-            <select className="form-select" value={infoForm.class_id}
-              onChange={e => setInfoForm({ ...infoForm, class_id: Number(e.target.value) })}>
-              {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <label className="form-label">所属范围</label>
+            {group.scope_type === 'grade' ? (
+              <div className="form-input" style={{ background: '#f7f8fa', color: '#1D2129' }}>
+                {group.grade_name || '年级'}（年级统考{group.exam_type === 'liberal_arts' ? '·文科' : group.exam_type === 'science' ? '·理科' : '·综合'}）
+              </div>
+            ) : (
+              <select className="form-select" value={infoForm.class_id}
+                onChange={e => setInfoForm({ ...infoForm, class_id: Number(e.target.value) })}>
+                {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
           </div>
         </div>
         <div className="form-row">
@@ -211,8 +255,11 @@ export default function ScoreGroupDetail() {
           <div style={{ display: 'flex', gap: 8 }}>
             <input ref={batchTotalRef} className="form-input" style={{ width: 100 }} type="number" placeholder="统一满分" />
             <button className="btn btn-default btn-sm" onClick={handleBatchTotalScore}>批量设置</button>
-            <button className="btn btn-primary btn-sm" onClick={() => { setEditExamId(null); setExamForm({ subject: '', exam_name: '', exam_time: '', total_score: 100, remark: '' }); setShowAddExam(true); }}>
+            <button className="btn btn-primary btn-sm" onClick={() => { setEditExamId(null); setExamForm({ subject: '', subject_id: null, exam_name: '', exam_time: '', total_score: 100, remark: '' }); setShowAddExam(true); }}>
               + 新增科目
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => { setShowBatchAdd(true); }}>
+              + 批量新增
             </button>
           </div>
         </div>
@@ -229,6 +276,8 @@ export default function ScoreGroupDetail() {
                 <th>考试名称</th>
                 <th>考试时间</th>
                 <th>满分</th>
+                <th>录入进度</th>
+                <th>平均分</th>
                 <th>备注</th>
                 <th style={{ width: 120 }}>操作</th>
               </tr>
@@ -249,6 +298,12 @@ export default function ScoreGroupDetail() {
                   <td>{exam.exam_name}</td>
                   <td>{exam.exam_time ? exam.exam_time.substring(0, 16).replace('T', ' ') : '-'}</td>
                   <td>{exam.total_score || 100}</td>
+                  <td style={{ fontSize: 12 }}>
+                    <span style={{ color: '#86909C' }}>已录{exam.entered_count || 0}</span>
+                    <span style={{ margin: '0 2px', color: '#C9CDD4' }}>/</span>
+                    <span style={{ color: '#1D2129' }}>应录{exam.expected_count || 0}</span>
+                  </td>
+                  <td style={{ fontWeight: 500 }}>{exam.avg_score != null ? exam.avg_score : '-'}</td>
                   <td style={{ color: '#86909C', fontSize: 12 }}>{exam.remark || '-'}</td>
                   <td style={{ display: 'flex', gap: 6 }}>
                     <button className="btn btn-default btn-sm"
@@ -304,6 +359,62 @@ export default function ScoreGroupDetail() {
         </div>
       </div>
 
+      {/* Batch Add Exams Modal */}
+      {showBatchAdd && (
+        <div className="modal-overlay" onClick={() => setShowBatchAdd(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
+            <div className="modal-title">批量新增科目</div>
+            <div className="form-group">
+              <label className="form-label">选择科目 <span style={{ color: '#F53F3F' }}>*</span></label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                {subjects.map((s: any) => (
+                  <label key={s.id} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '4px 10px', border: '1px solid #e5e6eb', borderRadius: 4,
+                    background: batchForm.selectedIds.includes(s.id) ? '#e6f7f5' : '#fff',
+                    cursor: 'pointer', fontSize: 13
+                  }}>
+                    <input type="checkbox"
+                      checked={batchForm.selectedIds.includes(s.id)}
+                      onChange={e => {
+                        setBatchForm(prev => ({
+                          ...prev,
+                          selectedIds: e.target.checked
+                            ? [...prev.selectedIds, s.id]
+                            : prev.selectedIds.filter(id => id !== s.id)
+                        }));
+                      }}
+                    />
+                    {s.subject_name}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">考试时间</label>
+              <input className="form-input" type="datetime-local" value={batchForm.exam_time}
+                onChange={e => setBatchForm({ ...batchForm, exam_time: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">满分</label>
+              <input className="form-input" type="number" value={batchForm.total_score}
+                onChange={e => setBatchForm({ ...batchForm, total_score: Number(e.target.value) })} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">备注</label>
+              <input className="form-input" value={batchForm.remark}
+                onChange={e => setBatchForm({ ...batchForm, remark: e.target.value })} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-default" onClick={() => setShowBatchAdd(false)}>取消</button>
+              <button className="btn btn-primary" onClick={handleBatchAdd} disabled={batchSaving}>
+                {batchSaving ? '创建中...' : '批量创建'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add/Edit Exam Modal */}
       {showAddExam && (
         <div className="modal-overlay" onClick={() => { setShowAddExam(false); setEditExamId(null); }}>
@@ -311,9 +422,14 @@ export default function ScoreGroupDetail() {
             <div className="modal-title">{editExamId ? '编辑科目' : '新增科目'}</div>
             <div className="form-group">
               <label className="form-label">科目 <span style={{ color: '#F53F3F' }}>*</span></label>
-              <input className="form-input" value={examForm.subject}
-                onChange={e => setExamForm({ ...examForm, subject: e.target.value })}
-                placeholder="如：语文、数学、英语" />
+              <select className="form-select" value={examForm.subject_id ?? ''} onChange={e => {
+                const id = e.target.value ? Number(e.target.value) : null;
+                const sub = subjects.find((s: any) => s.id === id);
+                setExamForm({ ...examForm, subject_id: id, subject: sub ? sub.subject_name : '' });
+              }}>
+                <option value="">请选择科目</option>
+                {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.subject_name}</option>)}
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">考试名称 <span style={{ color: '#F53F3F' }}>*</span></label>

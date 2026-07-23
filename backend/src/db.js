@@ -34,6 +34,14 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS subjects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_name VARCHAR(50) NOT NULL UNIQUE,
+    sort INTEGER NOT NULL DEFAULT 0,
+    status INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS class_teachers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     class_id INTEGER NOT NULL,
@@ -196,6 +204,7 @@ try { db.exec('ALTER TABLE classes ADD COLUMN grade_id INTEGER REFERENCES grades
 // 迁移：为 exam_groups 表添加双范围字段
 try { db.exec('ALTER TABLE exam_groups ADD COLUMN scope_type VARCHAR(10) NOT NULL DEFAULT \'class\''); } catch (_) {}
 try { db.exec('ALTER TABLE exam_groups ADD COLUMN grade_id INTEGER REFERENCES grades(id) ON DELETE SET NULL'); } catch (_) {}
+try { db.exec('ALTER TABLE exam_groups ADD COLUMN exam_type VARCHAR(20) NOT NULL DEFAULT \'comprehensive\''); } catch (_) {}
 
 // 初始化预置年级
 (function seedGrades() {
@@ -206,6 +215,20 @@ try { db.exec('ALTER TABLE exam_groups ADD COLUMN grade_id INTEGER REFERENCES gr
     db.prepare('INSERT INTO grades (grade_name, sort) VALUES (?, ?)').run('高三年级', 3);
   }
 })();
+
+// 初始化预置科目
+(function seedSubjects() {
+  const existing = db.prepare('SELECT COUNT(*) as cnt FROM subjects').get();
+  if (existing.cnt === 0) {
+    const list = ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理', '体育'];
+    list.forEach((name, i) => {
+      db.prepare('INSERT INTO subjects (subject_name, sort) VALUES (?, ?)').run(name, i + 1);
+    });
+  }
+})();
+
+// 迁移：为 exams 表添加 subject_id
+try { db.exec('ALTER TABLE exams ADD COLUMN subject_id INTEGER REFERENCES subjects(id) ON DELETE SET NULL'); } catch (_) {}
 
 // 迁移：为 exams 表添加新字段
 try { db.exec('ALTER TABLE exams ADD COLUMN group_id INTEGER REFERENCES exam_groups(id) ON DELETE SET NULL'); } catch (_) {}

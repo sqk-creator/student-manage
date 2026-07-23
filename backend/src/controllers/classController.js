@@ -1,13 +1,18 @@
 const db = require('../db');
 
 exports.list = (req, res) => {
+  const { grade_id, type } = req.query;
+  let where = 'WHERE c.teacher_id = ?';
+  const params = [req.teacherId];
+  if (grade_id) { where += ' AND c.grade_id = ?'; params.push(grade_id); }
+  if (type) { where += ' AND c.type = ?'; params.push(type); }
   const classes = db.prepare(`
     SELECT c.*,
       (SELECT COUNT(*) FROM students WHERE class_id = c.id) as student_count
     FROM classes c
-    WHERE c.teacher_id = ?
+    ${where}
     ORDER BY c.created_at DESC
-  `).all(req.teacherId);
+  `).all(...params);
 
   const result = classes.map(c => {
     const teachers = db.prepare(`

@@ -48,11 +48,11 @@ exports.list = (req, res) => {
 exports.create = (req, res) => {
   const { exam_id, student_id, score } = req.body;
   if (!exam_id || !student_id) return res.status(422).json({ error: '考试ID和学生ID为必填项' });
-  if (score === undefined || score < 0) return res.status(422).json({ error: '成绩不能为空或负数' });
 
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(exam_id);
   if (!exam) return res.status(404).json({ error: '考试不存在' });
   const totalScore = exam.total_score || 100;
+  if (score === undefined || score < 0 || score > totalScore) return res.status(422).json({ error: `成绩应在0-${totalScore}之间` });
 
   db.prepare(`
     INSERT INTO scores (score, student_id, exam_id, updated_at) VALUES (?, ?, ?, datetime('now'))
@@ -87,10 +87,9 @@ exports.update = (req, res) => {
   const existing = db.prepare('SELECT * FROM scores WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: '成绩记录不存在' });
   const { score } = req.body;
-  if (score === undefined || score < 0) return res.status(422).json({ error: '成绩不能为空或负数' });
-
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(existing.exam_id);
   const totalScore = exam ? (exam.total_score || 100) : 100;
+  if (score === undefined || score < 0 || score > totalScore) return res.status(422).json({ error: `成绩应在0-${totalScore}之间` });
 
   db.prepare('UPDATE scores SET score = ?, updated_at = datetime(\'now\') WHERE id = ?').run(score, id);
 
@@ -168,7 +167,7 @@ exports.batchSave = (req, res) => {
 
   const transaction = db.transaction((items) => {
     for (const item of items) {
-      if (item.score === undefined || item.score < 0) throw new Error('成绩不能为空或负数');
+      if (item.score === undefined || item.score < 0 || item.score > totalScore) throw new Error(`成绩应在0-${totalScore}之间`);
       upsertScore.run(item.score, item.student_id, exam_id);
     }
 

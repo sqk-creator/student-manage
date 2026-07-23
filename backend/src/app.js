@@ -17,6 +17,7 @@ const classEventsRoutes = require('./routes/class-events');
 const attendanceRoutes = require('./routes/attendances');
 const studentCommentRoutes = require('./routes/student-comments');
 const gradeRoutes = require('./routes/grades');
+const subjectRoutes = require('./routes/subjects');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -286,6 +287,10 @@ app.get('/api/public/grade/list', (req, res) => {
   const db = require('./db');
   res.json(db.prepare('SELECT * FROM grades WHERE status = 1 ORDER BY sort ASC').all());
 });
+app.get('/api/public/subject/list', (req, res) => {
+  const db = require('./db');
+  res.json(db.prepare('SELECT * FROM subjects WHERE status = 1 ORDER BY sort ASC').all());
+});
 app.use('/api/banners', authMiddleware, bannerRoutes);
 app.use('/api/classes', authMiddleware, classRoutes);
 
@@ -309,6 +314,7 @@ app.use('/api/classes/:classId/events', authMiddleware, classEventsRoutes);
 app.use('/api/attendances', authMiddleware, attendanceRoutes);
 app.use('/api/students/:studentId/comments', authMiddleware, studentCommentRoutes);
 app.use('/api/grades', authMiddleware, gradeRoutes);
+app.use('/api/subjects', authMiddleware, subjectRoutes);
 
 app.use((err, req, res, _next) => {
   console.error(err);
