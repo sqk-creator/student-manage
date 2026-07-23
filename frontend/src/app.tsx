@@ -19,6 +19,7 @@ import ScoreExamDetail from './pages/score-exam-detail/index';
 import ScoreReport from './pages/score-report/index';
 import ScoreStudentArchive from './pages/score-student-archive/index';
 import Subjects from './pages/subjects/index';
+import FeatureCards from './pages/feature-cards/index';
 import './app.scss';
 
 const adminRoutes: Record<string, { component: React.FC; title: string }> = {
@@ -40,6 +41,7 @@ const adminRoutes: Record<string, { component: React.FC; title: string }> = {
   '/admin/score-report': { component: ScoreReport, title: '成绩统计报表' },
   '/admin/score-student-archive': { component: ScoreStudentArchive, title: '学生成绩档案' },
   '/admin/banners': { component: Banners, title: 'Banner图管理' },
+  '/admin/feature-cards': { component: FeatureCards, title: '运营卡片管理' },
 };
 
 function Sidebar({ current, onNav }: { current: string; onNav: (path: string) => void }) {
@@ -63,6 +65,7 @@ function Sidebar({ current, onNav }: { current: string; onNav: (path: string) =>
   ];
   const operationItems = [
     { path: '/admin/banners', label: 'Banner图管理', icon: '▣' },
+    { path: '/admin/feature-cards', label: '运营卡片管理', icon: '◈' },
   ];
 
   return (

@@ -246,4 +246,16 @@ try { db.exec('ALTER TABLE scores ADD COLUMN updated_at DATETIME DEFAULT CURRENT
 // 学生档案评语表
 try { db.exec('CREATE TABLE IF NOT EXISTS student_comments (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, teacher_name VARCHAR(50) NOT NULL DEFAULT \'\', comment TEXT NOT NULL DEFAULT \'\', semester VARCHAR(20) NOT NULL DEFAULT \'\', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE)'); } catch (_) {}
 
+// 运营卡片配置表
+try { db.exec('CREATE TABLE IF NOT EXISTS feature_cards (id INTEGER PRIMARY KEY AUTOINCREMENT, card_key VARCHAR(30) NOT NULL UNIQUE, title VARCHAR(50) NOT NULL DEFAULT \'\', subtitle VARCHAR(100) NOT NULL DEFAULT \'\', image_url VARCHAR(500) NOT NULL DEFAULT \'\', link_url VARCHAR(200) NOT NULL DEFAULT \'\', is_enabled INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)'); } catch (_) {}
+
+(function seedFeatureCards() {
+  const existing = db.prepare('SELECT COUNT(*) as cnt FROM feature_cards').get();
+  if (existing.cnt === 0) {
+    db.prepare("INSERT INTO feature_cards (card_key, title, subtitle, link_url, sort_order) VALUES ('student_analysis', '学生智能分析', 'AI赋能构建学生管家', 'm-student-analysis.html', 1)").run();
+    db.prepare("INSERT INTO feature_cards (card_key, title, subtitle, link_url, sort_order) VALUES ('score_report', '成绩报告', '班级及年级成绩统计', 'm-score-report.html', 2)").run();
+    db.prepare("INSERT INTO feature_cards (card_key, title, subtitle, link_url, sort_order) VALUES ('notice_board', '通知公告', '学校通知动态一览', 'm-notices.html', 3)").run();
+  }
+})();
+
 module.exports = db;

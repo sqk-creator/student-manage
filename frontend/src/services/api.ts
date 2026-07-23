@@ -287,6 +287,30 @@ export const api = {
     }).then(res => res.json());
   },
 
+  getFeatureCards() {
+    return request('/feature-cards');
+  },
+
+  updateFeatureCard(id: number, data: any) {
+    return request(`/feature-cards/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  uploadFeatureCard(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const headers: Record<string, string> = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${BASE}/feature-cards/upload`, {
+      method: 'POST',
+      headers,
+      body: formData
+    }).then(res => res.json());
+  },
+
   getTeacherProfiles() {
     return request('/teacher-profiles');
   },

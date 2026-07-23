@@ -18,6 +18,7 @@ const attendanceRoutes = require('./routes/attendances');
 const studentCommentRoutes = require('./routes/student-comments');
 const gradeRoutes = require('./routes/grades');
 const subjectRoutes = require('./routes/subjects');
+const featureCardRoutes = require('./routes/featureCards');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,6 +29,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/auth', authRoutes);
 app.get('/api/banners/enabled', require('./controllers/bannerController').enabled);
+app.get('/api/feature-cards/enabled', require('./controllers/featureCardController').enabled);
 app.get('/api/public/classes', (req, res) => {
   const db = require('./db');
   let sql = `SELECT c.*, (SELECT COUNT(*) FROM students WHERE class_id = c.id) as student_count FROM classes c`;
@@ -315,6 +317,7 @@ app.use('/api/attendances', authMiddleware, attendanceRoutes);
 app.use('/api/students/:studentId/comments', authMiddleware, studentCommentRoutes);
 app.use('/api/grades', authMiddleware, gradeRoutes);
 app.use('/api/subjects', authMiddleware, subjectRoutes);
+app.use('/api/feature-cards', authMiddleware, featureCardRoutes);
 
 app.use((err, req, res, _next) => {
   console.error(err);
