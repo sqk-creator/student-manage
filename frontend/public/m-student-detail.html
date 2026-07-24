@@ -8,19 +8,41 @@
 <style>
 html{overflow-y:scroll;}
 
-/* Header Title Row - photo top-aligned with name */
-.header-title-row{align-items:flex-start;}
-
 /* Header Card - full width white */
 .header-card{
   background:#FFFFFF;padding:14px 16px 0;
 }
 
-/* Student Hero Left Column - name + info, photo on right */
-.student-hero-left{flex:1;min-width:0;padding-right:16px;}
+/* ===== Student Hero Section ===== */
+.student-hero{
+  display:flex;flex-direction:column;align-items:center;
+  padding:12px 0 10px;
+}
+.hero-photo-wrap{
+  width:120px;height:160px;border-radius:12px;
+  overflow:hidden;margin-bottom:14px;
+  background:linear-gradient(135deg,#BEEFDA,#35B9AA);
+  display:flex;align-items:center;justify-content:center;
+  font-size:48px;color:#fff;font-weight:700;
+}
+.hero-photo-wrap img{
+  width:120px;height:160px;object-fit:cover;display:block;
+}
+.hero-name{
+  font-size:30px;font-weight:700;color:#1D2129;margin-bottom:4px;
+}
+.hero-student-no{
+  font-size:14px;color:#86909C;
+}
 
-/* Student Info below name - 14px gap, narrower width */
-.student-info{margin-top:14px;margin-left:10px;max-width:280px;}
+/* Four-column info */
+.hero-info-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:0;padding:8px 0 0;
+}
+.hero-info-item{text-align:center;}
+.hero-info-label{font-size:14px;color:#86909C;margin-bottom:2px;}
+.hero-info-value{font-size:16px;color:#1D2129;font-weight:700;}
 
 /* Override nav title to match design */
 .page-header.mode-nav .header-label{font-size:16px;font-weight:500;}
@@ -40,13 +62,20 @@ html{overflow-y:scroll;}
   font-size:32px;color:#fff;font-weight:700;
 }
 
-.expand-toggle{
-  display:flex;align-items:center;justify-content:center;gap:4px;
-  padding:0 0 4px;cursor:pointer;
+.more-btn-wrap{
+  display:flex;justify-content:center;
+  padding:16px 0 20px;
 }
-.expand-toggle-text{font-size:12px;color:#86909C;}
-.expand-toggle-arrow{font-size:10px;color:#C0C4CC;transition:transform .2s;}
-.expand-toggle.open .expand-toggle-arrow{transform:rotate(180deg);}
+.more-btn{
+  display:inline-flex;align-items:center;
+  padding:6px 20px;border-radius:14px;
+  background:#F2F3F5;color:#86909C;
+  font-size:13px;cursor:pointer;user-select:none;
+  -webkit-user-select:none;
+}
+.more-btn.open{
+  background:#14A89A;color:#FFFFFF;
+}
 
 .info-extra{
   display:none;padding:10px 0 0;margin-top:8px;
@@ -110,38 +139,55 @@ html{overflow-y:scroll;}
   padding:16px;
   box-shadow:0 2px 6px rgba(0,0,0,0.04);
 }
-.section-title{
-  font-size:15px;font-weight:600;color:#1D2129;
-  margin-bottom:14px;
-  display:flex;align-items:center;gap:6px;
-}
-.section-title::before{
-  content:'';width:3px;height:15px;
-  background:#14A89A;border-radius:2px;display:inline-block;
-}
-.score-summary{
-  display:grid;grid-template-columns:repeat(3,1fr);
-  gap:10px;margin-bottom:16px;
-}
-.score-item{
-  background:#F7F8FA;border-radius:12px;
-  padding:14px 10px;text-align:center;
-}
-.score-label{font-size:12px;color:#86909C;}
-.score-value{font-size:22px;font-weight:700;color:#1D2129;margin-top:4px;}
-.score-value.high{color:#14A89A;}
 
-.exam-table{
-  width:100%;border-collapse:collapse;
+/* Score Tabs */
+.score-tabs{
+  display:flex;justify-content:center;
+  margin-bottom:16px;
 }
-.exam-table th,.exam-table td{
-  padding:10px 8px;text-align:left;font-size:14px;
+.score-tab{
+  padding:8px 24px;font-size:15px;font-weight:500;
+  color:#86909C;cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:all .2s;
 }
-.exam-table th{color:#86909C;font-weight:400;font-size:12px;border-bottom:1px solid #E5E6EB;}
-.exam-table td{color:#1D2129;border-bottom:1px solid #F2F3F5;}
-.exam-table tr:last-child td{border-bottom:none;}
-.score-highlight{color:#14A89A;font-weight:600;}
-.score-warn{color:#FF6A1A;font-weight:600;}
+.score-tab.active{
+  color:#1D2129;font-weight:700;
+  border-bottom-color:#14A89A;
+}
+
+/* Score Chart */
+.score-chart-wrap{
+  margin-bottom:16px;position:relative;
+}
+.score-chart-wrap canvas{
+  width:100%;height:auto;border-radius:8px;
+  background:#F9FAFB;
+}
+
+/* Score Card List */
+.score-card-list{
+  display:flex;flex-direction:column;gap:10px;
+}
+.score-card{
+  background:#F7F8FA;border-radius:12px;padding:14px;
+}
+.score-card-name{
+  font-size:15px;font-weight:700;color:#1D2129;
+  margin-bottom:10px;
+}
+.score-card-row{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.score-card-field{text-align:left;}
+.score-card-label{font-size:12px;color:#86909C;margin-bottom:2px;}
+.score-card-value{font-size:16px;font-weight:700;color:#1D2129;}
+.score-card-value.high{color:#14A89A;}
+.score-empty{
+  text-align:center;color:#86909C;font-size:14px;
+  padding:20px 0;
+}
 
 /* ===== Attendance Stats Card ===== */
 .attendance-stats-card{
@@ -245,47 +291,34 @@ html{overflow-y:scroll;}
       </div>
     </div>
 
-    <div class="header-title-row">
-      <div class="student-hero-left">
-        <span class="page-title" id="headerTitle">-</span>
-        <div class="student-info">
-          <div class="info-left">
-            <div class="info-grid-row">
-              <div class="info-field">
-                <div class="info-field-label">性别</div>
-                <div class="info-field-value" id="heroGender">-</div>
-              </div>
-              <div class="info-field">
-                <div class="info-field-label">学号</div>
-                <div class="info-field-value" id="heroNo">-</div>
-              </div>
-              <div class="info-field">
-                <div class="info-field-label">出生年月</div>
-                <div class="info-field-value" id="heroBirth">-</div>
-              </div>
-            </div>
-            <div class="info-grid-row">
-              <div class="info-field">
-                <div class="info-field-label">籍贯</div>
-                <div class="info-field-value" id="heroHometown">-</div>
-              </div>
-              <div class="info-field">
-                <div class="info-field-label">年龄</div>
-                <div class="info-field-value" id="heroAge">-</div>
-              </div>
-              <div class="info-field"></div>
-            </div>
-          </div>
-        </div>
+    <!-- Student Hero Section -->
+    <div class="student-hero">
+      <div class="hero-photo-wrap" id="heroAvatar"></div>
+      <div class="hero-name" id="heroName">-</div>
+      <div class="hero-student-no" id="heroStudentNo">学号 -</div>
+    </div>
+
+    <div class="hero-info-grid">
+      <div class="hero-info-item">
+        <div class="hero-info-label">性别</div>
+        <div class="hero-info-value" id="heroGender">-</div>
       </div>
-      <div class="info-right">
-        <div class="info-photo" id="heroAvatar"></div>
+      <div class="hero-info-item">
+        <div class="hero-info-label">出生年月</div>
+        <div class="hero-info-value" id="heroBirth">-</div>
+      </div>
+      <div class="hero-info-item">
+        <div class="hero-info-label">年龄</div>
+        <div class="hero-info-value" id="heroAge">-</div>
+      </div>
+      <div class="hero-info-item">
+        <div class="hero-info-label">籍贯</div>
+        <div class="hero-info-value" id="heroHometown">-</div>
       </div>
     </div>
 
-    <div class="expand-toggle" id="expandToggle" onclick="toggleExpand()">
-      <span class="expand-toggle-text">查看更多信息</span>
-      <span class="expand-toggle-arrow">&#9660;</span>
+    <div class="more-btn-wrap">
+      <span class="more-btn" id="moreBtn" onclick="toggleExpand()">更多</span>
     </div>
     <div class="info-extra" id="heroExtra">
       <div class="info-grid-row">
@@ -347,27 +380,16 @@ html{overflow-y:scroll;}
   </div>
 
   <!-- Score Section -->
-  <div class="info-section">
-    <div class="section-title">成绩记录</div>
-    <div class="score-summary">
-      <div class="score-item">
-        <span class="score-label">考试次数</span>
-        <span class="score-value" id="examCount">0</span>
-      </div>
-      <div class="score-item">
-        <span class="score-label">平均分</span>
-        <span class="score-value high" id="avgTotal">-</span>
-      </div>
-      <div class="score-item">
-        <span class="score-label">最近成绩</span>
-        <span class="score-value" id="lastTotal">-</span>
-      </div>
+  <div class="info-section" id="scoreSection">
+    <div class="score-tabs">
+      <span class="score-tab active" id="tabComprehensive" onclick="switchScoreTab('comprehensive')">年级统考</span>
+      <span class="score-tab" id="tabSingle" onclick="switchScoreTab('single')">单科测验</span>
     </div>
-    <div style="overflow-x:auto;" id="examTableContainer">
-      <table class="exam-table">
-        <thead><tr><th>考试</th><th>语文</th><th>数学</th><th>英语</th></tr></thead>
-        <tbody id="examTbody"><tr><td colspan="4" style="text-align:center;color:#86909C;font-size:14px;">暂无成绩记录</td></tr></tbody>
-      </table>
+    <div class="score-chart-wrap">
+      <canvas id="scoreChart" width="366" height="200"></canvas>
+    </div>
+    <div class="score-card-list" id="scoreCardList">
+      <div class="score-empty">暂无成绩记录</div>
     </div>
   </div>
 
@@ -463,9 +485,9 @@ const studentId=urlParams.get('id')||1;
 var currentSemester=0;
 
 function toggleExpand(){
-  var toggle=document.getElementById('expandToggle');
+  var btn=document.getElementById('moreBtn');
   var extra=document.getElementById('heroExtra');
-  toggle.classList.toggle('open');
+  btn.classList.toggle('open');
   extra.classList.toggle('show');
 }
 
@@ -491,25 +513,26 @@ async function loadStudent(){
     var initialName=s.name||'-';
 
     // Set page title to student name
-    document.getElementById('headerTitle').textContent=initialName;
+    document.getElementById('heroName').textContent=initialName;
 
     var photoDiv=document.getElementById('heroAvatar');
     if(s.photo){
-      photoDiv.innerHTML='<img src="'+s.photo+'" style="width:80px;height:106px;border-radius:10px;object-fit:cover;">';
+      photoDiv.innerHTML='<img src="'+s.photo+'" alt="">';
     }else{
       photoDiv.textContent=initialName[0];
     }
 
     document.getElementById('heroGender').textContent=s.gender||'-';
-    document.getElementById('heroBirth').textContent=s.birth_date||'-';
-    document.getElementById('heroNo').textContent=s.student_no||'-';
+    document.getElementById('heroStudentNo').textContent='学号 '+(s.student_no||'-');
     document.getElementById('heroHometown').textContent=s.hometown||'-';
-
+    var birthDisplay='-';
     if(s.birth_date){
+      birthDisplay=s.birth_date.substring(0,7);
       var birthYear=parseInt(s.birth_date.substring(0,4));
       var now=new Date().getFullYear();
       document.getElementById('heroAge').textContent=(now-birthYear)+'岁';
     }
+    document.getElementById('heroBirth').textContent=birthDisplay;
 
     document.getElementById('infoClass').textContent=s.class_name||'-';
     document.getElementById('infoPhone').textContent=s.phone||'-';
@@ -524,39 +547,135 @@ async function loadStudent(){
   }catch(e){}
 }
 
+var scoreType='comprehensive';
+
+function switchScoreTab(type){
+  scoreType=type;
+  document.getElementById('tabComprehensive').className='score-tab'+(type==='comprehensive'?' active':'');
+  document.getElementById('tabSingle').className='score-tab'+(type==='single'?' active':'');
+  loadScores();
+}
+
 async function loadScores(){
   try{
-    const res=await fetch('/api/public/scores?student_id='+studentId);
-    const data=await res.json();
-    const scores=data.data||data||[];
-    document.getElementById('examCount').textContent=scores.length;
+    var res=await fetch('/api/public/students/'+studentId+'/score-summary?type='+scoreType);
+    var data=await res.json();
+    if(data.error){renderScoreEmpty();return;}
+    var exams=data.exams||[];
+    if(exams.length===0){renderScoreEmpty();return;}
+    drawScoreChart(exams);
+    renderScoreCards(exams);
+  }catch(e){renderScoreEmpty();}
+}
 
-    if(scores.length===0){
-      document.getElementById('avgTotal').textContent='-';
-      document.getElementById('lastTotal').textContent='-';
-      return;
-    }
+function renderScoreEmpty(){
+  var canvas=document.getElementById('scoreChart');
+  var ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#C9CDD4';
+  ctx.font='14px system-ui';
+  ctx.textAlign='center';
+  ctx.fillText('暂无数据',canvas.width/2,canvas.height/2);
+  document.getElementById('scoreCardList').innerHTML='<div class="score-empty">暂无成绩记录</div>';
+}
 
-    let sumTotal=0;
-    scores.forEach(sc=>{
-      const subjects=['chinese','math','english','physics','chemistry','biology','politics','history','geography'];
-      let total=0;
-      subjects.forEach(s=>total+=(sc[s]||0));
-      sc._total=total;
-      sumTotal+=total;
-    });
-    document.getElementById('avgTotal').textContent=Math.round(sumTotal/scores.length);
-    document.getElementById('lastTotal').textContent=scores[0]._total;
+function drawScoreChart(exams){
+  var canvas=document.getElementById('scoreChart');
+  var ctx=canvas.getContext('2d');
+  var W=canvas.width,H=canvas.height;
+  var pad={top:20,right:16,bottom:32,left:40};
+  var pw=W-pad.left-pad.right;
+  var ph=H-pad.top-pad.bottom;
 
-    const tbody=document.getElementById('examTbody');
-    tbody.innerHTML=scores.slice(0,10).map(sc=>{
-      const highlight=(val)=>(val>=135?' score-highlight':(val<72?' score-warn':''));
-      return '<tr><td>'+(sc.exam_name||sc.exam_id)+'</td>'
-        +'<td class="'+highlight(sc.chinese||0)+'">'+(sc.chinese||'-')+'</td>'
-        +'<td class="'+highlight(sc.math||0)+'">'+(sc.math||'-')+'</td>'
-        +'<td class="'+highlight(sc.english||0)+'">'+(sc.english||'-')+'</td></tr>';
-    }).join('');
-  }catch(e){}
+  ctx.clearRect(0,0,W,H);
+
+  var studentScores=exams.map(function(e){return e.student_score;});
+  var avgScores=exams.map(function(e){return e.avg_score;});
+  var allVals=studentScores.concat(avgScores).filter(function(v){return v!=null;});
+  var minVal=Math.floor(Math.min.apply(null,allVals)*0.9/10)*10;
+  var maxVal=Math.ceil(Math.max.apply(null,allVals)*1.1/10)*10;
+  if(maxVal===minVal){maxVal=minVal+20;minVal=minVal-10;}
+  var yRange=maxVal-minVal;
+
+  var toX=function(i){return pad.left+(pw/(Math.max(exams.length-1,1)))*i;};
+  var toY=function(v){return pad.top+ph-((v-minVal)/yRange)*ph;};
+
+  // Grid lines
+  ctx.strokeStyle='#E5E6EB';ctx.lineWidth=0.5;
+  var gridLines=5;
+  for(var g=0;g<=gridLines;g++){
+    var yv=minVal+(yRange/gridLines)*g;
+    var gy=toY(yv);
+    ctx.beginPath();ctx.moveTo(pad.left,gy);ctx.lineTo(W-pad.right,gy);ctx.stroke();
+    ctx.fillStyle='#86909C';ctx.font='10px system-ui';ctx.textAlign='right';
+    ctx.fillText(Math.round(yv),pad.left-6,gy+3);
+  }
+
+  // X axis labels
+  ctx.fillStyle='#86909C';ctx.font='10px system-ui';ctx.textAlign='center';
+  for(var i=0;i<exams.length;i++){
+    var label=exams[i].exam_name||'';
+    if(label.length>3)label=label.substring(0,3);
+    ctx.fillText(label,toX(i),H-pad.bottom+14);
+  }
+
+  // Student score line
+  ctx.strokeStyle='#14A89A';ctx.lineWidth=2;ctx.lineJoin='round';
+  ctx.beginPath();
+  for(var i=0;i<exams.length;i++){
+    var x=toX(i),y=toY(exams[i].student_score);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Student score dots
+  ctx.fillStyle='#14A89A';
+  for(var i=0;i<exams.length;i++){
+    ctx.beginPath();ctx.arc(toX(i),toY(exams[i].student_score),3.5,0,Math.PI*2);ctx.fill();
+  }
+
+  // Avg score line (dashed)
+  ctx.strokeStyle='#FF8F5A';ctx.lineWidth=2;ctx.lineJoin='round';
+  ctx.setLineDash([6,3]);
+  ctx.beginPath();
+  for(var i=0;i<exams.length;i++){
+    var x=toX(i),y=toY(exams[i].avg_score);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Avg score dots
+  ctx.fillStyle='#FF8F5A';
+  for(var i=0;i<exams.length;i++){
+    ctx.beginPath();ctx.arc(toX(i),toY(exams[i].avg_score),3.5,0,Math.PI*2);ctx.fill();
+  }
+
+  // Legend
+  var lx=pad.left,ly=pad.top-2;
+  ctx.fillStyle='#14A89A';ctx.beginPath();ctx.arc(lx+4,ly+3,3.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#1D2129';ctx.font='11px system-ui';ctx.textAlign='left';
+  ctx.fillText('学生',lx+11,ly+7);
+
+  ctx.fillStyle='#FF8F5A';ctx.beginPath();ctx.arc(lx+52,ly+3,3.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#1D2129';ctx.fillText('均分',lx+59,ly+7);
+}
+
+function renderScoreCards(exams){
+  var html='';
+  for(var i=exams.length-1;i>=0;i--){
+    var e=exams[i];
+    var scoreClass=e.student_score>=e.avg_score?' high':'';
+    html+='<div class="score-card"><div class="score-card-name">'+escapeHtml(e.exam_name)+'</div>'
+      +'<div class="score-card-row">'
+      +'<div class="score-card-field"><div class="score-card-label">总分</div><div class="score-card-value'+scoreClass+'">'+e.student_score
+      +(e.total_score?'<span style="font-size:12px;font-weight:400;color:#86909C">/'+e.total_score+'</span>':'')
+      +'</div></div>'
+      +'<div class="score-card-field"><div class="score-card-label">班级排名</div><div class="score-card-value">第'+e.class_rank+'名</div></div>'
+      +'<div class="score-card-field"><div class="score-card-label">年级排名</div><div class="score-card-value">第'+e.grade_rank+'名</div></div>'
+      +'</div></div>';
+  }
+  document.getElementById('scoreCardList').innerHTML=html;
 }
 
 var ascMonth=null;
