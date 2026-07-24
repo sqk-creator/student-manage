@@ -101,29 +101,53 @@ app.get('/api/public/students/:id/score-summary', (req, res) => {
   const type = req.query.type || 'comprehensive';
   const student = db.prepare('SELECT id, class_id, name FROM students WHERE id = ?').get(studentId);
   if (!student) return res.status(404).json({ error: '学生不存在' });
-  let typeFilter = '';
+
   if (type === 'comprehensive') {
-    typeFilter = 'AND e.group_id IS NOT NULL AND e.group_id > 0';
-  } else if (type === 'single') {
-    typeFilter = 'AND (e.group_id IS NULL OR e.group_id = 0)';
+    const records = db.prepare(`
+      WITH stu_total AS (
+        SELECT eg.id as group_id, eg.group_name,
+          MAX(e.exam_date) as exam_date,
+          SUM(e.total_score) as total_score,
+          SUM(sc.score) as student_total
+        FROM scores sc
+        JOIN exams e ON sc.exam_id = e.id
+        JOIN exam_groups eg ON e.group_id = eg.id
+        WHERE sc.student_id = ?
+        GROUP BY eg.id
+      ),
+      all_total AS (
+        SELECT eg.id as group_id, sc.student_id, st.class_id,
+          SUM(sc.score) as total
+        FROM scores sc
+        JOIN exams e ON sc.exam_id = e.id
+        JOIN exam_groups eg ON e.group_id = eg.id
+        JOIN students st ON sc.student_id = st.id
+        GROUP BY eg.id, sc.student_id
+      )
+      SELECT st.*,
+        (SELECT ROUND(AVG(at2.total),1) FROM all_total at2 WHERE at2.group_id = st.group_id) as avg_total,
+        (SELECT COUNT(*)+1 FROM all_total at2 WHERE at2.group_id = st.group_id AND at2.class_id = ? AND at2.total > st.student_total) as class_rank,
+        (SELECT COUNT(*)+1 FROM all_total at2 WHERE at2.group_id = st.group_id AND at2.total > st.student_total) as grade_rank
+      FROM stu_total st
+      ORDER BY st.exam_date ASC
+    `).all(studentId, student.class_id);
+    res.json({ student_id: student.id, class_id: student.class_id, student_name: student.name, exams: records, type: 'comprehensive' });
+  } else {
+    const exams = db.prepare(`
+      SELECT
+        e.id as exam_id, e.exam_name, e.exam_date, e.total_score,
+        s.score as student_score,
+        s.single_rank as grade_rank,
+        (SELECT ROUND(AVG(sc.score),1) FROM scores sc WHERE sc.exam_id = e.id) as avg_score,
+        (SELECT ROUND(AVG(sc.score),1) FROM scores sc JOIN students st ON sc.student_id = st.id WHERE sc.exam_id = e.id AND st.class_id = ?) as class_avg,
+        (SELECT COUNT(*) + 1 FROM scores sc2 JOIN students st2 ON sc2.student_id = st2.id WHERE sc2.exam_id = e.id AND st2.class_id = ? AND sc2.score > s.score) as class_rank
+      FROM scores s
+      JOIN exams e ON s.exam_id = e.id
+      WHERE s.student_id = ? AND (e.group_id IS NULL OR e.group_id = 0)
+      ORDER BY e.exam_date ASC
+    `).all(student.class_id, student.class_id, studentId);
+    res.json({ student_id: student.id, class_id: student.class_id, student_name: student.name, exams, type: 'single' });
   }
-  const exams = db.prepare(`
-    SELECT
-      e.id as exam_id,
-      e.exam_name,
-      e.exam_date,
-      e.total_score,
-      s.score as student_score,
-      s.single_rank as grade_rank,
-      (SELECT ROUND(AVG(sc.score),1) FROM scores sc WHERE sc.exam_id = e.id) as avg_score,
-      (SELECT ROUND(AVG(sc.score),1) FROM scores sc JOIN students st ON sc.student_id = st.id WHERE sc.exam_id = e.id AND st.class_id = ?) as class_avg,
-      (SELECT COUNT(*) + 1 FROM scores sc2 JOIN students st2 ON sc2.student_id = st2.id WHERE sc2.exam_id = e.id AND st2.class_id = ? AND sc2.score > s.score) as class_rank
-    FROM scores s
-    JOIN exams e ON s.exam_id = e.id
-    WHERE s.student_id = ? ${typeFilter}
-    ORDER BY e.exam_date ASC
-  `).all(student.class_id, student.class_id, studentId);
-  res.json({ student_id: student.id, class_id: student.class_id, student_name: student.name, exams });
 });
 app.get('/api/public/teachers/:id/honors', (req, res) => {
   const db = require('./db');
