@@ -149,6 +149,81 @@ app.get('/api/public/students/:id/score-summary', (req, res) => {
     res.json({ student_id: student.id, class_id: student.class_id, student_name: student.name, exams, type: 'single' });
   }
 });
+app.get('/api/public/exams/list', (req, res) => {
+  const db = require('./db');
+  const { class_id } = req.query;
+  let sql = 'SELECT e.id, e.exam_name, e.subject, e.exam_date, e.total_score FROM exams e WHERE (e.group_id IS NULL OR e.group_id = 0)';
+  const params = [];
+  if (class_id) { sql += ' AND e.class_id = ?'; params.push(class_id); }
+  sql += ' ORDER BY e.exam_date DESC';
+  res.json(db.prepare(sql).all(...params));
+});
+app.get('/api/public/exam-groups/list', (req, res) => {
+  const db = require('./db');
+  const { class_id, grade_id } = req.query;
+  let sql = 'SELECT id, group_name, exam_date, total_score, scope_type, exam_type FROM exam_groups WHERE 1=1';
+  const params = [];
+  if (class_id) { sql += ' AND (class_id = ? OR (scope_type = \'grade\' AND grade_id = (SELECT grade_id FROM classes WHERE id = ?)))'; params.push(class_id, class_id); }
+  if (grade_id) { sql += ' AND grade_id = ?'; params.push(grade_id); }
+  sql += ' ORDER BY exam_date DESC';
+  res.json(db.prepare(sql).all(...params));
+});
+app.get('/api/public/exam-stats', (req, res) => {
+  const db = require('./db');
+  const { exam_id } = req.query;
+  if (!exam_id) return res.status(400).json({ error: '缺少 exam_id' });
+  const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(exam_id);
+  if (!exam) return res.status(404).json({ error: '考试不存在' });
+  const dbStats = db.prepare('SELECT COUNT(*) as total, ROUND(AVG(score),1) as avg, MAX(score) as max, MIN(score) as min FROM scores WHERE exam_id = ?').get(exam_id);
+  const dist = db.prepare(`
+    SELECT
+      SUM(CASE WHEN ROUND((score*100.0/ ?),0) >= 90 THEN 1 ELSE 0 END) as excellent,
+      SUM(CASE WHEN ROUND((score*100.0/ ?),0) >= 80 AND ROUND((score*100.0/ ?),0) < 90 THEN 1 ELSE 0 END) as good,
+      SUM(CASE WHEN ROUND((score*100.0/ ?),0) >= 60 AND ROUND((score*100.0/ ?),0) < 80 THEN 1 ELSE 0 END) as average,
+      SUM(CASE WHEN ROUND((score*100.0/ ?),0) < 60 THEN 1 ELSE 0 END) as fail
+    FROM scores WHERE exam_id = ?
+  `).get(exam.total_score || 100, exam.total_score || 100, exam.total_score || 100, exam.total_score || 100, exam.total_score || 100, exam.total_score || 100, exam_id);
+  const rankings = db.prepare(`
+    SELECT s.id as student_id, s.name as student_name, s.student_no,
+      sc.score, sc.single_rank as rank, sc.level
+    FROM scores sc JOIN students s ON sc.student_id = s.id
+    WHERE sc.exam_id = ? ORDER BY sc.score DESC
+  `).all(exam_id);
+  res.json({ exam, stats: dbStats, distribution: dist, rankings });
+});
+app.get('/api/public/group-stats', (req, res) => {
+  const db = require('./db');
+  const { group_id } = req.query;
+  if (!group_id) return res.status(400).json({ error: '缺少 group_id' });
+  const group = db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(group_id);
+  if (!group) return res.status(404).json({ error: '考试批次不存在' });
+  const exams = db.prepare('SELECT e.id as exam_id, e.exam_name, e.subject, e.total_score FROM exams e WHERE e.group_id = ?').all(group_id);
+  const examStats = exams.map(ex => {
+    const st = db.prepare('SELECT COUNT(*) as total, ROUND(AVG(score),1) as avg, MAX(score) as max, MIN(score) as min FROM scores WHERE exam_id = ?').get(ex.exam_id);
+    return { ...ex, stats: st };
+  });
+  const students = db.prepare(`
+    SELECT DISTINCT s.id, s.name, s.student_no FROM students s
+    JOIN scores sc ON sc.student_id = s.id
+    JOIN exams e ON sc.exam_id = e.id
+    WHERE e.group_id = ?
+  `).all(group_id);
+  const studentStats = students.map(st => {
+    const subjects = {};
+    let total = 0;
+    exams.forEach(ex => {
+      const sc = db.prepare('SELECT score, level, single_rank as rank FROM scores WHERE student_id = ? AND exam_id = ?').get(st.id, ex.exam_id);
+      if (sc) {
+        subjects[ex.subject || ex.exam_name] = { score: sc.score, level: sc.level, rank: sc.rank, exam_name: ex.exam_name };
+        total += sc.score;
+      }
+    });
+    return { student_id: st.id, student_name: st.name, student_no: st.student_no, total, subjects };
+  });
+  studentStats.sort((a, b) => b.total - a.total);
+  studentStats.forEach((st, i) => { st.rank = i + 1; });
+  res.json({ group, exams: examStats, rankings: studentStats });
+});
 app.get('/api/public/teachers/:id/honors', (req, res) => {
   const db = require('./db');
   const honors = db.prepare('SELECT * FROM teacher_honors WHERE teacher_id = ? ORDER BY date DESC').all(req.params.id);

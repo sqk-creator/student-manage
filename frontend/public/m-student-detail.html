@@ -8,6 +8,10 @@
 <style>
 html{overflow-y:scroll;}
 
+.page-header.mode-nav{
+  background:linear-gradient(to bottom,#B7EAD8,#FFFFFF 40%,#FFFFFF);
+}
+
 /* Header Card - full width white */
 .header-card{
   background:#FFFFFF;padding:14px 16px 0;
@@ -142,19 +146,19 @@ html{overflow-y:scroll;}
 
 /* Score Tabs */
 .score-tabs{
-  display:flex;justify-content:center;
+  display:flex;align-items:baseline;gap:0;
   margin-bottom:16px;
 }
 .score-tab{
-  padding:8px 24px;font-size:16px;font-weight:500;
+  padding:8px 24px 8px 0;
+  font-size:16px;font-weight:500;
   color:#86909C;cursor:pointer;
-  border-bottom:2px solid transparent;
+  border:none;
   transition:all .2s;
 }
 .score-tab.active{
   font-size:20px;font-weight:600;
   color:#1D2129;
-  border-bottom-color:#14A89A;
 }
 
 /* Score Chart */

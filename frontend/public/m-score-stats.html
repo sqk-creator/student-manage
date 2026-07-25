@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>成绩统计</title>
+<link rel="stylesheet" href="mobile-header.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;min-height:100vh}
+.app{width:100%;max-width:430px;background:#F1F8F7;min-height:100vh;padding-bottom:120px}
+
+.mode-tabs{display:flex;align-items:baseline;gap:0;padding:8px 16px 0;background:#fff}
+.mode-tab{padding:8px 24px 8px 0;font-size:16px;font-weight:500;color:#86909C;cursor:pointer;border:none;background:none}
+.mode-tab.active{font-size:20px;font-weight:600;color:#1D2129}
+
+.selector-bar{padding:8px 16px 12px;background:#fff;display:flex;gap:8px;align-items:center}
+.selector-bar select{flex:1;padding:8px 10px;border-radius:8px;border:1px solid #E5E6EB;font-size:14px;color:#1D2129;background:#F9FAFB;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386909C' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px}
+
+/* Metrics */
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 16px 10px}
+.metric-card{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.metric-label{font-size:11px;color:#86909C;margin-bottom:4px}
+.metric-value{font-size:18px;font-weight:700;color:#1D2129}
+.metric-value.high{color:#14A89A}
+
+/* Card section */
+.card-section{margin:0 16px 10px;background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.sec-title{font-size:15px;font-weight:600;color:#1D2129;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.sec-title::before{content:'';width:3px;height:15px;background:#14A89A;border-radius:2px;display:inline-block}
+
+/* Bar chart */
+.bar-row{display:flex;align-items:center;margin-bottom:8px}
+.bar-label{width:48px;font-size:12px;color:#86909C;text-align:right;padding-right:8px;flex-shrink:0}
+.bar-track{flex:1;height:20px;background:#F2F3F5;border-radius:10px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:10px;transition:width .4s ease}
+.bar-fill.excellent{background:#14A89A}
+.bar-fill.good{background:#35B9AA}
+.bar-fill.average{background:#BEEFDA}
+.bar-fill.fail{background:#FF8F5A}
+.bar-count{width:36px;font-size:12px;color:#1D2129;text-align:right;flex-shrink:0;padding-left:6px}
+
+/* Subject bars */
+.subj-row{display:flex;align-items:center;margin-bottom:8px}
+.subj-label{width:56px;font-size:12px;color:#1D2129;font-weight:500;text-align:right;padding-right:10px;flex-shrink:0}
+.subj-track{flex:1;height:20px;background:#F2F3F5;border-radius:10px;overflow:hidden;position:relative}
+.subj-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#0B6D55,#14A89A);transition:width .4s ease}
+.subj-val{width:48px;font-size:12px;color:#1D2129;font-weight:600;text-align:right;flex-shrink:0;padding-left:8px}
+
+/* Ranking */
+.rank-list{margin-top:4px}
+.rank-item{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #F2F3F5}
+.rank-item:last-child{border-bottom:none}
+.rank-num{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#86909C;background:#F2F3F5;flex-shrink:0}
+.rank-num.top1{background:#14A89A;color:#fff}
+.rank-num.top2{background:rgba(20,168,154,.2);color:#14A89A}
+.rank-num.top3{background:rgba(20,168,154,.1);color:#14A89A}
+.rank-name{flex:1;font-size:14px;color:#1D2129;font-weight:500;margin-left:10px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.rank-score{font-size:16px;font-weight:700;color:#1D2129;margin-right:8px}
+.rank-level{font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px}
+.rank-level.A{background:rgba(20,168,154,.08);color:#14A89A}
+.rank-level.B{background:rgba(53,185,170,.08);color:#1D2129}
+.rank-level.C{background:rgba(255,143,90,.08);color:#FF8F5A}
+.rank-level.D{background:rgba(245,63,63,.08);color:#F53F3F}
+
+/* Subject tabs for multi-mode */
+.subj-tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+.subj-tabs::-webkit-scrollbar{display:none}
+.subj-tab{padding:6px 14px;border-radius:14px;font-size:13px;white-space:nowrap;flex-shrink:0;cursor:pointer;background:#F2F3F5;color:#86909C}
+.subj-tab.active{background:#14A89A;color:#fff}
+
+.empty-state{text-align:center;padding:30px;color:#86909C;font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header mode-nav">
+    <div class="header-top">
+      <button class="back-btn" onclick="history.back()"><span class="back-arrow">&#8249;</span></button>
+      <span class="header-label">成绩统计</span>
+      <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
+    </div>
+  </div>
+
+  <div class="mode-tabs">
+    <span class="mode-tab active" id="tabSingle" onclick="switchMode('single')">单科统计</span>
+    <span class="mode-tab" id="tabMulti" onclick="switchMode('multi')">多科批次</span>
+  </div>
+
+  <div class="selector-bar" id="selectorBar">
+    <select id="sel1"><option value="">请选择</option></select>
+    <select id="sel2" style="display:none"><option value="">请选择</option></select>
+  </div>
+
+  <div class="metrics-row" id="metricsRow" style="display:none"></div>
+
+  <div class="card-section" id="distCard" style="display:none">
+    <div class="sec-title" id="distTitle">分数段分布</div>
+    <div id="distContent"></div>
+  </div>
+
+  <div class="card-section" id="rankCard" style="display:none">
+    <div class="sec-title">排名榜单</div>
+    <div class="subj-tabs" id="subjTabs" style="display:none"></div>
+    <div id="rankContent"></div>
+  </div>
+</div>
+
+<script>
+var mode='single';
+var grades=[],classes=[],exams=[],groups=[];
+var currentData=null,currentSubject=0;
+
+function switchMode(m){
+  mode=m;
+  document.getElementById('tabSingle').className='mode-tab'+(m==='single'?' active':'');
+  document.getElementById('tabMulti').className='mode-tab'+(m==='multi'?' active':'');
+  document.getElementById('sel2').style.display='none';
+  document.getElementById('sel1').value='';
+  document.getElementById('sel2').value='';
+  hideAll();
+  if(m==='single')loadExams();
+  else loadGroups();
+}
+
+async function init(){
+  try{
+    var r1=await fetch('/api/public/grades');
+    grades=await r1.json();
+    r1=await fetch('/api/public/classes');
+    classes=await r1.json();
+    var sel1=document.getElementById('sel1');
+    sel1.innerHTML='<option value="">请选择班级</option>'+classes.map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>';}).join('');
+    sel1.onchange=function(){if(mode==='single')loadExams();else loadGroups();};
+  }catch(e){}
+}
+
+async function loadExams(){
+  hideAll();
+  var cid=document.getElementById('sel1').value;
+  if(!cid)return;
+  var r=await fetch('/api/public/exams/list?class_id='+cid);
+  exams=await r.json();
+  var sel2=document.getElementById('sel2');
+  sel2.style.display='block';
+  sel2.innerHTML='<option value="">请选择考试</option>'+exams.map(function(e){return '<option value="'+e.id+'">'+e.exam_name+'('+e.subject+')</option>';}).join('');
+  sel2.onchange=function(){if(this.value)loadSingleStats(this.value);};
+}
+
+async function loadGroups(){
+  hideAll();
+  var cid=document.getElementById('sel1').value;
+  if(!cid)return;
+  var r=await fetch('/api/public/exam-groups/list?class_id='+cid);
+  groups=await r.json();
+  var sel2=document.getElementById('sel2');
+  sel2.style.display='block';
+  sel2.innerHTML='<option value="">请选择批次</option>'+groups.map(function(g){return '<option value="'+g.id+'">'+g.group_name+'</option>';}).join('');
+  sel2.onchange=function(){if(this.value)loadGroupStats(this.value);};
+}
+
+function hideAll(){
+  document.getElementById('metricsRow').style.display='none';
+  document.getElementById('distCard').style.display='none';
+  document.getElementById('rankCard').style.display='none';
+  document.getElementById('subjTabs').style.display='none';
+}
+
+async function loadSingleStats(examId){
+  var r=await fetch('/api/public/exam-stats?exam_id='+examId);
+  var d=await r.json();
+  if(d.error){alert(d.error);return;}
+  currentData=d;
+  var exam=exams.find(function(e){return e.id==parseInt(examId);});
+  var totalScore=exam?exam.total_score:100;
+  var passRate=d.stats.total?Math.round(d.distribution.average+d.distribution.good+d.distribution.excellent)/d.stats.total*100:0;
+  showMetrics(d.stats.avg,d.stats.max,d.stats.min,Math.round(passRate)+'%');
+  showDistribution(d.distribution,'分数段分布',d.stats.total);
+  showRankings(d.rankings,'score');
+  document.getElementById('rankCard').style.display='';
+}
+
+async function loadGroupStats(groupId){
+  var r=await fetch('/api/public/group-stats?group_id='+groupId);
+  var d=await r.json();
+  if(d.error){alert(d.error);return;}
+  currentData=d;
+  var tops=d.rankings[0]?d.rankings[0].total:0;
+  var bot=D=d.rankings[d.rankings.length-1]?d.rankings[d.rankings.length-1].total:0;
+  var avgTotal=d.rankings.length?Math.round(d.rankings.reduce(function(s,r){return s+r.total;},0)/d.rankings.length):0;
+  var group=groups.find(function(g){return g.id==parseInt(groupId);});
+  var maxScore=group?group.total_score:0;
+  var passCount=d.rankings.filter(function(r){return r.total>=maxScore*0.6;}).length;
+  var passRate=d.rankings.length?Math.round(passCount/d.rankings.length*100):0;
+  showMetrics(avgTotal,tops,bot,passRate+'%');
+  showSubjectComparison(d.exams);
+  document.getElementById('rankCard').style.display='';
+  renderSubjTabs(d.exams);
+  showMultiRankings(d,0);
+}
+
+function showMetrics(avg,vmax,vmin,pass){
+  document.getElementById('metricsRow').style.display='';
+  var html='';
+  var items=[
+    {label:'平均分',value:avg,high:true},
+    {label:'最高分',value:vmax},
+    {label:'最低分',value:vmin},
+    {label:'及格率',value:pass}
+  ];
+  items.forEach(function(item){
+    html+='<div class="metric-card"><div class="metric-label">'+item.label+'</div><div class="metric-value'+(item.high?' high':'')+'">'+item.value+'</div></div>';
+  });
+  document.getElementById('metricsRow').innerHTML=html;
+}
+
+function showDistribution(dist,title,total){
+  document.getElementById('distCard').style.display='';
+  document.getElementById('distTitle').textContent=title;
+  var bars=[
+    {label:'A(优秀)',key:'excellent',cls:'excellent'},
+    {label:'B(良好)',key:'good',cls:'good'},
+    {label:'C(中等)',key:'average',cls:'average'},
+    {label:'D(不及格)',key:'fail',cls:'fail'}
+  ];
+  var html='';
+  bars.forEach(function(b){
+    var count=dist[b.key]||0;
+    var pct=total?count/total*100:0;
+    html+='<div class="bar-row"><span class="bar-label">'+b.label+'</span><div class="bar-track"><div class="bar-fill '+b.cls+'" style="width:'+pct+'%"></div></div><span class="bar-count">'+count+'</span></div>';
+  });
+  document.getElementById('distContent').innerHTML=html;
+}
+
+function showSubjectComparison(exams){
+  document.getElementById('distCard').style.display='';
+  document.getElementById('distTitle').textContent='各科对比';
+  var allAvgs=exams.map(function(e){return (e.stats&&e.stats.avg)||0;});
+  var maxAvg=Math.max.apply(null,allAvgs)||1;
+  var html='';
+  exams.forEach(function(e){
+    var avg=(e.stats&&e.stats.avg)||0;
+    var name=e.subject||e.exam_name||'';
+    html+='<div class="subj-row"><span class="subj-label">'+name+'</span><div class="subj-track"><div class="subj-fill" style="width:'+(avg/maxAvg*100)+'%"></div></div><span class="subj-val">'+avg+'</span></div>';
+  });
+  document.getElementById('distContent').innerHTML=html;
+}
+
+function showRankings(rankings,scoreKey){
+  if(!rankings||!rankings.length){
+    document.getElementById('rankContent').innerHTML='<div class="empty-state">暂无排名数据</div>';
+    return;
+  }
+  var html='<div class="rank-list">';
+  rankings.forEach(function(r,i){
+    var numCls=i<3?' top'+(i+1):'';
+    var score=scoreKey?r[scoreKey]:r.score;
+    var level=r.level||'';
+    html+='<div class="rank-item"><span class="rank-num'+numCls+'">'+(i+1)+'</span><span class="rank-name">'+escapeHtml(r.student_name)+'</span>'
+      +'<span class="rank-score">'+score+'</span>'
+      +(level?'<span class="rank-level '+level+'">'+level+'</span>':'')
+      +'</div>';
+  });
+  html+='</div>';
+  document.getElementById('rankContent').innerHTML=html;
+}
+
+function renderSubjTabs(exams){
+  var tabs=document.getElementById('subjTabs');
+  tabs.style.display='flex';
+  currentSubject=0;
+  tabs.innerHTML='<span class="subj-tab active" onclick="showMultiRankings(currentData,0)">总分</span>';
+  exams.forEach(function(e,i){
+    tabs.innerHTML+='<span class="subj-tab" onclick="showMultiRankings(currentData,'+(i+1)+')">'+(e.subject||e.exam_name)+'</span>';
+  });
+}
+
+function showMultiRankings(data,subjIdx){
+  var tabs=document.querySelectorAll('.subj-tab');
+  tabs.forEach(function(t){t.className='subj-tab';});
+  if(tabs[subjIdx])tabs[subjIdx].className='subj-tab active';
+  currentSubject=subjIdx;
+
+  var rankings;
+  if(subjIdx===0){
+    rankings=data.rankings.map(function(r){return {student_name:r.student_name,score:r.total,level:''};});
+  }else{
+    var ex=data.exams[subjIdx-1];
+    var subjName=ex.subject||ex.exam_name;
+    rankings=data.rankings.map(function(r){
+      var s=r.subjects[subjName];
+      return s?{student_name:r.student_name,score:s.score,level:s.level}:{student_name:r.student_name,score:0,level:''};
+    });
+    rankings.sort(function(a,b){return b.score-a.score;});
+  }
+  showRankings(rankings,'score');
+}
+
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+init();
+</script>
+</body>
+</html>
