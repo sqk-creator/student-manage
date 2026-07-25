@@ -37,6 +37,7 @@ exports.update = (req, res) => {
   const existing = db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: '考试批次不存在' });
   const { class_id, grade_id, scope_type, group_name, semester, exam_date, total_score, remark, exam_type } = req.body;
+  db.pragma('foreign_keys = 0');
   db.prepare(
     'UPDATE exam_groups SET class_id = ?, grade_id = ?, scope_type = ?, group_name = ?, semester = ?, exam_date = ?, total_score = ?, remark = ?, exam_type = ? WHERE id = ?'
   ).run(
@@ -51,6 +52,7 @@ exports.update = (req, res) => {
     exam_type || existing.exam_type || 'comprehensive',
     id
   );
+  db.pragma('foreign_keys = 1');
   res.json(db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(id));
 };
 
