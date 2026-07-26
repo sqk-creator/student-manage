@@ -16,7 +16,7 @@ body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content
 /* Module 1: Summary Cards */
 .summary-cards{display:flex;flex-direction:column;gap:8px}
 .summary-row{display:grid;gap:8px}
-.summary-row.r2{grid-template-columns:repeat(5,1fr)}
+.summary-row.r2{grid-template-columns:repeat(4,1fr)}
 .summary-row.r1{grid-template-columns:1fr 1fr}
 .scard{background:#fff;border-radius:12px;padding:12px 6px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04)}
 .scard-icon{font-size:20px;margin-bottom:4px;opacity:.6}
@@ -154,7 +154,6 @@ function renderSummary(){
     +'<div class="scard"><div class="scard-val green">'+(s.avg_score_rate||0)+'%</div><div class="scard-label">平均得分率</div></div>'
     +'</div>'
     +'<div class="summary-row r2">'
-    +'<div class="scard"><div class="scard-val green">'+(s.avg_score_rate||0)+'%</div><div class="scard-label">平均得分率</div></div>'
     +'<div class="scard"><div class="scard-val green">'+(s.avg_excellent_rate||0)+'%</div><div class="scard-label">平均优秀率</div></div>'
     +'<div class="scard"><div class="scard-val">'+(s.avg_good_rate||0)+'%</div><div class="scard-label">平均良好率</div></div>'
     +'<div class="scard"><div class="scard-val orange">'+(s.avg_pass_rate||0)+'%</div><div class="scard-label">平均及格率</div></div>'
