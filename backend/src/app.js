@@ -262,11 +262,12 @@ app.get('/api/public/exam-group-summaries', (req, res) => {
 });
 app.get('/api/public/grade-trend', (req, res) => {
   const db = require('./db');
-  const { grade_id } = req.query;
+  const { grade_id, exam_type } = req.query;
   if (!grade_id) return res.status(422).json({ error: 'grade_id is required' });
   const grade = db.prepare('SELECT * FROM grades WHERE id = ?').get(grade_id);
   if (!grade) return res.status(404).json({ error: '年级不存在' });
-  const groups = db.prepare('SELECT * FROM exam_groups WHERE grade_id = ? AND exam_type = ? ORDER BY exam_date ASC').all(grade_id, 'comprehensive');
+  const defaultType = exam_type || db.prepare('SELECT exam_type FROM exam_groups WHERE grade_id = ? ORDER BY exam_date ASC LIMIT 1').pluck().get(grade_id) || 'comprehensive';
+  const groups = db.prepare('SELECT * FROM exam_groups WHERE grade_id = ? AND exam_type = ? ORDER BY exam_date ASC').all(grade_id, defaultType);
   const groupStats = groups.map(grp => {
     const exams = db.prepare('SELECT id, exam_name, subject, total_score FROM exams WHERE group_id = ?').all(grp.id);
     const studentTotals = db.prepare(`
@@ -316,7 +317,8 @@ app.get('/api/public/grade-trend', (req, res) => {
     avg_excellent_rate: groupStats.length ? Math.round(allExcRates.reduce((a,b)=>a+b,0)/allExcRates.length) : 0,
     total_exams: groupStats.length
   };
-  res.json({ grade_id: grade.id, grade_name: grade.grade_name, summary, groups: groupStats, classes: classData });
+  const availableTypes = db.prepare('SELECT DISTINCT exam_type FROM exam_groups WHERE grade_id = ?').pluck().all(grade_id);
+  res.json({ grade_id: grade.id, grade_name: grade.grade_name, exam_type: defaultType, available_types: availableTypes, summary, groups: groupStats, classes: classData });
 });
 app.get('/api/public/teachers/:id/honors', (req, res) => {
   const db = require('./db');

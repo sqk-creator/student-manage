@@ -49,6 +49,11 @@ body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content
 .change-val.zero{color:#86909C}
 .change-arrow{font-size:12px}
 
+.type-switch{display:flex;gap:0;background:#E5E6EB;border-radius:10px;padding:3px}
+.type-btn{padding:6px 18px;font-size:13px;font-weight:500;border:none;border-radius:8px;cursor:pointer;background:transparent;color:#86909C;flex:1;text-align:center}
+.type-btn.active{background:#14A89A;color:#fff}
+.type-btn:active{opacity:.8}
+
 .empty-state{text-align:center;padding:60px 20px;color:#86909C;font-size:14px}
 .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
 .loading{text-align:center;padding:40px;color:#86909C;font-size:14px}
@@ -75,18 +80,37 @@ function goBack(){
 
 function getParam(k){return new URLSearchParams(location.search).get(k);}
 
+function examTypeLabel(t){return t==='liberal_arts'?'文科':(t==='comprehensive'?'理科':t);}
+
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+var currentExamType=null;
 
 async function init(){
   gradeId=getParam('grade_id');
   if(!gradeId){renderError('缺少年级参数');return;}
+  currentExamType=getParam('exam_type')||null;
+  await loadData();
+}
+
+async function loadData(){
+  var url='/api/public/grade-trend?grade_id='+gradeId;
+  if(currentExamType)url+='&exam_type='+currentExamType;
   try{
-    var r=await fetch('/api/public/grade-trend?grade_id='+gradeId);
+    var r=await fetch(url);
     if(!r.ok){renderError('数据加载失败');return;}
     data=await r.json();
-    document.getElementById('headerTitle').textContent=data.grade_name+' · 趋势分析';
+    if(!currentExamType)currentExamType=data.exam_type;
+    document.getElementById('headerTitle').textContent=data.grade_name+' · '+examTypeLabel(data.exam_type)+'趋势';
     render();
   }catch(e){renderError('网络异常');}
+}
+
+function switchType(type){
+  if(type===currentExamType)return;
+  currentExamType=type;
+  document.getElementById('pageContent').innerHTML='<div class="loading">加载中...</div>';
+  loadData();
 }
 
 function renderError(msg){
@@ -95,9 +119,16 @@ function renderError(msg){
 
 function render(){
   if(!data||!data.groups||!data.groups.length){
-    renderError('暂无年级统考数据');return;
+    renderError('暂无'+examTypeLabel(currentExamType)+'统考数据');return;
   }
+  var types=data.available_types||[];
   var html='';
+  if(types.length>1){
+    html+='<div class="module" style="padding-top:8px;padding-bottom:4px">'
+      +'<div class="type-switch">'
+      +types.map(function(t){return '<button class="type-btn'+(t===currentExamType?' active':'')+'" onclick="switchType(\''+t+'\')">'+examTypeLabel(t)+'</button>';}).join('')
+      +'</div></div>';
+  }
   html+=renderSummary();
   html+=renderTrendChart();
   html+=renderBarChart();
