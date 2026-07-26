@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>成绩报告</title>
+<link rel="stylesheet" href="mobile-header.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;min-height:100vh;background:#F1F8F7}
+.app{width:100%;max-width:430px;min-height:100vh;padding-bottom:80px}
+
+.grade-filter{padding:4px 16px 10px;background:#fff;display:flex;align-items:center}
+.grade-filter select{flex:1;padding:8px 10px;border-radius:8px;border:1px solid #E5E6EB;font-size:14px;color:#1D2129;background:#F9FAFB;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386909C' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:32px}
+
+.tab-bar{display:flex;align-items:baseline;gap:0;padding:0 16px;background:#fff}
+.tab{font-size:16px;font-weight:500;color:#86909C;cursor:pointer;padding:8px 24px 8px 0;border:none;background:none}
+.tab.active{font-size:20px;font-weight:600;color:#1D2129}
+
+.content{padding:12px 16px}
+
+.group-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.card-title{font-size:17px;font-weight:700;color:#1D2129}
+.card-grade{font-size:12px;color:#14A89A;background:rgba(20,168,154,.08);padding:2px 8px;border-radius:8px;white-space:nowrap}
+.card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.meta-tag{font-size:12px;color:#86909C;background:#F2F3F5;padding:3px 8px;border-radius:6px}
+.card-subjects{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+.subj-chip{font-size:12px;color:#1D2129;background:#F1F8F7;padding:4px 10px;border-radius:6px}
+.card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stat-item{text-align:center;background:#F7F8FA;border-radius:10px;padding:10px 6px}
+.stat-label{font-size:11px;color:#86909C}
+.stat-value{font-size:18px;font-weight:700;color:#1D2129;margin-top:2px}
+.stat-value.green{color:#14A89A}
+.card-actions{display:flex;gap:10px}
+.card-btn{flex:1;padding:10px 0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;text-align:center}
+.btn-outline{background:rgba(20,168,154,.06);color:#14A89A}
+.btn-primary{background:#14A89A;color:#fff}
+.card-btn:active{opacity:.8}
+
+.empty-state{text-align:center;padding:60px 20px;color:#86909C;font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header mode-nav">
+    <div class="header-top">
+      <button class="back-btn" onclick="history.back()"><span class="back-arrow">&#8249;</span></button>
+      <span class="header-label">成绩报告</span>
+      <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
+    </div>
+  </div>
+
+  <div class="grade-filter">
+    <select id="gradeSelect"><option value="">全部年级</option></select>
+  </div>
+
+  <div class="tab-bar">
+    <span class="tab active" id="tabGroup" onclick="switchTab('group')">年级统考</span>
+    <span class="tab" id="tabSingle" onclick="switchTab('single')">单科测验</span>
+  </div>
+
+  <div class="content" id="contentArea">
+    <div class="empty-state"><div class="empty-icon">--</div>暂无数据</div>
+  </div>
+</div>
+
+<script>
+var currentTab='group',grades=[],summaries=[],singleExams=[];
+
+async function init(){
+  try{
+    var r=await fetch('/api/public/grades');
+    grades=await r.json();
+    var sel=document.getElementById('gradeSelect');
+    sel.innerHTML='<option value="">全部年级</option>'+grades.map(function(g){return '<option value="'+g.id+'">'+g.grade_name+'</option>';}).join('');
+    sel.onchange=loadData;
+  }catch(e){}
+  loadData();
+}
+
+function switchTab(tab){
+  currentTab=tab;
+  document.getElementById('tabGroup').className='tab'+(tab==='group'?' active':'');
+  document.getElementById('tabSingle').className='tab'+(tab==='single'?' active':'');
+  loadData();
+}
+
+async function loadData(){
+  var gid=document.getElementById('gradeSelect').value;
+  if(currentTab==='group'){
+    var params=gid?'?grade_id='+gid:'';
+    var r=await fetch('/api/public/exam-group-summaries'+params);
+    summaries=await r.json();
+    renderGroupCards();
+  }else{
+    var params=gid?'?class_id='+gid:'';
+    if(!gid){document.getElementById('contentArea').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>请先选择年级</div>';return;}
+    var r=await fetch('/api/public/exams/list'+params);
+    singleExams=await r.json();
+    renderSingleCards();
+  }
+}
+
+function renderGroupCards(){
+  if(!summaries||!summaries.length){
+    document.getElementById('contentArea').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>暂无年级统考数据</div>';
+    return;
+  }
+  var html='';
+  summaries.forEach(function(g){
+    var subjHtml=g.subjects.map(function(s){return '<span class="subj-chip">'+escapeHtml(s)+'</span>';}).join('');
+    html+='<div class="group-card">'
+      +'<div class="card-header"><span class="card-title">'+escapeHtml(g.group_name)+'</span><span class="card-grade">'+escapeHtml(g.grade_name)+'</span></div>'
+      +'<div class="card-meta">'
+      +'<span class="meta-tag">'+escapeHtml(g.exam_date)+'</span>'
+      +'<span class="meta-tag">满分 '+g.total_score+'</span>'
+      +'<span class="meta-tag">'+g.student_count+'人参考</span>'
+      +'</div>'
+      +'<div class="card-subjects">'+subjHtml+'</div>'
+      +'<div class="card-stats">'
+      +'<div class="stat-item"><div class="stat-label">年级均分</div><div class="stat-value green">'+g.avg_total+'</div></div>'
+      +'<div class="stat-item"><div class="stat-label">及格率</div><div class="stat-value">'+g.pass_rate+'</div></div>'
+      +'<div class="stat-item"><div class="stat-label">科目数</div><div class="stat-value">'+g.subjects.length+'</div></div>'
+      +'</div>'
+      +'<div class="card-actions">'
+      +'<button class="card-btn btn-outline" onclick="location.href=\'m-score-grade-trend.html?grade_id='+g.grade_id+'\'">多考对比</button>'
+      +'<button class="card-btn btn-primary" onclick="location.href=\'m-score-grade-single-stats.html?group_id='+g.group_id+'\'">本场详情</button>'
+      +'</div>'
+      +'</div>';
+  });
+  document.getElementById('contentArea').innerHTML=html;
+}
+
+function renderSingleCards(){
+  if(!singleExams||!singleExams.length){
+    document.getElementById('contentArea').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>暂无单科测验数据</div>';
+    return;
+  }
+  var html='';
+  singleExams.forEach(function(e){
+    html+='<div class="group-card">'
+      +'<div class="card-header"><span class="card-title">'+escapeHtml(e.exam_name)+'</span><span class="card-grade">'+escapeHtml(e.subject)+'</span></div>'
+      +'<div class="card-meta">'
+      +'<span class="meta-tag">'+escapeHtml(e.exam_date)+'</span>'
+      +'<span class="meta-tag">满分 '+e.total_score+'</span>'
+      +'</div>'
+      +'<div class="card-actions">'
+      +'<button class="card-btn btn-primary" style="flex:1" onclick="location.href=\'m-score-stats.html?exam_id='+e.id+'\'">查看详情</button>'
+      +'</div>'
+      +'</div>';
+  });
+  document.getElementById('contentArea').innerHTML=html;
+}
+
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+init();
+</script>
+</body>
+</html>

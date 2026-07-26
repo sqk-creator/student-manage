@@ -224,6 +224,42 @@ app.get('/api/public/group-stats', (req, res) => {
   studentStats.forEach((st, i) => { st.rank = i + 1; });
   res.json({ group, exams: examStats, rankings: studentStats });
 });
+app.get('/api/public/exam-group-summaries', (req, res) => {
+  const db = require('./db');
+  const { grade_id } = req.query;
+  let sql = 'SELECT eg.*, g.grade_name FROM exam_groups eg LEFT JOIN grades g ON eg.grade_id = g.id WHERE 1=1';
+  const params = [];
+  if (grade_id) { sql += ' AND eg.grade_id = ?'; params.push(grade_id); }
+  sql += ' ORDER BY eg.exam_date DESC';
+  const groups = db.prepare(sql).all(...params);
+  const summaries = groups.map(grp => {
+    const exams = db.prepare('SELECT exam_name, subject, total_score FROM exams WHERE group_id = ?').all(grp.id);
+    const subjects = exams.map(e => e.subject || e.exam_name);
+    const studentTotals = db.prepare(`
+      SELECT sc.student_id, SUM(sc.score) as total
+      FROM scores sc JOIN exams e ON sc.exam_id = e.id
+      WHERE e.group_id = ? GROUP BY sc.student_id
+    `).all(grp.id);
+    const totals = studentTotals.map(s => s.total);
+    const avgTotal = totals.length ? Math.round(totals.reduce((a,b)=>a+b,0)/totals.length) : 0;
+    const maxPossible = grp.total_score || exams.reduce((s,e)=>s+e.total_score,0);
+    const passCount = totals.filter(t => t >= maxPossible * 0.6).length;
+    const passRate = totals.length ? Math.round(passCount/totals.length*100) : 0;
+    return {
+      group_id: grp.id,
+      group_name: grp.group_name,
+      grade_name: grp.grade_name || '',
+      grade_id: grp.grade_id,
+      exam_date: grp.exam_date,
+      total_score: maxPossible,
+      subjects,
+      student_count: studentTotals.length,
+      avg_total: avgTotal,
+      pass_rate: passRate + '%'
+    };
+  });
+  res.json(summaries);
+});
 app.get('/api/public/teachers/:id/honors', (req, res) => {
   const db = require('./db');
   const honors = db.prepare('SELECT * FROM teacher_honors WHERE teacher_id = ? ORDER BY date DESC').all(req.params.id);
