@@ -78,7 +78,7 @@ export default function Classes() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">年级</label>
-                <select className="form-select" value={gradeId || (gradeId ? '' : grade)}
+                <select className="form-select" value={gradeId ? `g_${gradeId}` : grade}
                   onChange={e => {
                     const v = e.target.value;
                     if (v.startsWith('g_')) setGradeId(Number(v.substring(2)));
