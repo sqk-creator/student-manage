@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>班级趋势</title>
+<link rel="stylesheet" href="mobile-header.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;min-height:100vh;background:#F1F8F7}
+.app{width:100%;max-width:430px;min-height:100vh;padding-bottom:80px}
+
+.module{padding:12px 16px}
+.module-title{font-size:16px;font-weight:700;color:#1D2129;margin-bottom:12px;padding-left:6px;border-left:3px solid #14A89A}
+
+/* Module 1: Summary */
+.summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.scard{background:#fff;border-radius:12px;padding:14px 8px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.scard-val{font-size:22px;font-weight:700;color:#1D2129;line-height:1.2}
+.scard-val.green{color:#14A89A}
+.scard-val.red{color:#FF5C4A}
+.scard-val.orange{color:#FF8F5A}
+.scard-label{font-size:11px;color:#86909C;margin-top:4px}
+
+/* Chart */
+.chart-container{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.subject-toggle{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.subj-btn{font-size:12px;padding:4px 12px;border-radius:14px;border:1px solid #E5E6EB;background:#F7F8FA;color:#4E5969;cursor:pointer}
+.subj-btn.active{background:#14A89A;color:#fff;border-color:#14A89A}
+.canvas-wrap{position:relative;width:100%}
+#trendChart,#barChart{width:100%;height:220px;display:block}
+.tt-tooltip{position:absolute;background:#1D2129;color:#fff;font-size:11px;padding:6px 10px;border-radius:6px;pointer-events:none;display:none;white-space:nowrap;z-index:10}
+
+/* Student List */
+.student-list{margin-top:0}
+.student-row{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.04);cursor:pointer;display:flex;align-items:center;gap:12px}
+.student-row:active{opacity:.8}
+.st-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#14A89A,#0B6D55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.st-info{flex:1;min-width:0}
+.st-name{font-size:15px;font-weight:600;color:#1D2129}
+.st-no{font-size:12px;color:#86909C;margin-top:2px}
+.st-change{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.change-val{font-size:16px;font-weight:700}
+.change-val.up{color:#14A89A}
+.change-val.down{color:#FF5C4A}
+.change-val.zero{color:#86909C}
+.change-arrow{font-size:12px}
+.st-rank{font-size:12px;color:#86909C;flex-shrink:0;margin-left:8px}
+
+.type-switch{display:flex;gap:0;background:#E5E6EB;border-radius:10px;padding:3px}
+.type-btn{padding:6px 14px;font-size:12px;font-weight:500;border:none;border-radius:8px;cursor:pointer;background:transparent;color:#86909C;flex:1;text-align:center}
+.type-btn.active{background:#14A89A;color:#fff}
+
+.empty-state{text-align:center;padding:60px 20px;color:#86909C;font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.loading{text-align:center;padding:40px;color:#86909C;font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header mode-nav">
+    <div class="header-top">
+      <button class="back-btn" onclick="goBack()"><span class="back-arrow">&#8249;</span></button>
+      <span class="header-label" id="headerTitle">班级趋势</span>
+      <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
+    </div>
+  </div>
+  <div id="pageContent"><div class="loading">加载中...</div></div>
+</div>
+
+<script>
+var data=null,classId=null,currentType=null,chartSubj='total';
+
+function getParam(k){return new URLSearchParams(location.search).get(k);}
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function examTypeLabel(t){
+  if(t==='comprehensive')return '理科';
+  if(t==='liberal_arts')return '文科';
+  return t||'综合';
+}
+
+function goBack(){
+  location.href='m-score-grade-trend.html?grade_id='+(data?data.grade_id:'');
+}
+
+async function init(){
+  classId=getParam('class_id');
+  if(!classId){renderError('缺省班级参数');return;}
+  await loadData();
+}
+
+async function loadData(){
+  try{
+    var r=await fetch('/api/public/class-trend?class_id='+classId);
+    if(!r.ok){renderError('数据加载失败');return;}
+    data=await r.json();
+    if(!currentType){
+      var allTypes=[];
+      data.groups.forEach(function(g){if(allTypes.indexOf(g.exam_type)===-1)allTypes.push(g.exam_type);});
+      currentType=allTypes[0]||'';
+    }
+    document.getElementById('headerTitle').textContent=data.class_name+' · '+data.grade_name;
+    render();
+  }catch(e){renderError('网络异常');}
+}
+
+function renderError(msg){
+  document.getElementById('pageContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>'+escapeHtml(msg)+'</div>';
+}
+
+function filteredGroups(){
+  return data.groups.filter(function(g){return g.exam_type===currentType;});
+}
+
+function render(){
+  var groups=filteredGroups();
+  if(!groups.length){renderError('暂无'+examTypeLabel(currentType)+'统考数据');return;}
+  var types=[];
+  data.groups.forEach(function(g){if(types.indexOf(g.exam_type)===-1)types.push(g.exam_type);});
+  var html='';
+  if(types.length>1){
+    html+='<div class="module" style="padding-top:8px;padding-bottom:4px"><div class="type-switch">'
+      +types.map(function(t){return '<button class="type-btn'+(t===currentType?' active':'')+'" onclick="switchType(\''+t+'\')">'+examTypeLabel(t)+'科</button>';}).join('')
+      +'</div></div>';
+  }
+  html+=renderSummary();
+  html+=renderTrendChart();
+  html+=renderBarModule();
+  html+=renderStudentList();
+  document.getElementById('pageContent').innerHTML=html;
+  setTimeout(function(){drawTrendChart();drawBarChart();},60);
+}
+
+function switchType(t){
+  if(t===currentType)return;
+  currentType=t;chartSubj='total';
+  render();
+}
+
+/* Module 1 */
+function renderSummary(){
+  var s=data.summary;
+  var changeHtml='<span class="scard-val'+(s.avg_change>0?' green':(s.avg_change<0?' red':' orange'))+'">'+(s.avg_change>=0?'+':'')+s.avg_change+'</span>';
+  return '<div class="module"><div class="module-title">班级概况</div>'
+    +'<div class="summary-cards">'
+    +'<div class="scard"><div class="scard-val green">'+s.avg_total+'</div><div class="scard-label">历次平均总分</div></div>'
+    +'<div class="scard">'+changeHtml+'<div class="scard-label">平均升降幅度</div></div>'
+    +'<div class="scard"><div class="scard-val green">'+s.stability_rate+'%</div><div class="scard-label">成绩稳定率</div></div>'
+    +'</div></div>';
+}
+
+/* Module 2: Line Chart */
+function renderTrendChart(){
+  var groups=filteredGroups();
+  return '<div class="module"><div class="module-title">总分趋势</div><div class="chart-container">'
+    +'<div class="canvas-wrap"><canvas id="trendChart"></canvas><div class="tt-tooltip" id="ttTooltip"></div></div>'
+    +'</div></div>';
+}
+
+function drawTrendChart(){
+  var cvs=document.getElementById('trendChart');
+  if(!cvs)return;
+  var groups=filteredGroups();
+  var dpr=window.devicePixelRatio||1;
+  var rect=cvs.getBoundingClientRect();
+  cvs.width=rect.width*dpr;cvs.height=rect.height*dpr;
+  var ctx=cvs.getContext('2d');
+  ctx.scale(dpr,dpr);
+  var W=rect.width,H=rect.height;
+  ctx.clearRect(0,0,W,H);
+  if(!groups.length)return;
+
+  var pad={top:30,right:16,bottom:20,left:44};
+  var pw=W-pad.left-pad.right,ph=H-pad.top-pad.bottom;
+  var values=groups.map(function(g){return g.avg_total;});
+  var maxV=Math.max.apply(null,values),minV=Math.min.apply(null,values);
+  var range=maxV-minV||1;
+  minV=Math.max(0,minV-range*0.15);
+  maxV=Math.ceil(maxV+range*0.15);
+  range=maxV-minV;
+
+  var xStep=groups.length>1?pw/(groups.length-1):pw/2;
+  var points=[];
+  values.forEach(function(v,i){
+    var x=pad.left+(groups.length===1?pw/2:i*xStep);
+    var y=pad.top+ph-(v-minV)/range*ph;
+    points.push({x:x,y:y});
+  });
+
+  // grid
+  ctx.strokeStyle='#F2F3F5';ctx.lineWidth=1;
+  ctx.font='10px system-ui';ctx.fillStyle='#C9CDD4';ctx.textAlign='right';
+  for(var i=0;i<=4;i++){
+    var gy=pad.top+ph*(i/4);
+    ctx.beginPath();ctx.moveTo(pad.left,gy);ctx.lineTo(W-pad.right,gy);ctx.stroke();
+    ctx.fillText(Math.round(maxV-(maxV-minV)*i/4),pad.left-6,gy+4);
+  }
+  // x labels
+  ctx.textAlign='center';ctx.fillStyle='#86909C';ctx.font='10px system-ui';
+  groups.forEach(function(g,i){
+    var x=groups.length===1?pad.left+pw/2:pad.left+i*xStep;
+    ctx.fillText(g.group_name,x,pad.top+ph+16);
+  });
+  // line
+  ctx.strokeStyle='#14A89A';ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.setLineDash([]);
+  ctx.beginPath();
+  points.forEach(function(p,i){if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+  ctx.stroke();
+  // dots
+  points.forEach(function(p){
+    ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);
+    ctx.fillStyle='#14A89A';ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fill();
+  });
+
+  cvs._points=points;cvs._values=values;cvs._groups=groups;
+  var tooltip=document.getElementById('ttTooltip');
+  function onHover(mx,my){
+    var found=null,minD=30;
+    cvs._points.forEach(function(p,i){
+      var d=Math.abs(mx-p.x)+Math.abs(my-p.y);
+      if(d<minD){minD=d;found=i;}
+    });
+    if(found!==null){
+      tooltip.style.display='block';
+      tooltip.style.left=(cvs._points[found].x+10)+'px';
+      tooltip.style.top=(cvs._points[found].y-36)+'px';
+      tooltip.textContent=cvs._groups[found].group_name+' 均分: '+cvs._values[found];
+    }else{tooltip.style.display='none';}
+  }
+  cvs.onmousemove=function(e){var rc=cvs.getBoundingClientRect();onHover(e.clientX-rc.left,e.clientY-rc.top);};
+  cvs.onmouseleave=function(){tooltip.style.display='none';};
+  cvs.ontouchmove=function(e){var t=e.touches[0],rc=cvs.getBoundingClientRect();onHover(t.clientX-rc.left,t.clientY-rc.top);};
+  cvs.ontouchend=function(){tooltip.style.display='none';};
+}
+
+/* Module 3: Bar Chart */
+function renderBarModule(){
+  var groups=filteredGroups();
+  if(!groups.length)return '';
+  var subjs=['total'];
+  groups.forEach(function(g){
+    g.subjects.forEach(function(s){if(subjs.indexOf(s.subject)===-1)subjs.push(s.subject);});
+  });
+  var btns=subjs.map(function(s){
+    var label=s==='total'?'总分':s;
+    return '<span class="subj-btn'+(s===chartSubj?' active':'')+'" onclick="switchBarSubject(\''+s+'\')">'+escapeHtml(label)+'</span>';
+  }).join('');
+  return '<div class="module"><div class="module-title">各科对比</div><div class="chart-container">'
+    +'<div class="subject-toggle">'+btns+'</div>'
+    +'<div class="canvas-wrap"><canvas id="barChart"></canvas></div>'
+    +'</div></div>';
+}
+
+function switchBarSubject(s){
+  chartSubj=s;
+  var btns=document.querySelectorAll('.subj-btn');
+  btns.forEach(function(b){b.classList.toggle('active',b.textContent===s||(s==='total'&&b.textContent==='总分'));});
+  drawBarChart();
+}
+
+function drawBarChart(){
+  var cvs=document.getElementById('barChart');
+  if(!cvs)return;
+  var groups=filteredGroups();
+  var dpr=window.devicePixelRatio||1;
+  var rect=cvs.getBoundingClientRect();
+  cvs.width=rect.width*dpr;cvs.height=rect.height*dpr;
+  var ctx=cvs.getContext('2d');
+  ctx.scale(dpr,dpr);
+  var W=rect.width,H=rect.height;
+  ctx.clearRect(0,0,W,H);
+  if(!groups.length)return;
+
+  var pad={top:20,right:16,bottom:28,left:44};
+  var pw=W-pad.left-pad.right,ph=H-pad.top-pad.bottom;
+
+  var values=groups.map(function(g){
+    if(chartSubj==='total')return g.avg_total;
+    var s=g.subjects.find(function(x){return x.subject===chartSubj;});
+    return s?s.avg_score:0;
+  });
+  var maxV=Math.max.apply(null,values);
+  var range=maxV||1;
+  var topV=Math.ceil(maxV*1.15);
+  range=topV;
+
+  // grid
+  ctx.strokeStyle='#F2F3F5';ctx.lineWidth=1;
+  ctx.font='10px system-ui';ctx.fillStyle='#C9CDD4';ctx.textAlign='right';
+  for(var i=0;i<=4;i++){
+    var gy=pad.top+ph*(i/4);
+    ctx.beginPath();ctx.moveTo(pad.left,gy);ctx.lineTo(W-pad.right,gy);ctx.stroke();
+    ctx.fillText(Math.round(topV-topV*i/4),pad.left-6,gy+4);
+  }
+
+  var barW=Math.min(36,pw/groups.length-8);
+  var gap=(pw-barW*groups.length)/(groups.length+1);
+
+  groups.forEach(function(g,i){
+    var x=pad.left+gap+i*(barW+gap);
+    var barH=(values[i]/topV)*ph;
+    var y=pad.top+ph-barH;
+    var color=(values[i]/topV)>=0.6?'#14A89A':'#FF8F5A';
+    ctx.fillStyle=color;
+    ctx.fillRect(x,y,barW,barH);
+    ctx.fillStyle='#86909C';ctx.font='9px system-ui';ctx.textAlign='center';
+    ctx.fillText(g.group_name,x+barW/2,pad.top+ph+16);
+  });
+}
+
+/* Module 4: Student List */
+function renderStudentList(){
+  var students=data.students;
+  if(!students.length)return '<div class="module"><div class="empty-state">暂无学生数据</div></div>';
+  var rows=students.map(function(st,i){
+    var ch=st.recent_change;
+    var cls=ch>0?'up':(ch<0?'down':'zero');
+    var arrow=ch>0?'&#8593;':(ch<0?'&#8595;':'');
+    return '<div class="student-row" onclick="location.href=\'m-score-student-history.html?student_id='+st.student_id+'\'">'
+      +'<div class="st-avatar">'+escapeHtml(st.student_name.charAt(0))+'</div>'
+      +'<div class="st-info">'
+      +'<div class="st-name">'+escapeHtml(st.student_name)+'</div>'
+      +'<div class="st-no">'+escapeHtml(st.student_no)+'</div>'
+      +'</div>'
+      +'<span class="st-rank">均分 '+st.avg_total+'</span>'
+      +'<div class="st-change">'
+      +'<span class="change-val '+cls+'">'+(ch>=0?'+':'')+ch+'</span>'
+      +(arrow?'<span class="change-arrow '+cls+'">'+arrow+'</span>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+  return '<div class="module"><div class="module-title">学生排名</div><div class="student-list">'+rows+'</div></div>';
+}
+
+window.addEventListener('resize',function(){drawTrendChart();drawBarChart();});
+init();
+</script>
+</body>
+</html>

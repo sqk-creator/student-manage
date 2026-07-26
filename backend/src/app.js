@@ -330,6 +330,134 @@ app.get('/api/public/grade-trend', (req, res) => {
   const availableTypes = db.prepare('SELECT DISTINCT exam_type FROM exam_groups WHERE grade_id = ?').pluck().all(grade_id);
   res.json({ grade_id: grade.id, grade_name: grade.grade_name, exam_type: defaultType, available_types: availableTypes, summary, groups: groupStats, classes: classData });
 });
+app.get('/api/public/class-trend', (req, res) => {
+  const db = require('./db');
+  const { class_id } = req.query;
+  if (!class_id) return res.status(422).json({ error: 'class_id is required' });
+  const cls = db.prepare('SELECT c.*, g.grade_name FROM classes c LEFT JOIN grades g ON c.grade_id = g.id WHERE c.id = ?').get(class_id);
+  if (!cls) return res.status(404).json({ error: '班级不存在' });
+  if (!cls.grade_id) return res.status(422).json({ error: '该班级未关联年级' });
+  const groups = db.prepare(`
+    SELECT * FROM exam_groups WHERE grade_id = ? AND exam_type IN ('comprehensive','liberal_arts')
+    ORDER BY exam_date ASC
+  `).all(cls.grade_id);
+  const groupStats = groups.map(grp => {
+    const exams = db.prepare('SELECT id, exam_name, subject, total_score FROM exams WHERE group_id = ?').all(grp.id);
+    const clsTotals = db.prepare(`
+      SELECT SUM(sc.score) as total
+      FROM scores sc JOIN exams e ON sc.exam_id = e.id
+      JOIN students s ON sc.student_id = s.id
+      WHERE e.group_id = ? AND s.class_id = ?
+      GROUP BY sc.student_id
+    `).all(grp.id, class_id).map(r => r.total);
+    const avgTotal = clsTotals.length ? Math.round(clsTotals.reduce((a,b)=>a+b,0)/clsTotals.length) : 0;
+    const maxPossible = grp.total_score || exams.reduce((s,e)=>s+e.total_score,0);
+    const passCount = clsTotals.filter(t => t >= maxPossible * 0.6).length;
+    const passRate = clsTotals.length ? Math.round(passCount/clsTotals.length*100) : 0;
+    const subjects = exams.map(ex => {
+      const scs = db.prepare('SELECT sc.score FROM scores sc JOIN students s ON sc.student_id = s.id WHERE sc.exam_id = ? AND s.class_id = ?').all(ex.id, class_id);
+      const avgSc = scs.length ? Math.round(scs.reduce((a,b)=>a+b.score,0)/scs.length*10)/10 : 0;
+      return { subject: ex.subject || ex.exam_name, avg_score: avgSc, max_score: ex.total_score };
+    });
+    return { group_id: grp.id, group_name: grp.group_name, exam_date: grp.exam_date, exam_type: grp.exam_type, total_score: maxPossible, avg_total: avgTotal, pass_rate: passRate, student_count: clsTotals.length, subjects };
+  });
+  const students = db.prepare('SELECT id, name, student_no, gender FROM students WHERE class_id = ? ORDER BY name ASC').all(class_id);
+  const studentData = students.map(st => {
+    const trends = groups.map(grp => {
+      const total = db.prepare('SELECT SUM(sc.score) as total FROM scores sc JOIN exams e ON sc.exam_id = e.id WHERE e.group_id = ? AND sc.student_id = ?').pluck().get(grp.id, st.id) || 0;
+      return { group_id: grp.id, group_name: grp.group_name, total };
+    });
+    const avgAcross = trends.length ? Math.round(trends.reduce((a,b)=>a+b.total,0)/trends.length) : 0;
+    const recentChange = trends.length >= 2 ? trends[trends.length-1].total - trends[trends.length-2].total : 0;
+    return { student_id: st.id, student_name: st.name, student_no: st.student_no, gender: st.gender, trends, avg_total: avgAcross, recent_change: recentChange };
+  });
+  studentData.sort((a,b) => b.avg_total - a.avg_total);
+  const allAvgs = groupStats.map(g => g.avg_total);
+  const avgTotalAcross = groupStats.length ? Math.round(allAvgs.reduce((a,b)=>a+b,0)/allAvgs.length) : 0;
+  const diffs = groupStats.length >= 2 ? groupStats.slice(1).map((g,i) => g.avg_total - groupStats[i].avg_total) : [];
+  const avgChange = diffs.length ? Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length) : 0;
+  const stableCount = diffs.filter(c => Math.abs(c) <= 10).length;
+  const stabilityRate = diffs.length ? Math.round(stableCount/diffs.length*100) : 100;
+  const summary = { avg_total: avgTotalAcross, avg_change: avgChange, stability_rate: stabilityRate, total_exams: groupStats.length };
+  res.json({ class_id: cls.id, class_name: cls.name, grade_name: cls.grade_name || '', grade_id: cls.grade_id, summary, groups: groupStats, students: studentData });
+});
+app.get('/api/public/student-history', (req, res) => {
+  const db = require('./db');
+  const { student_id } = req.query;
+  if (!student_id) return res.status(422).json({ error: 'student_id is required' });
+  const st = db.prepare('SELECT s.*, c.name as class_name, c.grade_id, g.grade_name FROM students s LEFT JOIN classes c ON s.class_id = c.id LEFT JOIN grades g ON c.grade_id = g.id WHERE s.id = ?').get(student_id);
+  if (!st) return res.status(404).json({ error: '学生不存在' });
+  if (!st.grade_id) return res.status(422).json({ error: '该学生未关联年级' });
+  const groups = db.prepare("SELECT * FROM exam_groups WHERE grade_id = ? AND exam_type IN ('comprehensive','liberal_arts') ORDER BY exam_date ASC").all(st.grade_id);
+  const history = groups.map(grp => {
+    const exams = db.prepare('SELECT id, exam_name, subject, total_score FROM exams WHERE group_id = ?').all(grp.id);
+    const maxPossible = grp.total_score || exams.reduce((s,e)=>s+e.total_score,0);
+    const subjects = exams.map(ex => {
+      const sc = db.prepare('SELECT score, single_rank as rank, level FROM scores WHERE exam_id = ? AND student_id = ?').get(ex.id, st.id);
+      return {
+        subject: ex.subject || ex.exam_name,
+        score: sc ? sc.score : null,
+        max_score: ex.total_score,
+        rank: sc ? sc.rank : null,
+        level: sc ? sc.level : null
+      };
+    });
+    const totalScore = db.prepare('SELECT SUM(sc.score) as total FROM scores sc JOIN exams e ON sc.exam_id = e.id WHERE e.group_id = ? AND sc.student_id = ?').pluck().get(grp.id, st.id) || 0;
+    const allStudentTotals = db.prepare(`
+      SELECT sc.student_id, SUM(sc.score) as total
+      FROM scores sc JOIN exams e ON sc.exam_id = e.id
+      WHERE e.group_id = ? GROUP BY sc.student_id
+      ORDER BY total DESC
+    `).all(grp.id);
+    const classStudents = db.prepare('SELECT id FROM students WHERE class_id = ?').pluck().all(st.class_id);
+    const classIds = new Set(classStudents);
+    const gradeRank = allStudentTotals.findIndex(s => s.student_id == st.id) + 1 || null;
+    const classTotals = allStudentTotals.filter(s => classIds.has(s.student_id));
+    const classRank = classTotals.findIndex(s => s.student_id == st.id) + 1 || null;
+    return {
+      group_id: grp.id, group_name: grp.group_name, exam_date: grp.exam_date, exam_type: grp.exam_type,
+      total_score: maxPossible, student_total: totalScore, subjects,
+      grade_rank: gradeRank, class_rank: classRank,
+      grade_total: allStudentTotals.length, class_total: classTotals.length
+    };
+  });
+  const valid = history.filter(h => h.student_total > 0);
+  const avgTotal = valid.length ? Math.round(valid.reduce((a,b)=>a+b.student_total,0)/valid.length) : 0;
+  const avgClassRank = valid.length ? Math.round(valid.reduce((a,b)=>a+(b.class_rank||0),0)/valid.length*10)/10 : 0;
+  const avgGradeRank = valid.length ? Math.round(valid.reduce((a,b)=>a+(b.grade_rank||0),0)/valid.length*10)/10 : 0;
+  const summary = { avg_total: avgTotal, avg_class_rank: avgClassRank, avg_grade_rank: avgGradeRank, total_exams: history.length };
+  const strengths = [];
+  const weaknesses = [];
+  const allSubjects = {};
+  valid.forEach(h => {
+    h.subjects.forEach(s => {
+      if (s.score !== null) {
+        if (!allSubjects[s.subject]) allSubjects[s.subject] = { scores: [], ranks: [] };
+        allSubjects[s.subject].scores.push(s.score);
+        allSubjects[s.subject].ranks.push(s.rank);
+      }
+    });
+  });
+  Object.keys(allSubjects).forEach(subj => {
+    const scores = allSubjects[subj].scores;
+    const avgSc = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10;
+    const avgRk = allSubjects[subj].ranks.filter(r => r !== null);
+    const avgRank = avgRk.length ? Math.round(avgRk.reduce((a,b)=>a+b,0)/avgRk.length) : null;
+    allSubjects[subj].avg_score = avgSc;
+    allSubjects[subj].avg_rank = avgRank;
+  });
+  const subjList = Object.entries(allSubjects).sort((a,b) => b[1].avg_score - a[1].avg_score);
+  if (subjList.length >= 2) {
+    const top = subjList.slice(0, Math.ceil(subjList.length/2));
+    const bottom = subjList.slice(Math.ceil(subjList.length/2)).reverse();
+    top.forEach(([s,d]) => strengths.push({ subject: s, avg_score: d.avg_score, avg_rank: d.avg_rank }));
+    bottom.forEach(([s,d]) => weaknesses.push({ subject: s, avg_score: d.avg_score, avg_rank: d.avg_rank }));
+  }
+  res.json({
+    student: { id: st.id, name: st.name, student_no: st.student_no, gender: st.gender, photo: st.photo, birth_date: st.birth_date, class_name: st.class_name, grade_name: st.grade_name },
+    summary, groups: history, strengths, weaknesses
+  });
+});
 app.get('/api/public/teachers/:id/honors', (req, res) => {
   const db = require('./db');
   const honors = db.prepare('SELECT * FROM teacher_honors WHERE teacher_id = ? ORDER BY date DESC').all(req.params.id);
