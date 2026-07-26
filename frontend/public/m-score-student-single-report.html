@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>成绩单</title>
+<link rel="stylesheet" href="mobile-header.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;min-height:100vh;background:#F1F8F7}
+.app{width:100%;max-width:430px;min-height:100vh;padding-bottom:80px}
+
+.page-header.mode-nav{background:linear-gradient(to bottom,#B7EAD8,#FFF 40%,#FFF)}
+.page-header.mode-nav .header-label{font-size:16px;font-weight:500}
+.student-hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 10px}
+.hero-photo-wrap{width:80px;height:106px;border-radius:12px;overflow:hidden;margin-bottom:10px;background:linear-gradient(135deg,#BEEFDA,#35B9AA);display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;font-weight:700}
+.hero-photo-wrap img{width:80px;height:106px;object-fit:cover;display:block}
+.hero-name{font-size:22px;font-weight:700;color:#1D2129}
+.hero-meta{font-size:12px;color:#86909C;margin-top:2px;display:flex;gap:8px;align-items:center}
+.hero-meta span{background:#F2F3F5;padding:2px 8px;border-radius:4px}
+
+.module{padding:12px 16px}
+.module-title{font-size:16px;font-weight:700;color:#1D2129;margin-bottom:12px;padding-left:6px;border-left:3px solid #14A89A}
+
+/* Module 1: Summary Card */
+.summary-card{background:#fff;border-radius:14px;padding:20px 16px;box-shadow:0 2px 6px rgba(0,0,0,.04);text-align:center}
+.total-score{font-size:52px;font-weight:800;color:#14A89A;line-height:1}
+.total-score-sm{font-size:14px;color:#86909C;font-weight:400}
+.score-level{display:inline-block;font-size:14px;font-weight:600;padding:4px 14px;border-radius:12px;margin-top:6px}
+.level-excellent{background:rgba(20,168,154,.1);color:#14A89A}
+.level-good{background:rgba(20,168,154,.08);color:#0B6D55}
+.level-pass{background:rgba(255,143,90,.08);color:#FF8F5A}
+.level-fail{background:rgba(255,92,74,.08);color:#FF5C4A}
+.summary-meta{display:flex;justify-content:center;gap:24px;margin-top:14px;flex-wrap:wrap}
+.meta-item{text-align:center}
+.meta-label{font-size:11px;color:#86909C}
+.meta-val{font-size:16px;font-weight:700;color:#1D2129}
+.meta-val.green{color:#14A89A}
+
+/* Module 2: Table */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.subj-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.04);font-size:13px;table-layout:fixed}
+.subj-table thead th{background:#F1F8F7;color:#1D2129;font-weight:600;padding:10px 8px;border-bottom:1px solid #E5E6EB;text-align:center;overflow:hidden;text-overflow:ellipsis}
+.subj-table tbody td{padding:10px 8px;text-align:center;border-bottom:1px solid #F2F3F5;color:#4E5969;overflow:hidden;text-overflow:ellipsis}
+.subj-table tbody td:first-child{color:#1D2129;font-weight:500}
+.score-high{color:#14A89A;font-weight:600}
+.score-mid{color:#FF8F5A}
+.score-low{color:#FF5C4A}
+
+/* Module 3: Analysis */
+.analysis-card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.analysis-row{margin-bottom:12px}
+.analysis-row:last-child{margin-bottom:0}
+.analysis-label{font-size:13px;font-weight:600;color:#1D2129;margin-bottom:6px}
+.analysis-items{display:flex;flex-wrap:wrap;gap:6px}
+.analysis-chip{padding:4px 12px;border-radius:10px;font-size:12px;line-height:1.4}
+.chip-adv{background:rgba(20,168,154,.08);color:#14A89A}
+.chip-adv strong{display:block;font-size:14px}
+.chip-weak{background:rgba(255,92,74,.08);color:#FF5C4A}
+.chip-weak strong{display:block;font-size:14px}
+.analysis-text{font-size:12px;color:#86909C;line-height:1.6;margin-top:10px;padding:10px 14px;background:#F7F8FA;border-radius:10px}
+
+/* Module 4: Button */
+.btn-full{display:block;width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;border:none;cursor:pointer;text-align:center}
+.btn-primary{background:#14A89A;color:#fff}
+.btn-primary:active{opacity:.8}
+
+.empty-state{text-align:center;padding:60px 20px;color:#86909C;font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.loading{text-align:center;padding:40px;color:#86909C;font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header mode-nav">
+    <div class="header-top">
+      <button class="back-btn" onclick="history.back()"><span class="back-arrow">&#8249;</span></button>
+      <span class="header-label">成绩单</span>
+      <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
+    </div>
+    <div class="student-hero" id="studentHero"></div>
+  </div>
+  <div id="pageContent"><div class="loading">加载中...</div></div>
+</div>
+
+<script>
+var data=null;
+
+function getParam(k){return new URLSearchParams(location.search).get(k);}
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function init(){
+  var sid=getParam('student_id'),gid=getParam('group_id');
+  if(!sid||!gid){renderError('缺少参数');return;}
+  try{
+    var r=await fetch('/api/public/student-single-report?student_id='+sid+'&group_id='+gid);
+    if(!r.ok){renderError('数据加载失败');return;}
+    data=await r.json();
+    renderHero();
+    render();
+  }catch(e){renderError('网络异常');}
+}
+
+function renderHero(){
+  var s=data.student;
+  var ph=s.photo?'<img src="'+s.photo+'" alt="">':s.name.charAt(0);
+  document.getElementById('studentHero').innerHTML=
+    '<div class="hero-photo-wrap">'+ph+'</div>'
+    +'<div class="hero-name">'+escapeHtml(s.name)+'</div>'
+    +'<div class="hero-meta"><span>'+escapeHtml(s.class_name||'')+'</span><span>'+escapeHtml(s.grade_name||'')+'</span><span>学号 '+escapeHtml(s.student_no||'')+'</span></div>';
+}
+
+function renderError(msg){
+  document.getElementById('pageContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>'+escapeHtml(msg)+'</div>';
+}
+
+function render(){
+  if(!data)return;
+  var html='';
+  html+=renderSummary();
+  html+=renderTable();
+  html+=renderAnalysis();
+  html+=renderButton();
+  document.getElementById('pageContent').innerHTML=html;
+}
+
+/* Module 1 */
+function renderSummary(){
+  var s=data.summary;
+  var lvlClass=s.score_rate>=90?'level-excellent':(s.score_rate>=80?'level-good':(s.score_rate>=60?'level-pass':'level-fail'));
+  return'<div class="module"><div class="module-title">本场总分</div>'
+    +'<div class="summary-card">'
+    +'<div class="total-score">'+s.total_score+'<span class="total-score-sm"> / '+s.max_score+'</span></div>'
+    +'<div class="'+lvlClass+' score-level">'+s.level+' · 得分率 '+s.score_rate+'%</div>'
+    +'<div class="summary-meta">'
+    +'<div class="meta-item"><div class="meta-label">班级排名</div><div class="meta-val green">'+(s.class_rank||'-')+'<span style="font-size:11px;color:#86909C;font-weight:400">/'+s.class_total+'</span></div></div>'
+    +'<div class="meta-item"><div class="meta-label">年级排名</div><div class="meta-val">'+(s.grade_rank||'-')+'<span style="font-size:11px;color:#86909C;font-weight:400">/'+s.grade_total+'</span></div></div>'
+    +'</div></div>';
+}
+
+/* Module 2 */
+function renderTable(){
+  var subs=data.subjects;
+  if(!subs.length)return'<div class="module"><div class="empty-state">暂无科目数据</div></div>';
+  var rows=subs.map(function(s){
+    var sc=s.score!==null?s.score:'-';
+    var scoreClass=s.score!==null?(s.score>=s.max_score*0.8?'score-high':(s.score>=s.max_score*0.6?'score-mid':'score-low')):'';
+    return'<tr>'
+      +'<td>'+escapeHtml(s.subject)+'</td>'
+      +'<td class="'+scoreClass+'">'+sc+'</td>'
+      +'<td>'+s.max_score+'</td>'
+      +'<td>'+(s.class_rank||'-')+'</td>'
+      +'<td>'+(s.level||'-')+'</td>'
+      +'</tr>';
+  }).join('');
+  return'<div class="module"><div class="module-title">各科成绩</div><div class="table-wrap"><table class="subj-table"><thead><tr><th>科目</th><th>分数</th><th>满分</th><th>班排</th><th>等级</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+/* Module 3: Analysis */
+function renderAnalysis(){
+  var adv=data.advantages,wk=data.weaknesses;
+  if(!adv.length&&!wk.length)return'<div class="module"><div class="empty-state">暂无对比数据</div></div>';
+  var html='<div class="module"><div class="module-title">偏科分析</div><div class="analysis-card">';
+  if(adv.length){
+    html+='<div class="analysis-row"><div class="analysis-label">优势科目</div><div class="analysis-items">'
+      +adv.map(function(s){return'<span class="analysis-chip chip-adv"><strong>'+escapeHtml(s.subject)+' '+s.score+'分</strong>高于班级均分 +'+s.diff+'</span>';}).join('')
+      +'</div></div>';
+  }
+  if(wk.length){
+    html+='<div class="analysis-row"><div class="analysis-label">薄弱科目</div><div class="analysis-items">'
+      +wk.map(function(s){return'<span class="analysis-chip chip-weak"><strong>'+escapeHtml(s.subject)+' '+s.score+'分</strong>低于班级均分 '+s.diff+'</span>';}).join('')
+      +'</div></div>';
+  }
+  var text='';
+  if(adv.length&&!wk.length)text='本场考试各科均高于班级平均水平，整体表现均衡。建议继续保持，争取更高突破。';
+  else if(wk.length&&!adv.length)text='本场考试各科均低于班级平均水平，需全面加强复习。建议从薄弱科目入手，夯实基础。';
+  else if(adv.length&&wk.length){
+    text='本场考试中，'+adv.map(function(s){return s.subject;}).join('、')+'表现优异，高于班级均分；'
+      +wk.map(function(s){return s.subject;}).join('、')+'低于班级均分，需要重点加强。'
+      +'建议合理分配时间，薄弱科目多练习基础题型。';
+  }
+  if(text)html+='<div class="analysis-text">'+text+'</div>';
+  html+='</div></div>';
+  return html;
+}
+
+/* Module 4 */
+function renderButton(){
+  return'<div class="module"><button class="btn-full btn-primary" onclick="location.href=\'m-score-student-history.html?student_id='+data.student.id+'\'">查看全部历史统考</button></div>';
+}
+
+init();
+</script>
+</body>
+</html>

@@ -458,6 +458,48 @@ app.get('/api/public/student-history', (req, res) => {
     summary, groups: history, strengths, weaknesses
   });
 });
+app.get('/api/public/student-single-report', (req, res) => {
+  const db = require('./db');
+  const { student_id, group_id } = req.query;
+  if (!student_id || !group_id) return res.status(422).json({ error: 'student_id and group_id are required' });
+  const st = db.prepare('SELECT s.*, c.name as class_name, c.grade_id, g.grade_name FROM students s LEFT JOIN classes c ON s.class_id = c.id LEFT JOIN grades g ON c.grade_id = g.id WHERE s.id = ?').get(student_id);
+  if (!st) return res.status(404).json({ error: '学生不存在' });
+  const group = db.prepare('SELECT * FROM exam_groups WHERE id = ?').get(group_id);
+  if (!group) return res.status(404).json({ error: '考试批次不存在' });
+  const exams = db.prepare('SELECT id, exam_name, subject, total_score FROM exams WHERE group_id = ?').all(group_id);
+  const maxPossible = group.total_score || exams.reduce((s,e)=>s+e.total_score,0);
+  const subjects = exams.map(ex => {
+    const sc = db.prepare('SELECT score, single_rank as rank, level FROM scores WHERE exam_id = ? AND student_id = ?').get(ex.id, st.id);
+    const clsScores = db.prepare('SELECT AVG(sc2.score) as avg FROM scores sc2 JOIN students s2 ON sc2.student_id = s2.id WHERE sc2.exam_id = ? AND s2.class_id = ?').get(ex.id, st.class_id);
+    return {
+      subject: ex.subject || ex.exam_name,
+      score: sc ? sc.score : null,
+      max_score: ex.total_score,
+      class_rank: sc ? sc.rank : null,
+      level: sc ? sc.level : null,
+      class_avg: Math.round((clsScores?.avg || 0) * 10) / 10
+    };
+  });
+  const totalScore = db.prepare('SELECT SUM(sc.score) as total FROM scores sc JOIN exams e ON sc.exam_id = e.id WHERE e.group_id = ? AND sc.student_id = ?').pluck().get(group_id, st.id) || 0;
+  const allStudentTotals = db.prepare('SELECT sc.student_id, SUM(sc.score) as total FROM scores sc JOIN exams e ON sc.exam_id = e.id WHERE e.group_id = ? GROUP BY sc.student_id ORDER BY total DESC').all(group_id);
+  const classStudents = db.prepare('SELECT id FROM students WHERE class_id = ?').pluck().all(st.class_id);
+  const classIds = new Set(classStudents);
+  const gradeRank = allStudentTotals.findIndex(s => s.student_id == st.id) + 1 || null;
+  const classTotals = allStudentTotals.filter(s => classIds.has(s.student_id));
+  const classRank = classTotals.findIndex(s => s.student_id == st.id) + 1 || null;
+  const scoreRate = maxPossible ? Math.round(totalScore / maxPossible * 100) : 0;
+  const level = scoreRate >= 90 ? '优秀' : scoreRate >= 80 ? '良好' : scoreRate >= 60 ? '及格' : '不及格';
+  const summary = { total_score: totalScore, max_score: maxPossible, score_rate: scoreRate, level, class_rank: classRank, class_total: classTotals.length, grade_rank: gradeRank, grade_total: allStudentTotals.length };
+  const advSubs = subjects.filter(s => s.score !== null && s.class_avg > 0 && s.score > s.class_avg).sort((a,b) => (b.score-b.class_avg) - (a.score-a.class_avg));
+  const weakSubs = subjects.filter(s => s.score !== null && s.class_avg > 0 && s.score < s.class_avg).sort((a,b) => (a.score-a.class_avg) - (b.score-b.class_avg));
+  res.json({
+    student: { id: st.id, name: st.name, student_no: st.student_no, gender: st.gender, photo: st.photo, class_name: st.class_name, grade_name: st.grade_name },
+    group: { id: group.id, group_name: group.group_name, exam_date: group.exam_date, exam_type: group.exam_type },
+    summary, subjects,
+    advantages: advSubs.length ? advSubs.map(s => ({ subject: s.subject, score: s.score, class_avg: s.class_avg, diff: s.score - s.class_avg })) : [],
+    weaknesses: weakSubs.length ? weakSubs.map(s => ({ subject: s.subject, score: s.score, class_avg: s.class_avg, diff: s.score - s.class_avg })) : []
+  });
+});
 app.get('/api/public/grade-single-stats', (req, res) => {
   const db = require('./db');
   const { group_id } = req.query;
