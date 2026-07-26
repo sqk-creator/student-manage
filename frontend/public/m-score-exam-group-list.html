@@ -106,6 +106,13 @@ async function loadData(){
   }
 }
 
+function examTypeLabel(t){
+  if(t==='comprehensive')return '理科考试';
+  if(t==='liberal_arts')return '文科考试';
+  if(t==='general')return '综合考试';
+  return t||'综合考试';
+}
+
 function renderGroupCards(){
   if(!summaries||!summaries.length){
     document.getElementById('contentArea').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>暂无年级统考数据</div>';
@@ -113,15 +120,14 @@ function renderGroupCards(){
   }
   var html='';
   summaries.forEach(function(g){
-    var subjHtml=g.subjects.map(function(s){return '<span class="subj-chip">'+escapeHtml(s)+'</span>';}).join('');
     html+='<div class="group-card">'
       +'<div class="card-header"><span class="card-title">'+escapeHtml(g.group_name)+'</span><span class="card-grade">'+escapeHtml(g.grade_name)+'</span></div>'
       +'<div class="card-meta">'
+      +'<span class="meta-tag">'+escapeHtml(examTypeLabel(g.exam_type))+'</span>'
       +'<span class="meta-tag">'+escapeHtml(g.exam_date)+'</span>'
       +'<span class="meta-tag">满分 '+g.total_score+'</span>'
       +'<span class="meta-tag">'+g.student_count+'人参考</span>'
       +'</div>'
-      +'<div class="card-subjects">'+subjHtml+'</div>'
       +'<div class="card-stats">'
       +'<div class="stat-item"><div class="stat-label">年级均分</div><div class="stat-value green">'+g.avg_total+'</div></div>'
       +'<div class="stat-item"><div class="stat-label">及格率</div><div class="stat-value">'+g.pass_rate+'</div></div>'

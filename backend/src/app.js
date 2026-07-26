@@ -251,6 +251,7 @@ app.get('/api/public/exam-group-summaries', (req, res) => {
       grade_name: grp.grade_name || '',
       grade_id: grp.grade_id,
       exam_date: grp.exam_date,
+      exam_type: grp.exam_type,
       total_score: maxPossible,
       subjects,
       student_count: studentTotals.length,
