@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>本场统计</title>
+<link rel="stylesheet" href="mobile-header.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;min-height:100vh;background:#F1F8F7}
+.app{width:100%;max-width:430px;min-height:100vh;padding-bottom:80px}
+
+.module{padding:12px 16px}
+.module-title{font-size:16px;font-weight:700;color:#1D2129;margin-bottom:12px;padding-left:6px;border-left:3px solid #14A89A}
+
+/* Module 1: Metrics */
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mcard{background:#fff;border-radius:12px;padding:14px 6px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.mcard-val{font-size:21px;font-weight:700;color:#1D2129;line-height:1.2}
+.mcard-val.green{color:#14A89A}
+.mcard-val.orange{color:#FF8F5A}
+.mcard-val.red{color:#FF5C4A}
+.mcard-label{font-size:11px;color:#86909C;margin-top:3px}
+
+/* Module 2: Distribution */
+.chart-container{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+#distChart,#subjChart{width:100%;height:220px;display:block}
+
+/* Module 3: Subject Chart - reuse */
+/* Module 4: Class Table */
+.class-table-wrap{overflow-x:hidden}
+.class-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.04);font-size:13px}
+.class-table thead th{background:#F1F8F7;color:#1D2129;font-weight:600;padding:10px 12px;border-bottom:1px solid #E5E6EB;text-align:center}
+.class-table thead th:first-child{text-align:left}
+.class-table thead th:last-child{text-align:right;padding-right:16px}
+.class-table tbody td{padding:10px 12px;border-bottom:1px solid #F2F3F5;color:#4E5969;text-align:center}
+.class-table tbody td:first-child{text-align:left;font-weight:500;color:#1D2129}
+.class-table tbody td:last-child{text-align:right;padding-right:16px}
+.class-table tbody tr{cursor:pointer}
+.class-table tbody tr:active{opacity:.8}
+.rank-badge{display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;text-align:center}
+.rank-badge.r1{background:#14A89A}
+.rank-badge.r2{background:#14A89A;opacity:.75}
+.rank-badge.r3{background:#14A89A;opacity:.55}
+.rank-badge.rn{background:#C9CDD4;color:#86909C}
+
+.empty-state{text-align:center;padding:60px 20px;color:#86909C;font-size:14px}
+.loading{text-align:center;padding:40px;color:#86909C;font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="page-header mode-nav">
+    <div class="header-top">
+      <button class="back-btn" onclick="history.back()"><span class="back-arrow">&#8249;</span></button>
+      <span class="header-label" id="headerTitle">本场统计</span>
+      <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
+    </div>
+  </div>
+  <div id="pageContent"><div class="loading">加载中...</div></div>
+</div>
+
+<script>
+var data=null;
+
+function getParam(k){return new URLSearchParams(location.search).get(k);}
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function init(){
+  var gid=getParam('group_id');
+  if(!gid){renderError('缺少批次参数');return;}
+  try{
+    var r=await fetch('/api/public/grade-single-stats?group_id='+gid);
+    if(!r.ok){renderError('数据加载失败');return;}
+    data=await r.json();
+    document.getElementById('headerTitle').textContent=data.group.group_name;
+    render();
+  }catch(e){renderError('网络异常');}
+}
+
+function renderError(msg){
+  document.getElementById('pageContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>'+escapeHtml(msg)+'</div>';
+}
+
+function render(){
+  if(!data){return;}
+  var html='';
+  html+=renderMetrics();
+  html+=renderDistribution();
+  html+=renderSubjects();
+  html+=renderClasses();
+  document.getElementById('pageContent').innerHTML=html;
+  setTimeout(function(){drawDistChart();drawSubjChart();},60);
+}
+
+/* Module 1 */
+function renderMetrics(){
+  var m=data.metrics;
+  return '<div class="module"><div class="module-title">本场概况</div>'
+    +'<div class="metrics-grid">'
+    +'<div class="mcard"><div class="mcard-val green">'+m.avg_total+'</div><div class="mcard-label">年级平均分</div></div>'
+    +'<div class="mcard"><div class="mcard-val">'+m.max_total+'</div><div class="mcard-label">最高分</div></div>'
+    +'<div class="mcard"><div class="mcard-val">'+m.min_total+'</div><div class="mcard-label">最低分</div></div>'
+    +'<div class="mcard"><div class="mcard-val green">'+m.pass_rate+'%</div><div class="mcard-label">及格率</div></div>'
+    +'<div class="mcard"><div class="mcard-val orange">'+m.excellent_rate+'%</div><div class="mcard-label">优秀率</div></div>'
+    +'<div class="mcard"><div class="mcard-val red">'+m.low_rate+'%</div><div class="mcard-label">低分率</div></div>'
+    +'</div></div>';
+}
+
+/* Module 2: Distribution */
+function renderDistribution(){
+  return '<div class="module"><div class="module-title">分数段分布</div>'
+    +'<div class="chart-container"><canvas id="distChart"></canvas></div></div>';
+}
+
+function drawDistChart(){
+  var cvs=document.getElementById('distChart');
+  if(!cvs||!data.buckets.length)return;
+  var dpr=window.devicePixelRatio||1;
+  var rect=cvs.getBoundingClientRect();
+  cvs.width=rect.width*dpr;cvs.height=rect.height*dpr;
+  var ctx=cvs.getContext('2d');
+  ctx.scale(dpr,dpr);
+  var W=rect.width,H=rect.height;
+  ctx.clearRect(0,0,W,H);
+
+  var pad={top:16,right:12,bottom:24,left:44};
+  var pw=W-pad.left-pad.right,ph=H-pad.top-pad.bottom;
+  var buckets=data.buckets;
+  var maxC=Math.max.apply(null,buckets.map(function(b){return b.count;}));
+  if(maxC===0)maxC=1;
+
+  // grid
+  ctx.strokeStyle='#F2F3F5';ctx.lineWidth=1;
+  ctx.font='10px system-ui';ctx.fillStyle='#C9CDD4';ctx.textAlign='right';
+  for(var i=0;i<=4;i++){
+    var gy=pad.top+ph*(i/4);
+    ctx.beginPath();ctx.moveTo(pad.left,gy);ctx.lineTo(W-pad.right,gy);ctx.stroke();
+    ctx.fillText(Math.round(maxC-maxC*i/4),pad.left-6,gy+4);
+  }
+
+  var barW=pw/buckets.length-4;
+  var gap=(pw-barW*buckets.length)/(buckets.length+1);
+  buckets.forEach(function(b,i){
+    var x=pad.left+gap+i*(barW+gap);
+    var barH=(b.count/maxC)*ph;
+    var y=pad.top+ph-barH;
+    ctx.fillStyle=b.count>0?'#14A89A':'#E5E6EB';
+    ctx.fillRect(x,y,barW,barH);
+    // label
+    ctx.fillStyle='#86909C';ctx.font='9px system-ui';ctx.textAlign='center';
+    ctx.fillText(b.range,x+barW/2,pad.top+ph+14);
+    if(b.count>0){ctx.fillStyle='#1D2129';ctx.fillText(b.count,x+barW/2,y-4);}
+  });
+}
+
+/* Module 3: Subject Bars */
+function renderSubjects(){
+  return '<div class="module"><div class="module-title">各科对比</div>'
+    +'<div class="chart-container"><canvas id="subjChart"></canvas></div></div>';
+}
+
+function drawSubjChart(){
+  var cvs=document.getElementById('subjChart');
+  if(!cvs||!data.subjects.length)return;
+  var dpr=window.devicePixelRatio||1;
+  var rect=cvs.getBoundingClientRect();
+  cvs.width=rect.width*dpr;cvs.height=rect.height*dpr;
+  var ctx=cvs.getContext('2d');
+  ctx.scale(dpr,dpr);
+  var W=rect.width,H=rect.height;
+  ctx.clearRect(0,0,W,H);
+
+  var subjects=data.subjects;
+  var barH=(H-32)/subjects.length;
+  var maxM=Math.max.apply(null,subjects.map(function(s){return s.max_score;}));
+  var maxV=maxM||100;
+
+  // grid
+  ctx.strokeStyle='#F2F3F5';ctx.lineWidth=1;
+  ctx.font='10px system-ui';ctx.fillStyle='#C9CDD4';ctx.textAlign='right';
+  for(var i=0;i<=4;i++){
+    var gy=16+barH*subjects.length*(i/4);
+    ctx.beginPath();ctx.moveTo(44,gy);ctx.lineTo(W-12,gy);ctx.stroke();
+    ctx.fillText(Math.round(maxV-maxV*i/4),40,gy+4);
+  }
+
+  subjects.forEach(function(s,i){
+    var y=16+i*barH;
+    var w=Math.max(4,(s.avg_score/maxV)*(W-56-44));
+    ctx.fillStyle='#14A89A';
+    ctx.fillRect(44,y+8,w,barH-16);
+    ctx.fillStyle='#1D2129';ctx.font='12px system-ui';ctx.textAlign='left';
+    ctx.fillText(s.subject,48,y+barH/2+4);
+    ctx.fillStyle='#86909C';ctx.font='11px system-ui';ctx.textAlign='right';
+    ctx.fillText(s.avg_score+'/'+s.max_score,W-12,y+barH/2+4);
+  });
+}
+
+/* Module 4: Class Table */
+function renderClasses(){
+  var cls=data.classes;
+  if(!cls||!cls.length)return'<div class="module"><div class="empty-state">暂无班级数据</div></div>';
+  var badge=function(r){
+    if(r===1)return'<span class="rank-badge r1">1</span>';
+    if(r===2)return'<span class="rank-badge r2">2</span>';
+    if(r===3)return'<span class="rank-badge r3">3</span>';
+    return'<span class="rank-badge rn">'+r+'</span>';
+  };
+  var rows=cls.map(function(c){
+    return'<tr onclick="location.href=\'m-score-class-single-stats.html?group_id='+data.group.id+'&class_id='+c.class_id+'\'">'
+      +'<td>'+escapeHtml(c.class_name)+'</td>'
+      +'<td>'+c.avg_total+'</td>'
+      +'<td>'+c.pass_rate+'%</td>'
+      +'<td>'+c.student_count+'人</td>'
+      +'<td>'+badge(c.rank)+'</td>'
+      +'</tr>';
+  }).join('');
+  return'<div class="module"><div class="module-title">班级排行</div><div class="class-table-wrap"><table class="class-table"><thead><tr><th>班级</th><th>平均分</th><th>及格率</th><th>人数</th><th>排名</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+window.addEventListener('resize',function(){drawDistChart();drawSubjChart();});
+init();
+</script>
+</body>
+</html>

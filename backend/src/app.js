@@ -458,6 +458,69 @@ app.get('/api/public/student-history', (req, res) => {
     summary, groups: history, strengths, weaknesses
   });
 });
+app.get('/api/public/grade-single-stats', (req, res) => {
+  const db = require('./db');
+  const { group_id } = req.query;
+  if (!group_id) return res.status(422).json({ error: 'group_id is required' });
+  const group = db.prepare('SELECT eg.*, g.grade_name FROM exam_groups eg LEFT JOIN grades g ON eg.grade_id = g.id WHERE eg.id = ?').get(group_id);
+  if (!group) return res.status(404).json({ error: '考试批次不存在' });
+  const exams = db.prepare('SELECT id, exam_name, subject, total_score FROM exams WHERE group_id = ?').all(group_id);
+  const studentTotals = db.prepare(`
+    SELECT sc.student_id, s.name as student_name, s.class_id, c.name as class_name, SUM(sc.score) as total
+    FROM scores sc JOIN exams e ON sc.exam_id = e.id
+    JOIN students s ON sc.student_id = s.id
+    LEFT JOIN classes c ON s.class_id = c.id
+    WHERE e.group_id = ? GROUP BY sc.student_id
+  `).all(group_id);
+  const totals = studentTotals.map(s => s.total);
+  const maxPossible = group.total_score || exams.reduce((s,e)=>s+e.total_score,0);
+  const avgTotal = totals.length ? Math.round(totals.reduce((a,b)=>a+b,0)/totals.length) : 0;
+  const maxTotal = totals.length ? Math.max(...totals) : 0;
+  const minTotal = totals.length ? Math.min(...totals) : 0;
+  const passCount = totals.filter(t => t >= maxPossible*0.6).length;
+  const excCount = totals.filter(t => t >= maxPossible*0.8).length;
+  const lowCount = totals.filter(t => t < maxPossible*0.3).length;
+  const metrics = {
+    avg_total: avgTotal, max_total: maxTotal, min_total: minTotal,
+    total_score: maxPossible, student_count: totals.length,
+    pass_rate: totals.length ? Math.round(passCount/totals.length*100) : 0,
+    excellent_rate: totals.length ? Math.round(excCount/totals.length*100) : 0,
+    low_rate: totals.length ? Math.round(lowCount/totals.length*100) : 0
+  };
+  const bucketCount = 10;
+  const bucketWidth = Math.ceil(maxPossible/bucketCount);
+  const buckets = [];
+  for (let i = 0; i < bucketCount; i++) {
+    const lo = i * bucketWidth;
+    const hi = i === bucketCount-1 ? maxPossible : (i+1)*bucketWidth;
+    const count = totals.filter(t => t >= lo && (i===bucketCount-1 ? t <= hi : t < hi)).length;
+    buckets.push({ range: lo+'-'+hi, lo, hi, count });
+  }
+  const subjects = exams.map(ex => {
+    const scs = db.prepare('SELECT score FROM scores WHERE exam_id = ?').all(ex.id);
+    const avgSc = scs.length ? Math.round(scs.reduce((a,b)=>a+b.score,0)/scs.length*10)/10 : 0;
+    const maxSc = scs.length ? Math.max(...scs.map(s=>s.score)) : 0;
+    const minSc = scs.length ? Math.min(...scs.map(s=>s.score)) : 0;
+    return { subject: ex.subject||ex.exam_name, avg_score: avgSc, max_score: ex.total_score, max_sc: maxSc, min_sc: minSc, count: scs.length };
+  });
+  const classMap = {};
+  studentTotals.forEach(st => {
+    if (!st.class_id) return;
+    if (!classMap[st.class_id]) classMap[st.class_id] = { class_id: st.class_id, class_name: st.class_name, totals: [] };
+    classMap[st.class_id].totals.push(st.total);
+  });
+  const classRanks = Object.values(classMap).map(c => {
+    const clsAvg = Math.round(c.totals.reduce((a,b)=>a+b,0)/c.totals.length);
+    const clsPass = c.totals.filter(t => t >= maxPossible*0.6).length;
+    return { class_id: c.class_id, class_name: c.class_name, avg_total: clsAvg, pass_rate: c.totals.length?Math.round(clsPass/c.totals.length*100):0, student_count: c.totals.length };
+  });
+  classRanks.sort((a,b) => b.avg_total - a.avg_total);
+  classRanks.forEach((c,i) => { c.rank = i + 1; });
+  res.json({
+    group: { id: group.id, group_name: group.group_name, exam_date: group.exam_date, exam_type: group.exam_type, grade_name: group.grade_name||'' },
+    metrics, buckets, subjects, classes: classRanks
+  });
+});
 app.get('/api/public/teachers/:id/honors', (req, res) => {
   const db = require('./db');
   const honors = db.prepare('SELECT * FROM teacher_honors WHERE teacher_id = ? ORDER BY date DESC').all(req.params.id);
