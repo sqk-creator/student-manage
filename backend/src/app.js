@@ -260,6 +260,64 @@ app.get('/api/public/exam-group-summaries', (req, res) => {
   });
   res.json(summaries);
 });
+app.get('/api/public/grade-trend', (req, res) => {
+  const db = require('./db');
+  const { grade_id } = req.query;
+  if (!grade_id) return res.status(422).json({ error: 'grade_id is required' });
+  const grade = db.prepare('SELECT * FROM grades WHERE id = ?').get(grade_id);
+  if (!grade) return res.status(404).json({ error: '年级不存在' });
+  const groups = db.prepare('SELECT * FROM exam_groups WHERE grade_id = ? AND exam_type = ? ORDER BY exam_date ASC').all(grade_id, 'comprehensive');
+  const groupStats = groups.map(grp => {
+    const exams = db.prepare('SELECT id, exam_name, subject, total_score FROM exams WHERE group_id = ?').all(grp.id);
+    const studentTotals = db.prepare(`
+      SELECT sc.student_id, SUM(sc.score) as total
+      FROM scores sc JOIN exams e ON sc.exam_id = e.id
+      WHERE e.group_id = ? GROUP BY sc.student_id
+    `).all(grp.id);
+    const totals = studentTotals.map(s => s.total);
+    const avgTotal = totals.length ? Math.round(totals.reduce((a,b)=>a+b,0)/totals.length) : 0;
+    const maxPossible = grp.total_score || exams.reduce((s,e)=>s+e.total_score,0);
+    const passCount = totals.filter(t => t >= maxPossible * 0.6).length;
+    const excCount = totals.filter(t => t >= maxPossible * 0.8).length;
+    const passRate = totals.length ? Math.round(passCount/totals.length*100) : 0;
+    const excRate = totals.length ? Math.round(excCount/totals.length*100) : 0;
+    const subjects = exams.map(ex => {
+      const scs = db.prepare('SELECT score FROM scores WHERE exam_id = ?').all(ex.id);
+      const avgSc = scs.length ? Math.round(scs.reduce((a,b)=>a+b.score,0)/scs.length*10)/10 : 0;
+      return { subject: ex.subject || ex.exam_name, avg_score: avgSc, max_score: ex.total_score };
+    });
+    return { group_id: grp.id, group_name: grp.group_name, exam_date: grp.exam_date, total_score: maxPossible, avg_total: avgTotal, pass_rate: passRate, excellent_rate: excRate, student_count: studentTotals.length, subjects };
+  });
+  const classes = db.prepare('SELECT id, name FROM classes WHERE grade_id = ? ORDER BY name ASC').all(grade_id);
+  const classData = classes.map(cls => {
+    const trends = groups.map(grp => {
+      const clsTotals = db.prepare(`
+        SELECT SUM(sc.score) as total
+        FROM scores sc JOIN exams e ON sc.exam_id = e.id
+        JOIN students s ON sc.student_id = s.id
+        WHERE e.group_id = ? AND s.class_id = ?
+        GROUP BY sc.student_id
+      `).all(grp.id, cls.id).map(r => r.total);
+      const avg = clsTotals.length ? Math.round(clsTotals.reduce((a,b)=>a+b,0)/clsTotals.length) : 0;
+      const maxPossible = grp.total_score || db.prepare('SELECT SUM(total_score) FROM exams WHERE group_id = ?').pluck().get(grp.id) || 0;
+      const passCount = clsTotals.filter(t => t >= maxPossible * 0.6).length;
+      return { group_id: grp.id, group_name: grp.group_name, avg_total: avg, pass_rate: clsTotals.length ? Math.round(passCount/clsTotals.length*100) : 0 };
+    });
+    const avgAcross = trends.length ? Math.round(trends.reduce((a,b)=>a+b.avg_total,0)/trends.length) : 0;
+    const recentChange = trends.length >= 2 ? trends[trends.length-1].avg_total - trends[trends.length-2].avg_total : 0;
+    return { class_id: cls.id, class_name: cls.name, trends, avg_total: avgAcross, recent_change: recentChange };
+  });
+  const allPassRates = groupStats.map(g => g.pass_rate);
+  const allExcRates = groupStats.map(g => g.excellent_rate);
+  const allAvgs = groupStats.map(g => g.avg_total);
+  const summary = {
+    avg_total: groupStats.length ? Math.round(allAvgs.reduce((a,b)=>a+b,0)/allAvgs.length) : 0,
+    avg_pass_rate: groupStats.length ? Math.round(allPassRates.reduce((a,b)=>a+b,0)/allPassRates.length) : 0,
+    avg_excellent_rate: groupStats.length ? Math.round(allExcRates.reduce((a,b)=>a+b,0)/allExcRates.length) : 0,
+    total_exams: groupStats.length
+  };
+  res.json({ grade_id: grade.id, grade_name: grade.grade_name, summary, groups: groupStats, classes: classData });
+});
 app.get('/api/public/teachers/:id/honors', (req, res) => {
   const db = require('./db');
   const honors = db.prepare('SELECT * FROM teacher_honors WHERE teacher_id = ? ORDER BY date DESC').all(req.params.id);
