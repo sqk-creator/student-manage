@@ -279,15 +279,20 @@ app.get('/api/public/grade-trend', (req, res) => {
     const avgTotal = totals.length ? Math.round(totals.reduce((a,b)=>a+b,0)/totals.length) : 0;
     const maxPossible = grp.total_score || exams.reduce((s,e)=>s+e.total_score,0);
     const passCount = totals.filter(t => t >= maxPossible * 0.6).length;
+    const goodCount = totals.filter(t => t >= maxPossible * 0.7 && t < maxPossible * 0.8).length;
     const excCount = totals.filter(t => t >= maxPossible * 0.8).length;
+    const failCount = totals.filter(t => t < maxPossible * 0.6).length;
     const passRate = totals.length ? Math.round(passCount/totals.length*100) : 0;
+    const goodRate = totals.length ? Math.round(goodCount/totals.length*100) : 0;
     const excRate = totals.length ? Math.round(excCount/totals.length*100) : 0;
+    const failRate = totals.length ? Math.round(failCount/totals.length*100) : 0;
+    const scoreRate = maxPossible > 0 ? Math.round(avgTotal/maxPossible*100) : 0;
     const subjects = exams.map(ex => {
       const scs = db.prepare('SELECT score FROM scores WHERE exam_id = ?').all(ex.id);
       const avgSc = scs.length ? Math.round(scs.reduce((a,b)=>a+b.score,0)/scs.length*10)/10 : 0;
       return { subject: ex.subject || ex.exam_name, avg_score: avgSc, max_score: ex.total_score };
     });
-    return { group_id: grp.id, group_name: grp.group_name, exam_date: grp.exam_date, total_score: maxPossible, avg_total: avgTotal, pass_rate: passRate, excellent_rate: excRate, student_count: studentTotals.length, subjects };
+    return { group_id: grp.id, group_name: grp.group_name, exam_date: grp.exam_date, total_score: maxPossible, avg_total: avgTotal, score_rate: scoreRate, excellent_rate: excRate, good_rate: goodRate, pass_rate: passRate, fail_rate: failRate, student_count: studentTotals.length, subjects };
   });
   const classes = db.prepare('SELECT id, name FROM classes WHERE grade_id = ? ORDER BY name ASC').all(grade_id);
   const classData = classes.map(cls => {
@@ -308,13 +313,17 @@ app.get('/api/public/grade-trend', (req, res) => {
     const recentChange = trends.length >= 2 ? trends[trends.length-1].avg_total - trends[trends.length-2].avg_total : 0;
     return { class_id: cls.id, class_name: cls.name, trends, avg_total: avgAcross, recent_change: recentChange };
   });
-  const allPassRates = groupStats.map(g => g.pass_rate);
+  const allScoreRates = groupStats.map(g => g.score_rate);
   const allExcRates = groupStats.map(g => g.excellent_rate);
-  const allAvgs = groupStats.map(g => g.avg_total);
+  const allGoodRates = groupStats.map(g => g.good_rate);
+  const allPassRates = groupStats.map(g => g.pass_rate);
+  const allFailRates = groupStats.map(g => g.fail_rate);
   const summary = {
-    avg_total: groupStats.length ? Math.round(allAvgs.reduce((a,b)=>a+b,0)/allAvgs.length) : 0,
-    avg_pass_rate: groupStats.length ? Math.round(allPassRates.reduce((a,b)=>a+b,0)/allPassRates.length) : 0,
+    avg_score_rate: groupStats.length ? Math.round(allScoreRates.reduce((a,b)=>a+b,0)/allScoreRates.length) : 0,
     avg_excellent_rate: groupStats.length ? Math.round(allExcRates.reduce((a,b)=>a+b,0)/allExcRates.length) : 0,
+    avg_good_rate: groupStats.length ? Math.round(allGoodRates.reduce((a,b)=>a+b,0)/allGoodRates.length) : 0,
+    avg_pass_rate: groupStats.length ? Math.round(allPassRates.reduce((a,b)=>a+b,0)/allPassRates.length) : 0,
+    avg_fail_rate: groupStats.length ? Math.round(allFailRates.reduce((a,b)=>a+b,0)/allFailRates.length) : 0,
     total_exams: groupStats.length
   };
   const availableTypes = db.prepare('SELECT DISTINCT exam_type FROM exam_groups WHERE grade_id = ?').pluck().all(grade_id);

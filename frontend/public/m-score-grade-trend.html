@@ -14,12 +14,17 @@ body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content
 .module-title{font-size:16px;font-weight:700;color:#1D2129;margin-bottom:12px;padding-left:6px;border-left:3px solid #14A89A}
 
 /* Module 1: Summary Cards */
-.summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.summary-cards{display:flex;flex-direction:column;gap:8px}
+.summary-row{display:grid;gap:8px}
+.summary-row.r2{grid-template-columns:repeat(5,1fr)}
+.summary-row.r1{grid-template-columns:1fr 1fr}
 .scard{background:#fff;border-radius:12px;padding:12px 6px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04)}
 .scard-icon{font-size:20px;margin-bottom:4px;opacity:.6}
-.scard-val{font-size:22px;font-weight:700;color:#1D2129;line-height:1.2}
+.scard-val{font-size:20px;font-weight:700;color:#1D2129;line-height:1.2}
 .scard-val.green{color:#14A89A}
-.scard-label{font-size:10px;color:#86909C;margin-top:2px}
+.scard-val.red{color:#FF5C4A}
+.scard-val.orange{color:#FF8F5A}
+.scard-label{font-size:11px;color:#86909C;margin-top:2px}
 
 /* Module 2: Trend Chart */
 .chart-container{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
@@ -144,10 +149,17 @@ function renderSummary(){
   var s=data.summary;
   return '<div class="module"><div class="module-title">考试概况</div>'
     +'<div class="summary-cards">'
-    +'<div class="scard"><div class="scard-icon">--</div><div class="scard-val green">'+(s.avg_total||0)+'</div><div class="scard-label">平均总分</div></div>'
-    +'<div class="scard"><div class="scard-icon">--</div><div class="scard-val">'+(s.avg_pass_rate||0)+'%</div><div class="scard-label">平均及格率</div></div>'
-    +'<div class="scard"><div class="scard-icon">--</div><div class="scard-val">'+(s.avg_excellent_rate||0)+'%</div><div class="scard-label">平均优秀率</div></div>'
-    +'<div class="scard"><div class="scard-icon">--</div><div class="scard-val">'+(s.total_exams||0)+'</div><div class="scard-label">考试场次</div></div>'
+    +'<div class="summary-row r1">'
+    +'<div class="scard"><div class="scard-val">'+(s.total_exams||0)+'</div><div class="scard-label">考试场次</div></div>'
+    +'<div class="scard"><div class="scard-val green">'+(s.avg_score_rate||0)+'%</div><div class="scard-label">平均得分率</div></div>'
+    +'</div>'
+    +'<div class="summary-row r2">'
+    +'<div class="scard"><div class="scard-val green">'+(s.avg_score_rate||0)+'%</div><div class="scard-label">平均得分率</div></div>'
+    +'<div class="scard"><div class="scard-val green">'+(s.avg_excellent_rate||0)+'%</div><div class="scard-label">平均优秀率</div></div>'
+    +'<div class="scard"><div class="scard-val">'+(s.avg_good_rate||0)+'%</div><div class="scard-label">平均良好率</div></div>'
+    +'<div class="scard"><div class="scard-val orange">'+(s.avg_pass_rate||0)+'%</div><div class="scard-label">平均及格率</div></div>'
+    +'<div class="scard"><div class="scard-val red">'+(s.avg_fail_rate||0)+'%</div><div class="scard-label">平均不及格率</div></div>'
+    +'</div>'
     +'</div></div>';
 }
 
