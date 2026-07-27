@@ -3,7 +3,6 @@ const cors = require('cors');
 const path = require('path');
 const { authMiddleware } = require('./middleware/auth');
 const { photoUpload, excelUpload } = require('./shared/upload');
-const XLSX = require('xlsx');
 const ExcelImporter = require('./shared/excel-import');
 
 const authRoutes = require('./routes/auth');
