@@ -82,6 +82,10 @@ export default function ScoreExamList() {
   });
 
   const [sortKey, setSortKey] = useState('');
+  const [showImport, setShowImport] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [importing, setImporting] = useState(false);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -339,6 +343,32 @@ export default function ScoreExamList() {
     loadData();
   };
 
+  const handleImport = async () => {
+    if (!importFile) return alert('请选择文件');
+    setImporting(true);
+    try {
+      const form = new FormData();
+      form.append('file', importFile);
+      const token = localStorage.getItem('token');
+      const r = await fetch('/api/import/scores', { method: 'POST', headers: token ? { 'Authorization': 'Bearer ' + token } : {}, body: form });
+      const data = await r.json();
+      setImportResult(data);
+      if (data.success > 0) loadData();
+    } catch (e: any) { alert('导入失败: ' + e.message); }
+    finally { setImporting(false); }
+  };
+
+  const downloadTemplate = async () => {
+    const token = localStorage.getItem('token');
+    const r = await fetch('/api/template/scores', { headers: token ? { 'Authorization': 'Bearer ' + token } : {} });
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '成绩批量导入模板.xlsx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return <div className="loading-state">加载中...</div>;
 
   return (
@@ -350,6 +380,7 @@ export default function ScoreExamList() {
           <button className="btn btn-primary" onClick={() => setShowCreateMenu(!showCreateMenu)}>
             + 创建
           </button>
+          <button className="btn btn-default" style={{marginLeft:8}} onClick={() => { setShowImport(true); setImportFile(null); setImportResult(null); }}>批量导入</button>
           {showCreateMenu && (
             <div style={{
               position: 'absolute', right: 0, top: 40, zIndex: 100,
@@ -479,7 +510,31 @@ export default function ScoreExamList() {
                             <button className="btn btn-danger btn-sm"
                               onClick={() => setConfirmDelete({ id: item.id, type: 'exam', name: item.name })}>删除</button>
                           </>
-                        )}
+      )}
+      {showImport && (
+        <div className="modal-overlay" onClick={() => setShowImport(false)}>
+          <div className="modal" style={{maxWidth:460}} onClick={e => e.stopPropagation()}>
+            <div className="modal-title">批量导入成绩</div>
+            <div style={{marginBottom:12,display:'flex',gap:8}}>
+              <button className="btn btn-default" style={{fontSize:13}} onClick={downloadTemplate}>下载导入模板</button>
+            </div>
+            <div className="form-group">
+              <label className="form-label">上传 Excel 文件</label>
+              <input type="file" accept=".xlsx,.xls" onChange={e => setImportFile(e.target.files?.[0] || null)} />
+            </div>
+            {importResult && (
+              <div style={{marginTop:12,padding:10,background:'#F7F8FA',borderRadius:8,fontSize:13}}>
+                <div>成功: {importResult.success} 条 | 跳过: {importResult.skip} 条 | 总计: {importResult.total} 条</div>
+                {importResult.errors?.length > 0 && <div style={{color:'#FF5C4A',marginTop:6}}>{importResult.errors.slice(0,5).join('；')}</div>}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button className="btn btn-default" onClick={() => setShowImport(false)}>关闭</button>
+              <button className="btn btn-primary" onClick={handleImport} disabled={importing}>{importing ? '导入中...' : '开始导入'}</button>
+            </div>
+          </div>
+        </div>
+      )}
                       </td>
                     </tr>
                   );

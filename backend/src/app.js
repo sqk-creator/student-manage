@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { authMiddleware } = require('./middleware/auth');
-const { photoUpload } = require('./shared/upload');
+const { photoUpload, excelUpload } = require('./shared/upload');
+const XLSX = require('xlsx');
+const ExcelImporter = require('./shared/excel-import');
 
 const authRoutes = require('./routes/auth');
 const classRoutes = require('./routes/classes');
@@ -786,6 +788,135 @@ app.use('/api/students/:studentId/comments', authMiddleware, studentCommentRoute
 app.use('/api/grades', authMiddleware, gradeRoutes);
 app.use('/api/subjects', authMiddleware, subjectRoutes);
 app.use('/api/feature-cards', authMiddleware, featureCardRoutes);
+
+app.get('/api/template/students', authMiddleware, (req, res) => {
+  ExcelImporter.sendTemplate(res, {
+    name: '姓名', student_no: '学号', gender: '性别', birth_date: '出生日期',
+    hometown: '籍贯', phone: '手机号', class_name: '班级', class_role: '职务'
+  }, '学生批量导入模板.xlsx', [
+    '姓名: 必填',
+    '学号: 必填, 不可重复',
+    '性别: 男/女, 留空默认空',
+    '出生日期: 格式如 2006-01-15',
+    '籍贯: 如 浙江杭州',
+    '手机号: 11位手机号码',
+    '班级: 填写班级名称, 如"高三1班", 系统自动匹配已有班级或创建',
+    '职务: 班长/学习委员等, 留空默认空'
+  ]);
+});
+
+app.get('/api/template/scores', authMiddleware, (req, res) => {
+  ExcelImporter.sendTemplate(res, {
+    student_no: '学号', exam_group: '考试批次', subject: '科目',
+    score: '分数', class_rank: '班级排名', level: '等级'
+  }, '成绩批量导入模板.xlsx', [
+    '学号: 必填, 系统中已存在的学生学号',
+    '考试批次: 必填, 如"期中考试"或"高三第一学期期末模拟考试", 系统自动匹配已有批次',
+    '科目: 必填, 如"语文""数学""英语"',
+    '分数: 必填, 数值',
+    '班级排名: 选填, 数值',
+    '等级: 选填, 如 A/B/C/D 或 优秀/良好/及格/不及格'
+  ]);
+});
+
+app.post('/api/import/students', authMiddleware, excelUpload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: '请上传 Excel 文件' });
+  try {
+    const db = require('./db');
+    const classes = db.prepare('SELECT id, name FROM classes').all();
+    const insertStmt = db.prepare('INSERT INTO students (name, student_no, gender, birth_date, hometown, phone, class_id, class_role) VALUES (?,?,?,?,?,?,?,?)');
+    const checkStmt = db.prepare('SELECT id FROM students WHERE student_no = ?');
+
+    const importer = new ExcelImporter({
+      columns: {
+        name: '姓名', student_no: '学号', gender: '性别', birth_date: '出生日期',
+        hometown: '籍贯', phone: '手机号', class_name: '班级', class_role: '职务'
+      },
+      required: ['name', 'student_no'],
+      onRow: (data) => {
+        if (!data.name || !data.student_no) return { error: '姓名或学号为空' };
+        if (checkStmt.get(data.student_no)) return { skipped: true };
+        const gender = (data.gender === '男' || data.gender === '女') ? data.gender : '';
+        let classId = 0;
+        if (data.class_name) {
+          let cls = classes.find(c => c.name === data.class_name);
+          if (!cls) {
+            const r = db.prepare('INSERT INTO classes (name) VALUES (?)').run(data.class_name);
+            cls = { id: r.lastInsertRowid, name: data.class_name };
+            classes.push(cls);
+          }
+          classId = cls.id;
+        }
+        insertStmt.run(data.name, data.student_no, gender, data.birth_date, data.hometown, data.phone, classId, data.class_role);
+        return { inserted: true };
+      }
+    });
+
+    const result = importer.import(req.file.path, db);
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: '文件解析失败: ' + e.message }); }
+});
+
+app.post('/api/import/scores', authMiddleware, excelUpload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: '请上传 Excel 文件' });
+  try {
+    const db = require('./db');
+    const findStudent = db.prepare('SELECT id FROM students WHERE student_no = ?');
+    const findGroup = db.prepare('SELECT id FROM exam_groups WHERE group_name = ?');
+    const insertGroup = db.prepare('INSERT INTO exam_groups (class_id, group_name, exam_date, exam_type) VALUES (0, ?, ?, ?)');
+    const findExam = db.prepare('SELECT id FROM exams WHERE group_id = ? AND (subject = ? OR exam_name = ?)');
+    const insertExam = db.prepare('INSERT INTO exams (group_id, exam_name, subject, total_score) VALUES (?,?,?,150)');
+    const findScore = db.prepare('SELECT id FROM scores WHERE student_id = ? AND exam_id = ?');
+    const insertScore = db.prepare('INSERT INTO scores (student_id, exam_id, score, single_rank, level) VALUES (?,?,?,?,?)');
+    const updateScore = db.prepare('UPDATE scores SET score=?, single_rank=?, level=? WHERE id=?');
+    const groupCache = {}, examCache = {};
+
+    db.pragma('foreign_keys = 0');
+
+    const importer = new ExcelImporter({
+      columns: {
+        student_no: '学号', exam_group: '考试批次', subject: '科目',
+        score: '分数', class_rank: '班级排名', level: '等级'
+      },
+      required: ['student_no', 'exam_group', 'subject', 'score'],
+      onRow: (data) => {
+        const st = findStudent.get(data.student_no);
+        if (!st) return { error: '学号"' + data.student_no + '"不存在' };
+        const scoreVal = parseFloat(data.score);
+        if (isNaN(scoreVal)) return { error: '分数格式错误' };
+        const gkey = data.exam_group;
+        if (!groupCache[gkey]) {
+          let grp = findGroup.get(gkey);
+          if (!grp) {
+            const r = insertGroup.run(gkey, new Date().toISOString().slice(0, 10), 'single');
+            grp = { id: r.lastInsertRowid };
+          }
+          groupCache[gkey] = grp.id;
+        }
+        const gid = groupCache[gkey];
+        const ekey = gid + '_' + data.subject;
+        if (!examCache[ekey]) {
+          let ex = findExam.get(gid, data.subject, data.subject);
+          if (!ex) {
+            const r = insertExam.run(gid, data.subject, data.subject);
+            ex = { id: r.lastInsertRowid };
+          }
+          examCache[ekey] = ex.id;
+        }
+        const eid = examCache[ekey];
+        const rank = parseInt(data.class_rank) || 0;
+        const existing = findScore.get(st.id, eid);
+        if (existing) updateScore.run(scoreVal, rank, data.level, existing.id);
+        else insertScore.run(st.id, eid, scoreVal, rank, data.level);
+        return { inserted: true };
+      }
+    });
+
+    const result = importer.import(req.file.path, db);
+    db.pragma('foreign_keys = 1');
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: '文件解析失败: ' + e.message }); }
+});
 
 app.use((err, req, res, _next) => {
   console.error(err);

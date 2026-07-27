@@ -9,5 +9,10 @@ const storage = multer.diskStorage({
 });
 
 const photoUpload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+const excelUpload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (['.xlsx', '.xls'].includes(ext)) cb(null, true);
+  else cb(new Error('仅支持 .xlsx 或 .xls 格式的 Excel 文件'));
+}});
 
-module.exports = { uploadDir, photoUpload };
+module.exports = { uploadDir, photoUpload, excelUpload };

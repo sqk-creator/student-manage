@@ -10,6 +10,10 @@ export default function StudentMgmt() {
   const [keyword, setKeyword] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [showEdit, setShowEdit] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [importing, setImporting] = useState(false);
   const [editStudent, setEditStudent] = useState<any>(null);
   const [editForm, setEditForm] = useState({ name:'', student_no:'', gender:'', phone:'', birth_date:'', hometown:'', photo:'', class_role:'', class_id:0 });
 
@@ -46,6 +50,32 @@ export default function StudentMgmt() {
     try { await api.deleteStudent(id); loadData(); } catch (e: any) { alert(e.message); }
   };
 
+  const handleImport = async () => {
+    if (!importFile) return alert('请选择文件');
+    setImporting(true);
+    try {
+      const form = new FormData();
+      form.append('file', importFile);
+      const token = localStorage.getItem('token');
+      const r = await fetch('/api/import/students', { method: 'POST', headers: token ? { 'Authorization': 'Bearer ' + token } : {}, body: form });
+      const data = await r.json();
+      setImportResult(data);
+      if (data.success > 0) loadData();
+    } catch (e: any) { alert('导入失败: ' + e.message); }
+    finally { setImporting(false); }
+  };
+
+  const downloadTemplate = async () => {
+    const token = localStorage.getItem('token');
+    const r = await fetch('/api/template/students', { headers: token ? { 'Authorization': 'Bearer ' + token } : {} });
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '学生批量导入模板.xlsx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getClassName = (classId: number) => {
     const c = classes.find((x: any) => x.id === classId);
     return c ? c.name : '-';
@@ -55,8 +85,32 @@ export default function StudentMgmt() {
 
   return (
     <div>
+      {showImport && (
+        <div className="modal-overlay" onClick={() => setShowImport(false)}>
+          <div className="modal" style={{maxWidth:460}} onClick={e => e.stopPropagation()}>
+            <div className="modal-title">批量导入学生</div>
+            <div style={{marginBottom:12,display:'flex',gap:8}}>
+              <button className="btn btn-default" style={{fontSize:13}} onClick={downloadTemplate}>下载导入模板</button>
+            </div>
+            <div className="form-group">
+              <label className="form-label">上传 Excel 文件</label>
+              <input type="file" accept=".xlsx,.xls" onChange={e => setImportFile(e.target.files?.[0] || null)} />
+            </div>
+            {importResult && (
+              <div style={{marginTop:12,padding:10,background:'#F7F8FA',borderRadius:8,fontSize:13}}>
+                <div>成功: {importResult.success} 条 | 跳过(重复): {importResult.skip} 条 | 总计: {importResult.total} 条</div>
+                {importResult.errors?.length > 0 && <div style={{color:'#FF5C4A',marginTop:6}}>{importResult.errors.slice(0,5).join('；')}</div>}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button className="btn btn-default" onClick={() => setShowImport(false)}>关闭</button>
+              <button className="btn btn-primary" onClick={handleImport} disabled={importing}>{importing ? '导入中...' : '开始导入'}</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="card" style={{marginBottom:16,padding:16}}>
-        <div style={{display:'flex',gap:12,alignItems:'center'}}>
+        <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
           <input className="form-input" style={{flex:1,maxWidth:240}} placeholder="搜索姓名或学号" value={keyword}
             onChange={e => setKeyword(e.target.value)} onKeyDown={e => e.key==='Enter' && handleSearch()} />
           <select className="form-select" style={{width:140}} value={classFilter} onChange={e => setClassFilter(e.target.value)}>
@@ -64,6 +118,7 @@ export default function StudentMgmt() {
             {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <button className="btn btn-primary" onClick={handleSearch}>搜索</button>
+          <button className="btn btn-default" onClick={() => { setShowImport(true); setImportFile(null); setImportResult(null); }}>批量导入</button>
         </div>
       </div>
 
