@@ -1,0 +1,45 @@
+.app-message-root{
+  position:fixed;
+  top:24px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10000;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  pointer-events:none;
+}
+.app-message-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  max-width:480px;
+  padding:10px 18px;
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+  font-size:13px;
+  color:#262626;
+  opacity:0;
+  transform:translateY(-12px);
+  transition:opacity .22s ease, transform .22s ease;
+  pointer-events:auto;
+}
+.app-message-item.app-message-in{opacity:1;transform:translateY(0);}
+.app-message-item.app-message-leave{opacity:0;transform:translateY(-12px);}
+.app-message-icon{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  color:#fff;
+  flex-shrink:0;
+}
+.app-message-success .app-message-icon{background:#52c41a;}
+.app-message-error .app-message-icon{background:#ff4d4f;}
+.app-message-info .app-message-icon{background:#1890ff;}
+.app-message-warning .app-message-icon{background:#faad14;}

@@ -3,25 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>成绩报告</title>
+<title>成绩档案</title>
 <link rel="stylesheet" href="mobile-header.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="chart-base.js"></script>
+<script src="line-chart.js"></script>
+<script src="radar-chart.js"></script>
+<script src="histogram-chart.js"></script>
 <style>
+:root{
+  --color-grade-a:#02D9B3;--color-grade-a-bg:#D0FCF6;
+  --color-grade-b:#00A3FF;--color-grade-b-bg:#D6ECFF;
+  --color-grade-c:#485DFA;--color-grade-c-bg:#E1E5FF;
+  --color-grade-d:#F165B4;--color-grade-d-bg:#FFE6F2;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;min-height:100vh;background:#F1F8F7}
-.app{width:100%;max-width:430px;min-height:100vh;padding-bottom:80px}
+.app{width:100%;max-width:430px;min-height:100vh;padding-bottom:120px;position:relative;overflow:hidden}
 
-.grade-filter{padding:4px 16px 10px;background:#fff;display:flex;align-items:center}
-.grade-filter select{flex:1;padding:8px 10px;border-radius:8px;border:1px solid #E5E6EB;font-size:14px;color:#1D2129;background:#F9FAFB;
+.module{padding:12px 16px}
+.module-title{font-size:16px;font-weight:700;color:#1D2129;margin-bottom:12px;padding-left:6px;border-left:3px solid #14A89A}
+
+/* ====== Tab: 看考试 ====== */
+.exam-filter-row{display:flex;align-items:flex-start;gap:10px;padding:0 16px 10px}
+.sub-tabs{display:flex;justify-content:center;margin:16px 16px 0;flex:1}
+.sub-tab-wrap{display:inline-flex;background:#F0F1F2;border-radius:20px;padding:3px;flex-shrink:0}
+.sub-tab{padding:8px 20px;text-align:center;border-radius:18px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;border:none;background:transparent;color:#86909C}
+.sub-tab.active{background:#14A89A;color:#fff;font-weight:600;box-shadow:0 2px 6px rgba(20,168,154,.25)}
+.exam-grade-select{padding:10px 28px 10px 14px;border-radius:20px;border:none;font-size:14px;font-weight:500;color:#86909C;background:#F0F1F2;cursor:pointer;flex-shrink:0;
   appearance:none;-webkit-appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386909C' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;padding-right:32px}
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2386909C'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+.tab-content{padding:12px 16px}
 
-.tab-bar{display:flex;align-items:baseline;gap:0;padding:0 16px;background:#fff}
-.tab{font-size:16px;font-weight:500;color:#86909C;cursor:pointer;padding:8px 24px 8px 0;border:none;background:none}
-.tab.active{font-size:20px;font-weight:600;color:#1D2129}
-
-.content{padding:12px 16px}
-
+/* ====== Shared Cards ====== */
 .group-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
 .card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
 .card-title{font-size:17px;font-weight:700;color:#1D2129}
@@ -41,81 +56,416 @@ body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content
 .btn-primary{background:#14A89A;color:#fff}
 .card-btn:active{opacity:.8}
 
+/* ====== Tab: 看年级 / 看班级 / 看个人 ====== */
+.selector-row{display:flex;gap:8px;padding:4px 16px 12px;background:#fff}
+.selector-row select,.selector-row input{flex:1;padding:8px 10px;border-radius:8px;border:1px solid #E5E6EB;font-size:13px;color:#1D2129;background:#F9FAFB;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386909C' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:32px}
+.selector-row input{background-image:none;padding-right:10px}
+.type-switch{display:flex;gap:0;background:#E5E6EB;border-radius:10px;padding:3px;margin-bottom:12px}
+.type-btn{padding:6px 18px;font-size:13px;font-weight:500;border:none;border-radius:8px;cursor:pointer;background:transparent;color:#86909C;flex:1;text-align:center}
+.type-btn.active{background:#14A89A;color:#fff}
+
+.summary-cards{display:flex;flex-direction:column;gap:8px}
+.summary-row{display:grid;gap:8px}
+.summary-row.r2{grid-template-columns:repeat(4,1fr)}
+.summary-row.r1{grid-template-columns:1fr 1fr}
+.summary-row.r3{grid-template-columns:repeat(3,1fr)}
+.scard{background:#fff;border-radius:12px;padding:12px 6px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.scard-val{font-size:20px;font-weight:700;color:#1D2129;line-height:1.2}
+.scard-val.green{color:#14A89A}
+.scard-val.red{color:#FF5C4A}
+.scard-val.orange{color:#FF8F5A}
+.scard-label{font-size:11px;color:#86909C;margin-top:2px}
+
+/* ====== 看年级：得分率卡片 ====== */
+.grade-trend-card{
+  background:#fff;border-radius:14px;padding:20px 16px 16px;
+  margin:16px;box-shadow:0 2px 6px rgba(0,0,0,.04);
+}
+.grade-rate-card{
+  position:relative;height:180px;overflow:hidden;
+  margin-bottom:0;
+}
+.gauge-canvas{width:100%;height:100%;display:block}
+.gauge-text{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;padding-top:20px;
+}
+.gauge-label{font-size:14px;color:#1D2129;font-weight:500;}
+.gauge-value{font-size:48px;font-weight:800;color:#1D2129;line-height:1;margin:6px 0 0;}
+.gauge-value .gauge-unit{font-size:20px;font-weight:600;}
+.gauge-sub{font-size:16px;color:#86909C;margin-top:12px;}
+.gauge-stats{display:flex;gap:12px;margin-bottom:18px}
+.gauge-stat{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.gauge-stat-label{font-size:12px;color:#86909C;font-weight:500}
+.gauge-stat-value{font-size:20px;font-weight:800;color:#1D2129;line-height:1.1}
+
+.subject-toggle{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;cursor:grab;user-select:none}
+.subject-toggle::-webkit-scrollbar{display:none}
+.subject-toggle:active{cursor:grabbing}
+.subj-btn{font-size:12px;padding:4px 12px;border-radius:14px;border:1px solid #E5E6EB;background:#F7F8FA;color:#4E5969;cursor:pointer;flex-shrink:0;white-space:nowrap}
+.subj-btn.active{background:#14A89A;color:#fff;border-color:#14A89A}
+.chart-container{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04);margin:4px 16px 0}
+#gradeTrendChart{width:100%;height:200px}
+
+/* ====== 看年级：平均优秀/良好率 + 每班良好/优秀人数堆叠直方图 ====== */
+.grade-rate2-card{
+  background:#fff;border-radius:14px;padding:16px;margin:16px;
+  box-shadow:0 2px 6px rgba(0,0,0,.04);
+}
+.rate-avg-cards{display:flex}
+.rate-avg-cards .cs-rate + .cs-rate{margin-left:80px}
+.hist-scroll{cursor:grab;margin-top:6px}
+.hist-scroll.dragging{cursor:grabbing;user-select:none}
+
+.dual-legend{display:flex;gap:16px;margin-bottom:12px;font-size:12px;color:#86909C}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
+
+/* Class / Student list */
+.class-row,.student-row{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.04);cursor:pointer;display:flex;align-items:center;gap:12px}
+.class-row:active,.student-row:active{opacity:.8}
+.cr-avatar,.st-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#14A89A,#0B6D55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.cr-info,.st-info{flex:1;min-width:0}
+.cr-name,.st-name{font-size:15px;font-weight:600;color:#1D2129}
+.cr-sub,.st-no{font-size:12px;color:#86909C;margin-top:2px}
+.cr-change,.st-change{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.change-val{font-size:16px;font-weight:700}
+.change-val.up,.change-val.green{color:#14A89A}
+.change-val.down,.change-val.red{color:#FF5C4A}
+.change-val.zero{color:#86909C}
+.change-arrow{font-size:12px;line-height:1}
+
+/* ====== 班级卡片（看班级页顶部） ====== */
+.class-picker-card{
+  position:relative;margin:2px auto 16px;padding:12px 36px;width:100%;
+  background:linear-gradient(30deg,#C1FADB 10%,#E5F6EC 100%);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cpc-left{display:flex;flex-direction:column;gap:6px;min-width:0;align-items:flex-start}
+.cpc-top{display:flex;align-items:center;gap:8px}
+.cpc-name{font-size:20px;font-weight:600;color:#1D2129}
+.cpc-tag{font-size:11px;color:#14A89A;background:rgba(20,168,154,.1);padding:2px 8px;border-radius:8px;font-weight:600;align-self:flex-start}
+.cpc-bottom{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:12px}
+.cpc-avatars{display:flex}
+.cpc-avatars i,.cpc-avatars img{width:30px;height:30px;border-radius:50%;margin-left:-8px;flex-shrink:0;object-fit:cover}
+.cpc-avatars i:first-child,.cpc-avatars img:first-child{margin-left:0}
+.cpc-avatars i{display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-style:normal;border:2px solid #fff}
+.cpc-count{font-size:18px;font-weight:400;font-family:DIN;color:#1D2129;line-height:1}
+.cpc-count .cpc-unit{font-size:12px;font-weight:400;color:#86909C}
+.cpc-arrow{font-size:18px;color:#86909C}
+
+/* ====== 个人页学生选择卡片（复用 class-picker-card 外观） ====== */
+.spc-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.spc-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#BEEFDA,#35B9AA);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:22px}
+.spc-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.spc-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.spc-meta{font-size:12px;color:#86909C;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.spc-meta span{background:#F2F3F5;padding:2px 8px;border-radius:4px}
+.spc-meta span.spc-role{background:rgba(20,168,154,.1);color:#14A89A;font-weight:600}
+.spc-group{font-size:13px;font-weight:700;color:#1D2129;padding:12px 4px 4px;display:flex;align-items:center;gap:6px}
+.spc-group .spc-group-n{font-size:11px;font-weight:500;color:#86909C}
+.spc-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer}
+.spc-row:active{background:#F7F8FA}
+.spc-row-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#BEEFDA,#35B9AA);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px}
+.spc-row-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.spc-row-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.spc-row-name{font-size:15px;font-weight:600;color:#1D2129}
+.spc-row-sub{font-size:11px;color:#86909C;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.spc-row-sub .spc-role{background:rgba(20,168,154,.1);color:#14A89A;font-weight:600;padding:1px 6px;border-radius:4px}
+
+/* ====== 通用底部选择弹窗组件 BottomSelectPopup ====== */
+.bs-popup{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:1000}
+.bs-popup-mask{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:opacity .3s ease}
+.bs-popup.show .bs-popup-mask{opacity:1}
+.bs-popup-sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;max-height:70vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s ease;padding-bottom:env(safe-area-inset-bottom)}
+.bs-popup.show .bs-popup-sheet{transform:translateY(0)}
+.bs-popup-handle{width:36px;height:4px;border-radius:2px;background:#E5E6EB;margin:10px auto 0;flex-shrink:0}
+.bs-popup-title{font-size:16px;font-weight:700;color:#1D2129;text-align:center;padding:14px 16px 10px;flex-shrink:0}
+.bs-popup-body{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0}
+.bs-popup-content{padding:4px 16px 12px}
+.bs-popup-footer{display:flex;gap:12px;padding:12px 16px;flex-shrink:0;border-top:1px solid #F2F3F5}
+.bs-popup-btn{flex:1;padding:12px 0;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer}
+.bs-popup-btn.bs-cancel{background:#F2F3F5;color:#4E5969}
+.bs-popup-btn.bs-confirm{background:#14A89A;color:#fff}
+.bs-option{display:flex;align-items:center;justify-content:space-between;padding:14px 12px;font-size:15px;color:#1D2129;border-radius:10px;cursor:pointer}
+.bs-option:active{background:#F7F8FA}
+.bs-option.selected{color:#14A89A;font-weight:600}
+.bs-option .bs-check{width:18px;height:18px;border-radius:50%;border:1.5px solid #D8DCE0;flex-shrink:0;box-sizing:border-box}
+.bs-option-label{display:flex;align-items:center;gap:8px;min-width:0}
+.bs-option-tag{font-size:11px;color:#14A89A;background:rgba(20,168,154,.1);padding:2px 8px;border-radius:8px;font-weight:500;flex-shrink:0}
+.bs-option.selected .bs-check{border-color:#14A89A;background:#14A89A;position:relative}
+.bs-option.selected .bs-check::after{content:'';position:absolute;left:5px;top:2px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+/* ====== 成绩统计卡片（看班级页） ====== */
+.class-stats-card{background:#fff;border-radius:14px;padding:16px;margin:0 16px 16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.cs-rate{margin:10px 10px 0 10px;text-align:left}
+.cs-rate-label{font-size:14px;color:#1D2129;font-weight:500}
+.cs-rate-value{font-size:48px;font-weight:800;color:#14A89A;line-height:1;margin:6px 0 0}
+.cs-rate-value .cs-rate-unit{font-size:20px;font-weight:600;color:#1D2129}
+.class-stats-card .gauge-stats{margin:16px 10px 18px 10px;align-items:flex-start}
+.class-stats-card .gauge-stat{align-items:flex-start;text-align:left}
+.radar-card{position:relative;overflow:hidden;margin:16px;padding:16px;background:#fff;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.radar-card-bg{position:absolute;top:0;left:0;right:0;width:100%;aspect-ratio:2048/1152;background-image:url(/imgs/bg/sub-balance-analyze-bg.png);background-repeat:no-repeat;background-size:cover;background-position:top center;pointer-events:none}
+.radar-card-bg-mask{position:absolute;top:0;left:0;right:0;width:100%;aspect-ratio:2048/1152;background:linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0) 75%,rgba(255,255,255,.3) 82%,rgba(255,255,255,.75) 92%,#ffffff 100%);pointer-events:none}
+.radar-card-body{position:relative;z-index:1}
+.dist-rate{margin:0}
+.dist-rate-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 12px;margin:16px 10px 2px 10px}
+.dist-rate-grid .gauge-stat{align-items:flex-start;text-align:left;gap:5px}
+.dist-rate-unit{font-size:14px;font-weight:600;color:#86909C;margin-left:1px}
+.dist-eval{position:relative;display:flex;flex-direction:column;align-items:flex-start;margin-top:16px;padding:12px 16px;background:linear-gradient(90deg,#F0FAF8,#ffffff);border:1px solid #E3F2EF;border-radius:12px;overflow:hidden}
+.dist-eval-text{position:relative;z-index:1;padding:6px 0 0;font-size:16px;color:#1D2129;line-height:1.6;text-align:left;font-weight:700}
+.eval-badge{position:relative;z-index:2;display:inline-block;padding:4px 10px;background:#14A89A;color:#fff;font-size:14px;font-weight:700;letter-spacing:2px;border-radius:14px 0 14px 0}
+.dist-eval-note{color:#86909C;font-size:13px;margin-top:8px}
+.dist-eval-img{position:absolute;right:3%;width:120px;height:65px;background:url(/imgs/decor/bg-right1.png) no-repeat right bottom;background-size:contain;pointer-events:none;opacity:.5}
+.radar-card-title{font-size:20px;font-weight:700;color:#1D2129;margin-bottom:14px}
+.radar-stats{display:flex;justify-content:space-around;padding:2px 0 24px}
+.radar-stat{text-align:center;min-width:56px}
+.radar-stat-label{font-size:12px;color:#86909C;margin-bottom:6px}
+.radar-stat-value{font-size:20px;font-weight:700;color:#1D2129;line-height:1.2}
+.radar-tags{display:flex;justify-content:center;padding:0 0 14px}
+.radar-eval-img{width:130px;height:auto;display:block}
+
+/* ====== 班级排行榜卡片 ====== */
+.class-leaderboard{background:#fff;border-radius:14px;padding:16px;margin:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.class-leaderboard-title{font-size:20px;font-weight:700;color:#1D2129;margin-bottom:12px}
+.cb-card{display:flex;align-items:stretch;background:rgba(242,252,251,.6);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer}
+.cb-card:active{opacity:.8}
+.cb-rank{flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:36px;margin-right:18px}
+.cb-rank-num{font-size:32px;font-weight:700;font-style:italic;opacity:.2;transform:scaleY(1.8);color:#14A89A;line-height:1;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.cb-main{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.cb-name-line{display:flex;align-items:center;min-width:0}
+.cb-avatar{width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;margin-right:10px;background:linear-gradient(135deg,#BEEFDA,#35B9AA);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px}
+.cb-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.cb-name{font-size:16px;font-weight:600;color:#1D2129;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb-scores{display:flex;align-items:flex-end;gap:10px;margin-top:6px}
+.cb-avg{font-size:24px;font-weight:600;color:#1D2129;line-height:1}
+.cb-side{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:6px;margin-left:12px}
+.cb-spark{width:110px;height:40px}
+
+/* Student history specific */
+.student-hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 10px}
+.hero-photo-wrap{width:80px;height:106px;border-radius:12px;overflow:hidden;margin-bottom:10px;background:linear-gradient(135deg,#BEEFDA,#35B9AA);display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;font-weight:700}
+.hero-photo-wrap img{width:80px;height:106px;object-fit:cover;display:block}
+.hero-name{font-size:22px;font-weight:700;color:#1D2129}
+.hero-meta{font-size:12px;color:#86909C;margin-top:2px;display:flex;gap:8px;align-items:center}
+.hero-meta span{background:#F2F3F5;padding:2px 8px;border-radius:4px}
+
+.subj-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.subj-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.04);font-size:12px}
+.subj-table thead th{background:#F1F8F7;color:#1D2129;font-weight:600;padding:10px 8px;white-space:nowrap;border-bottom:1px solid #E5E6EB;text-align:center}
+.subj-table thead th:first-child{text-align:left;padding-left:12px}
+.subj-table tbody td{padding:8px;text-align:center;border-bottom:1px solid #F2F3F5;color:#4E5969}
+.subj-table tbody td:first-child{text-align:left;padding-left:12px;font-weight:500;color:#1D2129;white-space:nowrap}
+.score-high{color:#14A89A;font-weight:600}
+.score-low{color:#FF5C4A}
+.score-mid{color:#FF8F5A}
+
+.exam-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.04);cursor:pointer}
+.exam-card:active{opacity:.8}
+.ec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ec-title{font-size:15px;font-weight:700;color:#1D2129}
+.ec-type{font-size:11px;color:#86909C;background:#F2F3F5;padding:2px 8px;border-radius:6px}
+.ec-row{display:flex;gap:16px;font-size:12px;color:#4E5969}
+.ec-item{display:flex;align-items:center;gap:4px}
+.ec-label{color:#86909C}
+.ec-val{font-weight:600;color:#1D2129}
+.ec-val.green{color:#14A89A}
+
+.analysis-card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.analysis-row{margin-bottom:10px}
+.analysis-row:last-child{margin-bottom:0}
+.analysis-label{font-size:13px;font-weight:600;color:#1D2129;margin-bottom:4px}
+.analysis-items{display:flex;flex-wrap:wrap;gap:4px}
+.analysis-chip{padding:3px 10px;border-radius:10px;font-size:12px}
+.chip-strength{background:rgba(20,168,154,.08);color:#14A89A}
+.chip-weak{background:rgba(255,92,74,.08);color:#FF5C4A}
+
+.btn-full{display:block;width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;text-align:center}
+.btn-full.btn-primary{background:#14A89A;color:#fff}
+.btn-full:active{opacity:.8}
+
 .empty-state{text-align:center;padding:60px 20px;color:#86909C;font-size:14px}
 .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.loading{text-align:center;padding:40px;color:#86909C;font-size:14px}
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="page-header mode-nav">
+  <div class="page-header mode-page">
     <div class="header-top">
-      <button class="back-btn" onclick="history.back()"><span class="back-arrow">&#8249;</span></button>
-      <span class="header-label">成绩报告</span>
+      <button class="back-btn" onclick="location.href='班级组织首页.html'"><span class="back-arrow">&#8249;</span></button>
       <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
+    </div>
+    <div class="header-title-row">
+      <span class="page-title">成绩档案</span>
+      <select class="exam-grade-select" id="examGradeSelect" onchange="onExamGradeChange()" style="margin-left:auto"><option value="">全部年级</option></select>
+    </div>
+    <div class="main-tabs">
+      <button class="main-tab active" data-tab="exam" onclick="switchMainTab('exam')">看考试</button>
+      <button class="main-tab" data-tab="grade" onclick="switchMainTab('grade')">看年级</button>
+      <button class="main-tab" data-tab="class" onclick="switchMainTab('class')">看班级</button>
+      <button class="main-tab" data-tab="student" onclick="switchMainTab('student')">看个人</button>
     </div>
   </div>
 
-  <div class="grade-filter">
-    <select id="gradeSelect"><option value="">全部年级</option></select>
+  <!-- ====== Tab 1: 看考试 ====== -->
+  <div id="tab-exam" class="tab-panel">
+    <div class="exam-filter-row">
+      <div class="sub-tabs">
+        <div class="sub-tab-wrap">
+          <button class="sub-tab active" id="subTabGroup" onclick="switchExamSubTab('group')">年级统考</button>
+          <button class="sub-tab" id="subTabSingle" onclick="switchExamSubTab('single')">单科测验</button>
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="examContent"><div class="empty-state"><div class="empty-icon">--</div>暂无数据</div></div>
   </div>
 
-  <div class="tab-bar">
-    <span class="tab active" id="tabGroup" onclick="switchTab('group')">年级统考</span>
-    <span class="tab" id="tabSingle" onclick="switchTab('single')">单科测验</span>
+  <!-- ====== Tab 2: 看年级 ====== -->
+  <div id="tab-grade" class="tab-panel" style="display:none">
+    <div id="gradeTrendContent"><div class="empty-state">请选择年级后查看趋势数据</div></div>
   </div>
 
-  <div class="content" id="contentArea">
-    <div class="empty-state"><div class="empty-icon">--</div>暂无数据</div>
+  <!-- ====== Tab 3: 看班级 ====== -->
+  <div id="tab-class" class="tab-panel" style="display:none">
+    <select id="classTrendGrade" style="display:none" onchange="onClassTrendGradeChange()"><option value="">请选择年级</option></select>
+    <select id="classTrendClass" style="display:none" onchange="onClassTrendClassChange()"><option value="">请选择班级</option></select>
+    <div class="class-picker-card" id="classPickerCard" onclick="openClassPicker()">
+      <div class="cpc-left">
+        <div class="cpc-top">
+          <span class="cpc-name" id="cpcName">请选择班级</span>
+        </div>
+        <span class="cpc-tag" id="cpcTag" style="display:none"></span>
+      </div>
+      <div class="cpc-bottom">
+        <div class="cpc-avatars" id="cpcAvatars"></div>
+        <span class="cpc-count" id="cpcCount"></span>
+      </div>
+      <div class="cpc-right"><span class="cpc-arrow">&#9662;</span></div>
+    </div>
+    <div id="classTrendContent"><div class="empty-state">请选择年级和班级后查看数据</div></div>
+  </div>
+
+  <!-- ====== Tab 4: 看个人 ====== -->
+  <div id="tab-student" class="tab-panel" style="display:none">
+    <div class="class-picker-card" id="studentPickerCard" onclick="openStudentPicker()">
+      <div class="spc-left">
+        <div class="spc-avatar" id="stuAvatar">选</div>
+        <div class="spc-info">
+          <div class="cpc-name" id="stuName">请选择学生</div>
+          <div class="spc-meta" id="stuMeta"></div>
+        </div>
+      </div>
+      <div class="cpc-bottom"><span class="cpc-arrow">&#9662;</span></div>
+    </div>
+    <div id="stuHistContent"><div class="empty-state">请选择学生后查看历史数据</div></div>
+  </div>
+
+  <!-- ====== 通用底部选择弹窗组件 BottomSelectPopup ====== -->
+  <div class="bs-popup" id="bsPopup" style="display:none">
+    <div class="bs-popup-mask" id="bsPopupMask"></div>
+    <div class="bs-popup-sheet" id="bsPopupSheet">
+      <div class="bs-popup-handle"></div>
+      <div class="bs-popup-title" id="bsPopupTitle" style="display:none"></div>
+      <div class="bs-popup-body">
+        <div class="bs-popup-content" id="bsPopupContent"></div>
+      </div>
+      <div class="bs-popup-footer" id="bsPopupFooter">
+        <button class="bs-popup-btn bs-cancel" id="bsPopupCancel">取消</button>
+        <button class="bs-popup-btn bs-confirm" id="bsPopupConfirm">确定</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-var currentTab='group',grades=[],summaries=[],singleExams=[];
+/* ====== Utility ====== */
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function examTypeLabel(t){
+  if(t==='comprehensive')return'理科考试';
+  if(t==='liberal_arts')return'文科考试';
+  if(t==='general')return'综合考试';
+  return t||'综合考试';
+}
+function examTypeShort(t){
+  if(t==='comprehensive')return'理科';
+  if(t==='liberal_arts')return'文科';
+  return t||'';
+}
+function getParam(k){return new URLSearchParams(location.search).get(k);}
 
-async function init(){
+/* ====== Global: Grades ====== */
+var grades=[],classesMap={};
+
+async function loadGrades(){
   try{
     var r=await fetch('/api/public/grades');
     grades=await r.json();
-    var sel=document.getElementById('gradeSelect');
-    sel.innerHTML='<option value="">全部年级</option>'+grades.map(function(g){return '<option value="'+g.id+'">'+g.grade_name+'</option>';}).join('');
-    sel.onchange=loadData;
   }catch(e){}
-  loadData();
 }
 
-function switchTab(tab){
-  currentTab=tab;
-  document.getElementById('tabGroup').className='tab'+(tab==='group'?' active':'');
-  document.getElementById('tabSingle').className='tab'+(tab==='single'?' active':'');
-  loadData();
+async function loadClasses(gradeId){
+  if(!gradeId)return[];
+  try{
+    var r=await fetch('/api/public/classes');
+    var all=await r.json();
+    return all.filter(function(c){return c.grade_id==gradeId;});
+  }catch(e){return[];}
 }
 
-async function loadData(){
-  var gid=document.getElementById('gradeSelect').value;
-  if(currentTab==='group'){
+/* ====== Main Tab Switching ====== */
+var currentMainTab='exam';
+
+function switchMainTab(tab){
+  currentMainTab=tab;
+  document.querySelectorAll('.main-tab').forEach(function(t){t.classList.toggle('active',t.dataset.tab===tab);});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.style.display=p.id==='tab-'+tab?'block':'none';});
+  if(tab==='exam'&&!grades.length)initExamTab();
+  if(tab==='grade')onGradeTrendChange();
+  if(tab==='class')initClassTabSelectors();
+}
+
+/* ===================================================================
+   Tab 1: 看考试
+   =================================================================== */
+var currentExamSubTab='group',summaries=[],singleExams=[];
+
+async function initExamTab(){
+  if(!grades.length)await loadGrades();
+  var sel=document.getElementById('examGradeSelect');
+  sel.innerHTML='<option value="">全部年级</option>'+grades.map(function(g){return'<option value="'+g.id+'">'+g.grade_name+'</option>';}).join('');
+  sel.onchange=loadExamData;
+  loadExamData();
+}
+
+function switchExamSubTab(tab){
+  currentExamSubTab=tab;
+  document.getElementById('subTabGroup').className='sub-tab'+(tab==='group'?' active':'');
+  document.getElementById('subTabSingle').className='sub-tab'+(tab==='single'?' active':'');
+  loadExamData();
+}
+
+async function loadExamData(){
+  var gid=document.getElementById('examGradeSelect').value;
+  if(currentExamSubTab==='group'){
     var params=gid?'?grade_id='+gid:'';
     var r=await fetch('/api/public/exam-group-summaries'+params);
     summaries=await r.json();
-    renderGroupCards();
+    renderExamGroupCards();
   }else{
-    var params=gid?'?class_id='+gid:'';
-    if(!gid){document.getElementById('contentArea').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>请先选择年级</div>';return;}
-    var r=await fetch('/api/public/exams/list'+params);
+    if(!gid){document.getElementById('examContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>请先选择年级</div>';return;}
+    var r=await fetch('/api/public/exams/list?class_id='+gid);
     singleExams=await r.json();
-    renderSingleCards();
+    renderExamSingleCards();
   }
 }
 
-function examTypeLabel(t){
-  if(t==='comprehensive')return '理科考试';
-  if(t==='liberal_arts')return '文科考试';
-  if(t==='general')return '综合考试';
-  return t||'综合考试';
-}
-
-function renderGroupCards(){
+function renderExamGroupCards(){
   if(!summaries||!summaries.length){
-    document.getElementById('contentArea').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>暂无年级统考数据</div>';
+    document.getElementById('examContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>暂无年级统考数据</div>';
     return;
   }
   var html='';
@@ -130,21 +480,21 @@ function renderGroupCards(){
       +'</div>'
       +'<div class="card-stats">'
       +'<div class="stat-item"><div class="stat-label">年级均分</div><div class="stat-value green">'+g.avg_total+'</div></div>'
-      +'<div class="stat-item"><div class="stat-label">及格率</div><div class="stat-value">'+g.pass_rate+'</div></div>'
+      +'<div class="stat-item"><div class="stat-label">一般率</div><div class="stat-value">'+g.pass_rate+'</div></div>'
       +'<div class="stat-item"><div class="stat-label">科目数</div><div class="stat-value">'+g.subjects.length+'</div></div>'
       +'</div>'
       +'<div class="card-actions">'
-      +'<button class="card-btn btn-outline" onclick="location.href=\'m-score-grade-trend.html?grade_id='+g.grade_id+'\'">多考对比</button>'
+      +'<button class="card-btn btn-outline" onclick="document.getElementById(\'examGradeSelect\').value=\''+g.grade_id+'\';switchMainTab(\'grade\')">多考对比</button>'
       +'<button class="card-btn btn-primary" onclick="location.href=\'m-score-grade-single-stats.html?group_id='+g.group_id+'\'">本场详情</button>'
       +'</div>'
       +'</div>';
   });
-  document.getElementById('contentArea').innerHTML=html;
+  document.getElementById('examContent').innerHTML=html;
 }
 
-function renderSingleCards(){
+function renderExamSingleCards(){
   if(!singleExams||!singleExams.length){
-    document.getElementById('contentArea').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>暂无单科测验数据</div>';
+    document.getElementById('examContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>暂无单科测验数据</div>';
     return;
   }
   var html='';
@@ -160,11 +510,1355 @@ function renderSingleCards(){
       +'</div>'
       +'</div>';
   });
-  document.getElementById('contentArea').innerHTML=html;
+  document.getElementById('examContent').innerHTML=html;
 }
 
-function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+/* ===================================================================
+   Tab 2: 看年级
+   =================================================================== */
+var gradeTrendData=null,gradeTrendId=null,gradeTrendSubj='total',gradeTrendEType=null;
 
+function onGradeTrendChange(){
+  gradeTrendId=document.getElementById('examGradeSelect').value;
+  if(!gradeTrendId){document.getElementById('gradeTrendContent').innerHTML='<div class="empty-state">请选择年级后查看趋势数据</div>';return;}
+  loadGradeTrend();
+}
+
+function onExamGradeChange(){
+  if(currentMainTab==='grade')onGradeTrendChange();
+  if(currentMainTab==='exam')loadExamData();
+  if(currentMainTab==='class')onClassTrendGradeChange();
+}
+
+async function loadGradeTrend(etype){
+  var url='/api/public/grade-trend?grade_id='+gradeTrendId;
+  if(etype)url+='&exam_type='+etype;
+  document.getElementById('gradeTrendContent').innerHTML='<div class="loading">加载中...</div>';
+  try{
+    var r=await fetch(url);
+    if(!r.ok){renderGradeTrendError('数据加载失败');return;}
+    gradeTrendData=await r.json();
+    if(!gradeTrendEType)gradeTrendEType=gradeTrendData.exam_type;
+    if(etype)gradeTrendEType=etype;
+    if(!gradeTrendData.groups||!gradeTrendData.groups.length){
+      renderGradeTrendError('暂无'+examTypeShort(gradeTrendEType)+'统考数据');return;
+    }
+    renderGradeTrend();
+  }catch(e){renderGradeTrendError('网络异常');}
+}
+
+function switchGradeTrendType(type){
+  if(type===gradeTrendEType)return;
+  loadGradeTrend(type);
+}
+
+function switchGradeTrendSubj(subj){
+  gradeTrendSubj=subj;
+  document.querySelectorAll('#gradeTrendSubjBtns .subj-btn').forEach(function(b){
+    b.className='subj-btn'+(b.dataset.subj===subj?' active':'');
+  });
+  drawGradeTrendChart();
+}
+
+function renderGradeTrendError(msg){
+  document.getElementById('gradeTrendContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>'+escapeHtml(msg)+'</div>';
+}
+
+function renderGradeTrend(){
+  var d=gradeTrendData;
+  var types=d.available_types||[];
+  var html='';
+  if(types.length>1){
+    html+='<div class="module" style="padding-top:8px;padding-bottom:0">'
+      +'<div class="type-switch">'
+      +types.map(function(t){return'<button class="type-btn'+(t===gradeTrendEType?' active':'')+'" onclick="switchGradeTrendType(\''+t+'\')">'+examTypeShort(t)+'</button>';}).join('')
+      +'</div></div>';
+  }
+  var s=d.summary;
+  var groups=d.groups;
+  var gt=groups.map(function(g){return g.avg_total||0;});
+  var totalAvg=gt.length?Math.round(gt.reduce(function(a,b){return a+b;},0)/gt.length):0;
+  var maxAvg=gt.length?Math.max.apply(null,gt):0;
+  var minAvg=gt.length?Math.min.apply(null,gt):0;
+  // Grade trend card (all-in-one)
+  html+='<div class="grade-trend-card">'
+    +'<div class="grade-rate-card" data-rate="'+(s.avg_score_rate||0)+'" data-exams="'+(s.total_exams||0)+'">'
+    +'<canvas class="gauge-canvas" id="gaugeCanvas"></canvas>'
+    +'<div class="gauge-text">'
+    +'<div class="gauge-label">平均得分率</div>'
+    +'<div class="gauge-value">0<span class="gauge-unit">%</span></div>'
+    +'<div class="gauge-sub">'+(s.total_exams||0)+'场考试</div>'
+    +'</div></div>'
+    +'<div class="gauge-stats">'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">总平均分</div><div class="gauge-stat-value">'+totalAvg+'</div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">最高均分</div><div class="gauge-stat-value">'+maxAvg+'</div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">最低均分</div><div class="gauge-stat-value">'+minAvg+'</div></div>'
+    +'</div>';
+
+  // Subject toggle + chart
+  var subjSet={};
+  groups.forEach(function(g){g.subjects.forEach(function(s){subjSet[s.subject]=true;});});
+  var subjs=['total'].concat(Object.keys(subjSet));
+  var btns=subjs.map(function(s){
+    var label=s==='total'?'总分':s;
+    return'<span class="subj-btn'+(s===gradeTrendSubj?' active':'')+'" data-subj="'+s+'">'+escapeHtml(label)+'</span>';
+  }).join('');
+  html+='<div class="subject-toggle" id="gradeTrendSubjBtns">'+btns+'</div>'
+    +'<div id="gradeTrendChart" style="width:100%;height:200px;margin-top:10px;"></div>'
+    +'</div>';
+
+  // Rate breakdown card: 平均优秀率/平均良好率（cs-rate 样式）+ 每班良好/优秀人数堆叠直方图
+  var s2=d.summary;
+  var classes=d.classes||[];
+  var distNames=[],distGoods=[],distExcs=[];
+  classes.forEach(function(cls){
+    var gc=0,ec=0,gcN=0,ecN=0;
+    (cls.trends||[]).forEach(function(t){
+      if(t.good_count!=null){gc+=t.good_count;gcN++;}
+      if(t.excellent_count!=null){ec+=t.excellent_count;ecN++;}
+    });
+    distNames.push(cls.class_name);
+    distGoods.push(gcN?Math.round(gc/gcN):0);
+    distExcs.push(ecN?Math.round(ec/ecN):0);
+  });
+  gradeHistogramData={xAxis:distNames,series:[
+    {name:'良好',data:distGoods,color:'#00A3FF'},
+    {name:'优秀',data:distExcs,color:'#02D9B3'}
+  ]};
+  html+='<div class="grade-rate2-card">'
+    +'<div class="rate-avg-cards">'
+    +'<div class="cs-rate"><div class="cs-rate-label">优秀率-平均</div><div class="cs-rate-value" style="color:var(--color-grade-a)">'+(s2.avg_excellent_rate||0)+'<span class="cs-rate-unit">%</span></div></div>'
+    +'<div class="cs-rate"><div class="cs-rate-label">良好率-平均</div><div class="cs-rate-value" style="color:var(--color-grade-b)">'+(s2.avg_good_rate||0)+'<span class="cs-rate-unit">%</span></div></div>'
+    +'</div>'
+    +'<div id="gradeRateDistChart" style="height:260px"></div>'
+    +'</div>';
+
+  // 及格率分析卡片：平均及格率 + 每班历次平均及格人数直方图（复用班级页优劣分布直方图，一般等级配色）
+  var passAvg=(s2.avg_excellent_rate||0)+(s2.avg_good_rate||0)+(s2.avg_pass_rate||0);
+  var passNames=[],passData=[];
+  classes.forEach(function(cls){
+    var pc=0,cn=0;
+    (cls.trends||[]).forEach(function(t){
+      if(t.pass_count!=null){pc+=t.pass_count+(t.good_count||0)+(t.excellent_count||0);cn++;}
+    });
+    passNames.push(cls.class_name);
+    passData.push(cn?Math.round(pc/cn):0);
+  });
+  gradePassHistogramData={xAxis:passNames,series:[{name:'及格人数',data:passData,color:'#485DFA'}]};
+  html+='<div class="grade-rate2-card">'
+    +'<div class="cs-rate"><div class="cs-rate-label">平均及格率</div><div class="cs-rate-value" style="color:var(--color-grade-c)">'+passAvg+'<span class="cs-rate-unit">%</span></div></div>'
+    +'<div id="gradePassDistChart" style="height:260px"></div>'
+    +'</div>';
+
+  // Class leaderboard
+  if(classes.length){
+    var sortedClasses=classes.slice().sort(function(a,b){return b.avg_total-a.avg_total;});
+    var rows=sortedClasses.map(function(cls,i){
+      var rank=i+1;
+      var change=cls.recent_change;
+      var cc=change>0?'up':(change<0?'down':'zero');
+      var arrow=change>0?'&#8593;':(change<0?'&#8595;':'');
+      var sign=change>=0?'+':'';
+      var trendJson=escapeHtml(JSON.stringify(cls.trends.map(function(t){return t.avg_total;})));
+      return'<div class="cb-card" onclick="switchMainTab(\'class\');document.getElementById(\'classTrendGrade\').value=\''+gradeTrendId+'\';onClassTrendGradeChange(function(){document.getElementById(\'classTrendClass\').value=\''+cls.class_id+'\';onClassTrendClassChange();})">'
+        +'<div class="cb-rank"><div class="cb-rank-num">'+(rank<10?'0'+rank:rank)+'</div></div>'
+        +'<div class="cb-main">'
+        +'<div class="cb-name">'+escapeHtml(cls.class_name)+'</div>'
+        +'<div class="cb-scores">'
+        +'<div class="cb-avg">'+cls.avg_total+'</div>'
+        +'<div class="cr-change"><span class="change-val '+cc+'">'+sign+change+'</span>'+(arrow?'<span class="change-arrow '+cc+'">'+arrow+'</span>':'')+'</div>'
+        +'</div></div>'
+        +'<div class="cb-side">'
+        +'<canvas class="cb-spark" data-trend="'+trendJson+'"></canvas>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+    html+='<div class="class-leaderboard"><div class="class-leaderboard-title">班级排行榜</div>'+rows+'</div>';
+  }
+
+  document.getElementById('gradeTrendContent').innerHTML=html;
+  setTimeout(function(){bindGradeTrendSubjBtns();animateGauge();drawGradeTrendChart();drawGradeRateDistChart();drawGradePassDistChart();drawClassSparklines();},100);
+}
+
+var gradeHistogramData=null;
+var gradePassHistogramData=null;
+
+function drawGradeRateDistChart(){
+  var container=document.getElementById('gradeRateDistChart');
+  if(!container||!gradeHistogramData)return;
+  var n=gradeHistogramData.xAxis.length;
+  var parentW=container.clientWidth;
+  var perBar=Math.ceil(14/0.7)+4;
+  var need=n*perBar+20;
+  var dz=null;
+  if(need>parentW){
+    dz={start:0,end:Math.min(100,Math.round(parentW/need*100))};
+  }
+  HistogramChart.render(container,gradeHistogramData,{key:'gradeRateDist',showValueLabel:true,emptyText:'暂无分布数据',gridLeft:30,gridRight:10,rotate:45,stacked:true,barMaxWidth:14,dataZoom:dz});
+}
+
+function drawGradePassDistChart(){
+  var container=document.getElementById('gradePassDistChart');
+  if(!container||!gradePassHistogramData)return;
+  HistogramChart.render(container,gradePassHistogramData,{key:'gradePassDist',showValueLabel:true,emptyText:'暂无分布数据',gridLeft:30,gridRight:10,rotate:45,barMaxWidth:16});
+}
+
+function drawClassSparklines(){
+  document.querySelectorAll('.cb-spark').forEach(function(cv){
+    var data;
+    try{data=JSON.parse(cv.getAttribute('data-trend')||'[]');}catch(e){data=[];}
+    if(data.length<1)return;
+    var rect=cv.getBoundingClientRect();
+    var dpr=window.devicePixelRatio||1;
+    var W=rect.width,H=rect.height;
+    if(W<1||H<1)return;
+    cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+    var ctx=cv.getContext('2d');
+    ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,W,H);
+    var min=Math.min.apply(null,data),max=Math.max.apply(null,data);
+    var span=max-min||1;
+    var padX=4;
+    var padTop=4,padBottom=14;
+    var xs=data.map(function(_,i){return data.length>1?padX+i*(W-2*padX)/(data.length-1):W/2;});
+    var ys=data.map(function(v){return padTop+(max-v)/span*(H-padTop-padBottom);});
+    var grad=ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'rgba(20,168,154,0.45)');
+    grad.addColorStop(1,'rgba(20,168,154,0)');
+    ctx.beginPath();
+    ctx.moveTo(xs[0],H);
+    xs.forEach(function(x,i){ctx.lineTo(x,ys[i]);});
+    ctx.lineTo(xs[xs.length-1],H);
+    ctx.closePath();
+    ctx.fillStyle=grad;
+    ctx.fill();
+    ctx.beginPath();
+    xs.forEach(function(x,i){i===0?ctx.moveTo(x,ys[i]):ctx.lineTo(x,ys[i]);});
+    ctx.strokeStyle='#14A89A';
+    ctx.lineWidth=2;
+    ctx.lineJoin='round';
+    ctx.lineCap='round';
+    ctx.stroke();
+  });
+}
+
+function bindGradeTrendSubjBtns(){
+  var btns=document.querySelectorAll('#gradeTrendSubjBtns .subj-btn');
+  btns.forEach(function(b){
+    b.onclick=function(){switchGradeTrendSubj(b.dataset.subj);};
+  });
+  // Enable drag-to-scroll on subject-toggle
+  var el=document.getElementById('gradeTrendSubjBtns');
+  if(!el)return;
+  var isDown=false,startX,scrollLeft;
+  el.addEventListener('mousedown',function(e){
+    if(e.target.classList.contains('subj-btn'))return; // let button click through
+    isDown=true;el.style.cursor='grabbing';
+    startX=e.pageX-el.offsetLeft;scrollLeft=el.scrollLeft;
+  });
+  el.addEventListener('mouseleave',function(){isDown=false;el.style.cursor='grab';});
+  el.addEventListener('mouseup',function(){isDown=false;el.style.cursor='grab';});
+  el.addEventListener('mousemove',function(e){
+    if(!isDown)return;e.preventDefault();
+    var x=e.pageX-el.offsetLeft;
+    el.scrollLeft=scrollLeft-(x-startX);
+  });
+  // Touch support
+  el.addEventListener('touchstart',function(e){
+    if(e.target.classList.contains('subj-btn'))return;
+    isDown=true;startX=e.touches[0].pageX-el.offsetLeft;scrollLeft=el.scrollLeft;
+  },{passive:false});
+  el.addEventListener('touchend',function(){isDown=false;});
+  el.addEventListener('touchmove',function(e){
+    if(!isDown)return;e.preventDefault();
+    var x=e.touches[0].pageX-el.offsetLeft;
+    el.scrollLeft=scrollLeft-(x-startX);
+  },{passive:false});
+}
+
+function drawGauge(animActive){
+  var cvs=document.getElementById('gaugeCanvas');
+  if(!cvs)return;
+  var card=cvs.parentElement;
+  var targetRate=parseInt(card.dataset.rate)||0;
+  var dpr=window.devicePixelRatio||1;
+  var rect=cvs.getBoundingClientRect();
+  cvs.width=rect.width*dpr;cvs.height=rect.height*dpr;
+  var ctx=cvs.getContext('2d');ctx.scale(dpr,dpr);
+  var W=rect.width,H=rect.height;
+  ctx.clearRect(0,0,W,H);
+
+  var cx=W/2,cy=H-75,r=Math.min(cx-24,96);
+  var totalTicks=32;
+  var activeTicks=Math.round((animActive||targetRate)/100*totalTicks);
+  var tickLen=10;
+  var tickWidth=5;
+  var startAngle=Math.PI+Math.PI/6;
+  var endAngle=-Math.PI/6;
+  var arcSpan=startAngle-endAngle;
+
+  var cyan='#14A89A';
+  var inactive='rgba(0,0,0,0.12)';
+
+  ctx.lineCap='round';
+  for(var i=0;i<totalTicks;i++){
+    var angle=startAngle-(i/(totalTicks-1))*arcSpan;
+    var cos=Math.cos(angle),sin=Math.sin(angle);
+    var innerR=r-tickLen;
+    var x1=cx+innerR*cos;
+    var y1=cy-innerR*sin;
+    var x2=cx+r*cos;
+    var y2=cy-r*sin;
+    ctx.lineWidth=tickWidth;
+    if(i<activeTicks){
+      ctx.strokeStyle=cyan;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    }else{
+      ctx.strokeStyle=inactive;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    }
+  }
+}
+
+function animateGauge(){
+  var card=document.querySelector('.grade-rate-card');
+  if(!card)return;
+  var targetRate=parseInt(card.dataset.rate)||0;
+  var start=null,duration=1200;
+
+  function easeOutCubic(t){return 1-Math.pow(1-t,3);}
+
+  function frame(ts){
+    if(!start)start=ts;
+    var elapsed=ts-start;
+    var progress=Math.min(elapsed/duration,1);
+    var eased=easeOutCubic(progress);
+    var tickRate=targetRate*eased;
+    var numVal=Math.round(targetRate*eased);
+    var valEl=document.querySelector('.gauge-value');
+    if(valEl)valEl.innerHTML=numVal+'<span class="gauge-unit">%</span>';
+    drawGauge(tickRate);
+    if(progress<1){
+      requestAnimationFrame(frame);
+    }else{
+      if(valEl)valEl.innerHTML=targetRate+'<span class="gauge-unit">%</span>';
+      drawGauge(targetRate);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+// ===================================================================
+// ECharts 折线面积图配置（PC/移动端复用）
+// ===================================================================
+function getGradeTrendOption(data, mainColor, fixedZeroMode){
+  // ========== 配色常量 ==========
+  var COLOR_MAIN=mainColor||'#14A89A';
+  var COLOR_GRID='#E5E6EB';
+  var COLOR_TOOLTIP_BG='#ffffff';
+  var COLOR_TOOLTIP_TEXT='#1D2129';
+  var COLOR_TOOLTIP_SUB='#86909C';
+  var COLOR_WARNING='#FA8C16';
+  
+  // ========== 尺寸常量 ==========
+  var SYMBOL_SIZE=6;
+  var SYMBOL_BORDER_WIDTH=2;
+  var FONT_SIZE_YAXIS=11;
+  var FONT_SIZE_TOOLTIP_NAME=13;
+  var FONT_SIZE_TOOLTIP_AVG=18;
+  var FONT_SIZE_TOOLTIP_MAX=14;
+  var FONT_SIZE_TOOLTIP_RATE=18;
+  var FONT_SIZE_TOOLTIP_RATE_SUFFIX=14;  // "%得分率"后缀字号
+  var FONT_SIZE_HINT=11;
+  
+  // ========== 透明度常量 ==========
+  var MARKER_AREA_OPACITY=0.1;
+  
+  // ========== Grid 布局（固定像素）==========
+  var GRID_LEFT=30;     // 固定像素，控制坐标轴文字与卡片边缘距离
+  var GRID_RIGHT=10;    // 固定像素
+  var GRID_TOP=18;      // 固定像素
+  var GRID_BOTTOM=18;   // 固定像素，缩小图表容器下方间距
+  
+  // 数据处理
+  var categories=data.map(function(d){return d.group_name;});
+  var avgValues=data.map(function(d){return Math.round((d.val||0)*10)/10;});  // 1位小数
+  var maxValues=data.map(function(d){return d.max||0;});
+  var rates=data.map(function(d){return d.rate||0;});
+  
+  // 移动端窄屏字号自适应
+  var isNarrow=window.innerWidth<360;
+  var scale=isNarrow?0.85:1;
+  
+  // ========== Y 轴对称缓冲逻辑 ==========
+  var yMinOrig=Math.min.apply(null,avgValues);
+  var yMaxOrig=Math.max.apply(null,avgValues);
+  var span=yMaxOrig-yMinOrig;
+  var yMin,yMax,yIsFlat=false;
+  
+  if(span===0){
+    // 边界兼容：全部分数一致，上下各拓展 5 分对称整数区间
+    yIsFlat=true;
+    yMin=Math.max(0,yMinOrig-5);
+    yMax=yMinOrig+5;
+  }else if(fixedZeroMode){
+    // 固定 0 起点模式
+    yMin=0;
+    yMax=Math.ceil(yMaxOrig/10)*10;
+  }else{
+    // 对称缓冲：上下各预留 span*0.3（向上取整），保证垂直居中
+    var buffer=Math.ceil(span*0.3);
+    yMin=Math.max(0,Math.floor(yMinOrig-buffer));
+    yMax=Math.ceil(yMaxOrig+buffer);
+  }
+  
+  // 刻度强制规整整数
+  yMin=Math.floor(yMin);
+  yMax=Math.ceil(yMax);
+  
+  // ③ 自动规整刻度步长
+  var ySpan=yMax-yMin;
+  var step;
+  if(ySpan<10)step=1;
+  else if(ySpan<30)step=2;
+  else if(ySpan<60)step=5;
+  else step=10;
+  
+  // 步长规整后 min/max 对齐整数刻度
+  yMin=Math.floor(yMin/step)*step;
+  yMax=Math.ceil(yMax/step)*step;
+  
+  return{
+    grid:{left:GRID_LEFT,right:GRID_RIGHT,top:GRID_TOP,bottom:GRID_BOTTOM,containLabel:false},
+    // value 轴：min/max 各外扩 6% 实现等效 boundaryGap:[0.06,0.06]
+    xAxis:{
+      type:'value',
+      show:false,
+      min:(data.length>1?-(data.length-1)*0.06:-0.06),
+      max:(data.length>1?(data.length-1)*1.06:1.06),
+      interval:1
+    },
+    yAxis:{
+      type:'value',
+      min:fixedZeroMode?0:yMin,
+      max:yMax,
+      scale:!fixedZeroMode&&!yIsFlat,  // ① 开启 scale 不强制 0 起点
+      interval:step,  // ③ 规整步长
+      splitLine:{
+        show:true,
+        lineStyle:{color:COLOR_GRID,width:1}
+      },
+      axisLabel:{
+        color:COLOR_TOOLTIP_SUB,
+        fontSize:FONT_SIZE_YAXIS*scale,
+        formatter:function(v){return Math.round(v);}  // Y轴刻度整数
+      },
+      axisLine:{show:false},
+      axisTick:{show:false}
+    },
+    tooltip:{
+      trigger:'item',  // 单点触发，PC 鼠标移动、移动端长按滑动均可触发
+      triggerOn:'mousemove',  // 鼠标移动到数据点立即触发交互
+      alwaysShowContent:false,
+      axisPointer:{
+        type:'line',
+        lineStyle:{
+          color:COLOR_MAIN,
+          type:'dashed',
+          width:1.5
+        }
+      },
+      backgroundColor:COLOR_TOOLTIP_BG,
+      borderColor:'rgba(0,0,0,0.05)',
+      borderRadius:12,
+      padding:[14,18],
+      shadowColor:'rgba(0,0,0,0.15)',
+      shadowBlur:20,
+      shadowOffsetX:0,
+      shadowOffsetY:4,
+      // 自动避让：优先右侧弹出（与选中点保持 18px 距离），右侧空间不足时换左侧
+      position:function(pt,params,dom){
+        var gap=18;
+        var domW=dom.offsetWidth||140;
+        var appW=document.querySelector('.app')?document.querySelector('.app').getBoundingClientRect().width:window.innerWidth;
+        var left=pt[0]+gap;
+        if(left+domW>appW){left=Math.max(gap,pt[0]-domW-gap);}
+        return[left,pt[1]-10];
+      },
+      extraCssText:'z-index:999;',
+      // ② 整列蒙版在 markArea 中实现
+      formatter:function(params){
+        var idx=params.dataIndex;
+        var hintHtml=yIsFlat?'<div style="font-size:'+FONT_SIZE_HINT+'px;color:'+COLOR_WARNING+';margin-top:6px;padding-top:6px;border-top:1px dashed '+COLOR_GRID+'">⚠ 各次考试平均分无明显差距</div>':'';
+        return'<div style="font-size:'+FONT_SIZE_TOOLTIP_NAME+'px;color:'+COLOR_TOOLTIP_TEXT+';margin-bottom:8px;font-weight:600">'+categories[idx]+'</div>'
+          +'<div style="display:flex;align-items:baseline">'
+          +'<span style="font-size:'+FONT_SIZE_TOOLTIP_AVG+'px;color:'+COLOR_TOOLTIP_TEXT+';font-weight:800">'+avgValues[idx].toFixed(1)+'</span>'
+          +'<span style="margin:0 2px;font-size:'+FONT_SIZE_TOOLTIP_MAX+'px;color:'+COLOR_TOOLTIP_SUB+';font-weight:500">/</span>'
+          +'<span style="font-size:'+FONT_SIZE_TOOLTIP_MAX+'px;color:'+COLOR_TOOLTIP_SUB+';font-weight:500">'+maxValues[idx]+'</span>'
+          +'<span style="margin-left:auto;font-size:'+FONT_SIZE_TOOLTIP_RATE+'px;color:'+COLOR_MAIN+';font-weight:800">'+rates[idx]+'</span>'
+          +'<span style="margin:0 0 0 2px;font-size:'+FONT_SIZE_TOOLTIP_RATE_SUFFIX+'px;color:'+COLOR_TOOLTIP_SUB+';font-weight:500">%</span>'
+          +'</div>'
+          +hintHtml;
+      }
+    },
+    series:[{
+      name:'平均分',
+      type:'line',
+      data:avgValues.map(function(v,i){return[i,v];}),
+      smooth:false,
+      clip:false,  // 首尾节点不被绘图区裁剪，保持完整圆形
+      symbol:'circle',
+      symbolSize:SYMBOL_SIZE*scale,
+      symbolMargin:4,
+      lineStyle:{color:COLOR_MAIN,width:4},  // 主色 #14A89A，4px
+      itemStyle:{
+        color:COLOR_MAIN,
+        borderWidth:SYMBOL_BORDER_WIDTH,
+        borderColor:'#fff'
+      },
+      // 选中高亮视觉由 HTML/CSS 覆盖层实现（14px 白圆 + 4px 主色环 + 发光），此处禁用 ECharts 默认缩放避免叠加
+      emphasis:{
+        scale:false
+      },
+      areaStyle:{
+        color:new echarts.graphic.LinearGradient(0,0,0,1,[
+          {offset:0,color:'rgba(20,168,154,0.40)'},  // 上层主色 0.40
+          {offset:1,color:'rgba(20,168,154,0)'}      // 向下渐变至完全透明
+        ])
+      }
+    }]
+  };
+}
+
+function hexToRgba(hex,alpha){
+  var c=parseInt(hex.slice(1),16);
+  var r=(c>>16)&255,g=(c>>8)&255,b=c&255;
+  return'rgba('+r+','+g+','+b+','+alpha+')';
+}
+
+var lineTrendStates={};
+
+function drawLineTrendChart(instKey,containerId,groups,subj){
+  var container=document.getElementById(containerId);
+  if(!container)return;
+  if(!groups||groups.length<1)return;
+  var data=[];
+  groups.forEach(function(g){
+    var val,maxV;
+    if(subj==='total'){
+      val=g.avg_total;maxV=g.total_score;
+    }else{
+      var sj=(g.subjects||[]).find(function(s){return s.subject===subj;});
+      val=sj?(sj.score!=null?sj.score:sj.avg_score):0;
+      maxV=sj?sj.max_score:0;
+    }
+    data.push({group_name:g.group_name,val:val,max:maxV,rate:maxV>0?Math.round(val/maxV*100):0});
+  });
+  var avgValues=data.map(function(d){return Math.round((d.val||0)*10)/10;});
+  var st=lineTrendStates[instKey]=lineTrendStates[instKey]||{};
+  st.data=data;st.avgValues=avgValues;st.curIdx=-1;
+  var inst=LineChart.render(container,{
+    xAxis:data.map(function(d){return d.group_name;}),
+    series:[{name:'平均分',data:avgValues}]
+  },{key:instKey,customOption:getGradeTrendOption(data,'#14A89A',false),emptyText:'暂无趋势数据'});
+  st.chart=inst.getChart();
+  if(!st.chart){return;}
+  var zr=st.chart.getZr();
+  st.maskRect=null;st.dashLine=null;
+  var dot=document.getElementById('trendSelectDot_'+instKey);
+  if(!dot){
+    dot=document.createElement('div');
+    dot.id='trendSelectDot_'+instKey;
+    dot.style.cssText='position:absolute;width:10px;height:10px;border-radius:50%;background:#ffffff;box-shadow:0 0 0 4px #14A89A,0 0 14px 4px rgba(20,168,154,0.75);pointer-events:none;z-index:90;display:none;transform:translate(-50%,-50%);';
+    container.appendChild(dot);
+  }
+  st.dot=dot;
+  function gridPixels(){
+    var minY=Math.min(st.chart.convertToPixel({seriesIndex:0},[0,st.chart.getOption().yAxis[0].max])[1],
+                      st.chart.convertToPixel({seriesIndex:0},[0,st.chart.getOption().yAxis[0].min])[1]);
+    var left=st.chart.convertToPixel({seriesIndex:0},[-(data.length-1)*0.06,0])[0];
+    var right=st.chart.convertToPixel({seriesIndex:0},[(data.length-1)*1.06,0])[0];
+    var top=Math.min(st.chart.convertToPixel({seriesIndex:0},[0,st.chart.getOption().yAxis[0].max])[1],
+                     st.chart.convertToPixel({seriesIndex:0},[0,st.chart.getOption().yAxis[0].min])[1]);
+    var bottom=Math.max(st.chart.convertToPixel({seriesIndex:0},[0,st.chart.getOption().yAxis[0].max])[1],
+                        st.chart.convertToPixel({seriesIndex:0},[0,st.chart.getOption().yAxis[0].min])[1]);
+    return {x:left,y:top,width:right-left,height:bottom-top};
+  }
+  function activatePoint(idx){
+    if(idx==null||idx<0||idx>=data.length)return;
+    st.curIdx=idx;
+    var g=zr.group||new echarts.graphic.Group();
+    if(!st.maskRect){
+      st.maskRect=new echarts.graphic.Rect({silent:true,style:{fill:'rgba(20,168,154,0.1)'}});
+      st.dashLine=new echarts.graphic.Line({silent:true,style:{stroke:'#14A89A',lineWidth:1.5,lineDash:[6,4]}});
+      g.add(st.maskRect);g.add(st.dashLine);zr.add(g);
+    }
+    var gp=gridPixels();
+    var colW=gp.width/(data.length-1);
+    var x=st.chart.convertToPixel({seriesIndex:0},[idx,0])[0];
+    var y=st.chart.convertToPixel({seriesIndex:0},[idx,avgValues[idx]])[1];
+    var maskW=colW*0.5;
+    st.maskRect.attr('shape',{x:x-maskW/2,y:gp.y,width:maskW,height:gp.height});
+    st.maskRect.attr('style',{fill:'rgba(20,168,154,0.1)'});
+    st.dashLine.attr('shape',{x1:x,y1:gp.y,x2:x,y2:gp.y+gp.height});
+    st.dashLine.attr('style',{stroke:'#14A89A',lineWidth:1.5,lineDash:[6,4]});
+    dot.style.left=x+'px';
+    dot.style.top=y+'px';
+    dot.style.display='flex';
+    zr.refresh();
+  }
+  function deactivate(){
+    st.curIdx=-1;
+    if(st.maskRect){st.maskRect.attr('shape',{x:0,y:0,width:0,height:0});st.maskRect.attr('style',{fill:'rgba(20,168,154,0)'});}
+    if(st.dashLine){st.dashLine.attr('shape',{x1:0,y1:0,x2:0,y2:0});}
+    dot.style.display='none';
+    zr.refresh();
+  }
+  st.chart.on('showTip',function(p){activatePoint(p.dataIndex);});
+  st.chart.on('hideTip',function(){deactivate();});
+  zr.on('mousemove',function(e){
+    var idx=st.chart.convertFromPixel({seriesIndex:0},[e.offsetX,e.offsetY]);
+    if(idx&&idx.length&&typeof idx[0]==='number'){
+      idx=Math.round(idx[0]);
+      if(idx!==st.curIdx){
+        st.chart.dispatchAction({type:'showTip',seriesIndex:0,dataIndex:idx});
+      }
+    }
+  });
+  zr.on('mouseout',function(){
+    st.chart.dispatchAction({type:'hideTip'});
+  });
+  function touchIdx(t){
+    var rect=st.chart.getDom().getBoundingClientRect();
+    var px=t.clientX-rect.left,py=t.clientY-rect.top;
+    var idx=st.chart.convertFromPixel({seriesIndex:0},[px,py]);
+    return (idx&&idx.length&&typeof idx[0]==='number')?Math.round(idx[0]):-1;
+  }
+  zr.on('touchstart',function(e){
+    var t=e.touches&&e.touches[0];
+    if(t){var idx=touchIdx(t);if(idx>=0)st.chart.dispatchAction({type:'showTip',seriesIndex:0,dataIndex:idx});}
+  });
+  zr.on('touchmove',function(e){
+    var t=e.touches&&e.touches[0];
+    if(t){var idx=touchIdx(t);if(idx>=0&&idx!==st.curIdx)st.chart.dispatchAction({type:'showTip',seriesIndex:0,dataIndex:idx});}
+  });
+  zr.on('touchend',function(){
+    st.chart.dispatchAction({type:'hideTip'});
+  });
+  if(!st.resizeRegistered){
+    st.resizeHandler=function(){
+      if(st.chart){
+        st.chart.resize();
+        if(st.curIdx>=0){
+          var x=st.chart.convertToPixel({seriesIndex:0},[st.curIdx,0])[0];
+          var y=st.chart.convertToPixel({seriesIndex:0},[st.curIdx,st.avgValues[st.curIdx]])[1];
+          dot.style.left=x+'px';
+          dot.style.top=y+'px';
+        }
+      }
+    };
+    window.addEventListener('resize',st.resizeHandler);
+    st.resizeRegistered=true;
+  }
+}
+
+function drawGradeTrendChart(){
+  drawLineTrendChart('grade','gradeTrendChart',gradeTrendData.groups,gradeTrendSubj);
+}
+
+function drawClassLineChart(){
+  var d=classTrendData;
+  if(!d)return;
+  var allTypes=[];
+  d.groups.forEach(function(g){if(allTypes.indexOf(g.exam_type)===-1)allTypes.push(g.exam_type);});
+  var groups=d.groups.filter(function(g){return g.exam_type===classTrendEType;});
+  if(!groups.length)groups=d.groups;
+  drawLineTrendChart('class','classTrendChart',groups,classTrendSubj);
+}
+
+
+/* ===================================================================
+   Tab 3: 看班级
+   =================================================================== */
+var classTrendData=null,classTrendId=null,classTrendEType=null,classTrendSubj='total',classRadarItems=null,classHistogramData=null;
+
+function initClassTabSelectors(){
+  if(!grades.length)return;
+  var sel=document.getElementById('classTrendGrade');
+  sel.innerHTML='<option value="">请选择年级</option>'+grades.map(function(g){return'<option value="'+g.id+'">'+g.grade_name+'</option>';}).join('');
+}
+
+async function onClassTrendGradeChange(cb){
+  var gid=document.getElementById('classTrendGrade').value;
+  document.getElementById('classTrendClass').innerHTML='<option value="">请选择班级</option>';
+  document.getElementById('classTrendContent').innerHTML='<div class="empty-state">请选择班级后查看数据</div>';
+  if(!gid)return;
+  var classes=await loadClasses(gid);
+  var sel2=document.getElementById('classTrendClass');
+  sel2.innerHTML='<option value="">请选择班级</option>'+classes.map(function(c){return'<option value="'+c.id+'">'+c.name+'</option>';}).join('');
+  if(cb)setTimeout(cb,50);
+}
+
+async function onClassTrendClassChange(){
+  classTrendId=document.getElementById('classTrendClass').value;
+  if(!classTrendId){document.getElementById('classTrendContent').innerHTML='<div class="empty-state">请选择班级后查看数据</div>';return;}
+  loadClassTrend();
+}
+
+async function loadClassTrend(){
+  document.getElementById('classTrendContent').innerHTML='<div class="loading">加载中...</div>';
+  try{
+    var r=await fetch('/api/public/class-trend?class_id='+classTrendId);
+    if(!r.ok){renderClassTrendError('数据加载失败');return;}
+    classTrendData=await r.json();
+    if(!classTrendEType){
+      var allTypes=[];
+      classTrendData.groups.forEach(function(g){if(allTypes.indexOf(g.exam_type)===-1)allTypes.push(g.exam_type);});
+      classTrendEType=allTypes[0]||'';
+    }
+    if(!classTrendData.groups||!classTrendData.groups.length){renderClassTrendError('暂无统考数据');return;}
+    renderClassTrend();
+  }catch(e){renderClassTrendError('网络异常');}
+}
+
+function switchClassTrendType(type){
+  classTrendEType=type;
+  renderClassTrend();setTimeout(function(){drawClassLineChart();drawClassSubjectBars();},100);
+}
+
+function switchClassTrendSubj(subj){
+  classTrendSubj=subj;
+  document.querySelectorAll('#classTrendSubjBtns .subj-btn').forEach(function(b){
+    b.className='subj-btn'+(b.dataset.subj===subj?' active':'');
+  });
+  drawClassLineChart();
+}
+
+function renderClassTrendError(msg){
+  document.getElementById('classTrendContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>'+escapeHtml(msg)+'</div>';
+}
+
+function renderClassPickerCard(){
+  var d=classTrendData;
+  if(!d)return;
+  var nameEl=document.getElementById('cpcName');
+  var tagEl=document.getElementById('cpcTag');
+  var avEl=document.getElementById('cpcAvatars');
+  var cntEl=document.getElementById('cpcCount');
+  if(!nameEl||!tagEl||!avEl||!cntEl)return;
+  nameEl.textContent=d.class_name;
+  if(d.class_type){tagEl.style.display='inline-block';tagEl.textContent=d.class_type;}
+  else{tagEl.style.display='none';}
+  var students=d.students||[];
+  var colors=['#14A89A','#00A3FF','#485DFA','#F165B4','#FF8F5A'];
+  avEl.innerHTML=students.slice(0,3).map(function(st,i){
+    if(st.photo)return'<img src="'+escapeHtml(st.photo)+'" alt="">';
+    return'<i style="background:'+colors[i%colors.length]+'">'+escapeHtml(st.student_name.slice(0,1))+'</i>';
+  }).join('');
+  cntEl.innerHTML=students.length+'<span class="cpc-unit">人</span>';
+}
+
+function renderClassTrend(){
+  renderClassPickerCard();
+  var d=classTrendData;
+  var allTypes=[],typeGroups={};
+  d.groups.forEach(function(g){if(allTypes.indexOf(g.exam_type)===-1)allTypes.push(g.exam_type);});
+  allTypes.forEach(function(t){typeGroups[t]=d.groups.filter(function(g){return g.exam_type===t;});});
+  var groups=typeGroups[classTrendEType]||d.groups;
+
+  classRadarItems=null;
+
+  var s=d.summary;
+  var html='';
+  if(allTypes.length>1){
+    html+='<div class="module" style="padding-top:4px;padding-bottom:4px">'
+      +'<div class="type-switch">'
+      +allTypes.map(function(t){return'<button class="type-btn'+(t===classTrendEType?' active':'')+'" onclick="switchClassTrendType(\''+t+'\')">'+examTypeShort(t)+'</button>';}).join('')
+      +'</div></div>';
+  }
+
+  // 成绩统计卡片
+  var srList=groups.map(function(g){return g.total_score>0?Math.round(g.avg_total/g.total_score*100):0;});
+  var avgScoreRate=srList.length?Math.round(srList.reduce(function(a,b){return a+b;},0)/srList.length):0;
+  var totalAvg=s.avg_total||0;
+  var avgs=groups.map(function(g){return g.avg_total;});
+  var maxAvg=avgs.length?Math.max.apply(null,avgs):0;
+  var minAvg=avgs.length?Math.min.apply(null,avgs):0;
+
+  var subjSet={};
+  groups.forEach(function(g){g.subjects.forEach(function(s){subjSet[s.subject]=true;});});
+  var subjs=['total'].concat(Object.keys(subjSet));
+  var btns=subjs.map(function(s){
+    var label=s==='total'?'总分':s;
+    return'<span class="subj-btn'+(s===classTrendSubj?' active':'')+'" data-subj="'+s+'">'+escapeHtml(label)+'</span>';
+  }).join('');
+
+  html+='<div class="class-stats-card">'
+    +'<div class="cs-rate">'
+    +'<div class="cs-rate-label">平均得分率</div>'
+    +'<div class="cs-rate-value">'+avgScoreRate+'<span class="cs-rate-unit">%</span></div>'
+    +'</div>'
+    +'<div class="gauge-stats">'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">总平均分</div><div class="gauge-stat-value">'+totalAvg+'</div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">最高均分</div><div class="gauge-stat-value">'+maxAvg+'</div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">最低均分</div><div class="gauge-stat-value">'+minAvg+'</div></div>'
+    +'</div>'
+    +'<div class="subject-toggle" id="classTrendSubjBtns">'+btns+'</div>'
+    +'<div id="classTrendChart" style="width:100%;height:200px;margin-top:10px;"></div>'
+    +'</div>';
+
+  // 优劣分布分析（直方图）卡片：班级学生历次考试均分区间人数分布
+  var distBkts=[{range:'<60',min:0,max:60},{range:'60-70',min:60,max:70},{range:'70-80',min:70,max:80},{range:'80-90',min:80,max:90},{range:'90-100',min:90,max:101}];
+  var subjCount=(groups.length&&groups[0].subjects)?groups[0].subjects.length:1;
+  var distFullGrp=groups[groups.length-1];
+  var distTotalScore=(distFullGrp&&distFullGrp.total_score)?distFullGrp.total_score:0;
+  var distCounts=[0,0,0,0,0];
+  (classTrendData.students||[]).forEach(function(st){
+    var m=distTotalScore>0?(st.avg_total||0)/distTotalScore*100:0;
+    for(var b=0;b<distBkts.length;b++){
+      if(m>=distBkts[b].min&&m<distBkts[b].max){distCounts[b]++;break;}
+    }
+  });
+  classHistogramData={xAxis:distBkts.map(function(b){return b.range;}),series:[{name:'学生人数',data:distCounts}]};
+
+  // 历次考试平均各档率（对齐 grade-trend 分档口径：优秀>=90% 良好80-90 一般60-80 不及格<60）
+  var rateAvg={};
+  ['excellent_rate','good_rate','pass_rate','fail_rate'].forEach(function(k){
+    var list=groups.map(function(g){return g[k]||0;}).filter(function(v){return !isNaN(v);});
+    rateAvg[k]=list.length?Math.round(list.reduce(function(a,b){return a+b;},0)/list.length):0;
+  });
+  // 平均及格率 = 历次考试及格率(>=60%)的均值，及格率 = 优秀+良好+一般
+  var passAllList=groups.map(function(g){return (g.excellent_rate||0)+(g.good_rate||0)+(g.pass_rate||0);}).filter(function(v){return !isNaN(v);});
+  var avgPassAll=passAllList.length?Math.round(passAllList.reduce(function(a,b){return a+b;},0)/passAllList.length):0;
+
+  // 学情评价：基于直方图形态自动判定，返回 { text, color }
+  function evalDistText(c){
+    var total=c.reduce(function(a,b){return a+b;},0);
+    if(!total)return {text:'暂无分布数据',color:'#86909C'};
+    var maxV=Math.max.apply(null,c);
+    var peaks=[];
+    c.forEach(function(v,i){if(v===maxV)peaks.push(i);});
+    var first=peaks[0],last=peaks[peaks.length-1];
+    var hasGap=false;
+    for(var i=1;i<c.length-1;i++){ if(c[i]<=0){hasGap=true;} }
+    var maxDrop=0;
+    for(var i=1;i<c.length;i++){var d=c[i]-c[i-1];if(d>maxDrop)maxDrop=d;}
+    if(hasGap&&maxDrop>=Math.max(3,Math.round(maxV*0.5))){
+      return {text:'区间断层，稍显分化',color:'#e4814c'};
+    }
+    if(peaks.indexOf(0)>=0&&peaks.indexOf(c.length-1)>=0&&c.length>=3){
+      var midMin=Math.min.apply(null,c.slice(1,c.length-1));
+      if(midMin<maxV*0.5){return {text:'两极分化，分层明显',color:'#eb7555'};}
+    }
+    var minVal=Math.min.apply(null,c);
+    var span=maxV-minVal;
+    if(span<=Math.max(2,Math.round(maxV*0.25))){
+      return {text:'分布均匀，水平分散',color:'#8097b2'};
+    }
+    if(first===0){return {text:'低分居多，基础偏弱',color:'#f2994a'};}
+    if(last===c.length-1){return {text:'高分居多，学情向好',color:'#27ae60'};}
+    if(first>0&&last<c.length-1){
+      return {text:'中等居多，梯队均衡',color:'#14A89A'};
+    }
+    if(first<=1){return {text:'低分居多，基础偏弱',color:'#f2994a'};}
+    if(last>=c.length-2){return {text:'高分居多，学情向好',color:'#27ae60'};}
+    return {text:'中等居多，梯队均衡',color:'#14A89A'};
+  }
+  window.evalDistText=evalDistText;
+  var evalObj=evalDistText(distCounts);
+  var evalText=evalObj.text;
+  var evalColor=evalObj.color;
+  var evalTotal=distCounts.reduce(function(a,b){return a+b;},0);
+  if(evalTotal<15){evalText+='<div class="dist-eval-note">样本数量较少，分布仅供参考。</div>';}
+
+  html+='<div class="radar-card">'
+    +'<div class="radar-card-title">优劣分布分析</div>'
+    +'<div class="dist-rate">'
+    +'<div class="cs-rate">'
+    +'<div class="cs-rate-label">平均及格率</div>'
+    +'<div class="cs-rate-value">'+avgPassAll+'<span class="cs-rate-unit">%</span></div>'
+    +'</div>'
+    +'<div class="dist-rate-grid">'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">优秀率-平均</div><div class="gauge-stat-value">'+rateAvg.excellent_rate+'<span class="dist-rate-unit">%</span></div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">良好率-平均</div><div class="gauge-stat-value">'+rateAvg.good_rate+'<span class="dist-rate-unit">%</span></div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">一般率-平均</div><div class="gauge-stat-value">'+rateAvg.pass_rate+'<span class="dist-rate-unit">%</span></div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">不及格率-平均</div><div class="gauge-stat-value">'+rateAvg.fail_rate+'<span class="dist-rate-unit">%</span></div></div>'
+    +'</div>'
+    +'</div>'
+    +'<div id="classDistChart" style="width:100%;height:260px"></div>'
+    +'<div class="dist-eval">'
+    +'<div class="eval-badge">学情评价</div>'
+    +'<div class="dist-eval-text" style="color:'+evalColor+'">'+evalText+'</div>'
+    +'<div class="dist-eval-img"></div>'
+    +'</div>'
+    +'</div>';
+
+  // 科目均衡分析（雷达图）卡片
+  var lastRadarGroup=groups[groups.length-1];
+  if(lastRadarGroup&&lastRadarGroup.subjects){
+    var radarItems=LiberalRadarChart.SUBJECT_ORDER.map(function(name){
+      var sj=lastRadarGroup.subjects.filter(function(s){return s.subject===name;})[0];
+      return {name:name,value:sj?sj.avg_score:0,max:sj?sj.max_score:0};
+    });
+    if(radarItems.some(function(it){return it.max>0;})){
+      var radarStds=radarItems.map(function(it){return LiberalRadarChart.normalize(it.value,it.max);});
+      var radarAna=LiberalRadarChart.analyze(radarStds);
+      classRadarItems=radarItems;
+      var evalImgMap={'偏科':'/imgs/badge/badge-unbalance.png','文科优势':'/imgs/badge/badge-liberal-good.png','文科短板':'/imgs/badge/badge-liberal-weak.png','全科均衡':'/imgs/badge/badge-balance.png'};
+      var evalTags=radarAna.tags;
+      var evalImg='/imgs/badge/badge-balance.png';
+      if(evalTags.indexOf('偏科')>=0)evalImg=evalImgMap['偏科'];
+      else if(evalTags.indexOf('文科优势')>=0)evalImg=evalImgMap['文科优势'];
+      else if(evalTags.indexOf('文科短板')>=0)evalImg=evalImgMap['文科短板'];
+      else if(evalTags.indexOf('全科均衡')>=0)evalImg=evalImgMap['全科均衡'];
+      html+='<div class="radar-card">'
+        +'<div class="radar-card-bg"></div>'
+        +'<div class="radar-card-bg-mask"></div>'
+        +'<div class="radar-card-body">'
+        +'<div class="radar-card-title">科目均衡分析</div>'
+        +'<div class="radar-tags"><img class="radar-eval-img" src="'+evalImg+'" alt="'+escapeHtml(evalTags[0]||'')+'"></div>'
+        +'<div class="radar-stats">'
+        +'<div class="radar-stat"><div class="radar-stat-label">最高分</div><div class="radar-stat-value">'+radarAna.max+'</div></div>'
+        +'<div class="radar-stat"><div class="radar-stat-label">最低分</div><div class="radar-stat-value">'+radarAna.min+'</div></div>'
+        +'<div class="radar-stat"><div class="radar-stat-label">极差</div><div class="radar-stat-value">'+radarAna.range+'</div></div>'
+        +'<div class="radar-stat"><div class="radar-stat-label">平均分</div><div class="radar-stat-value">'+radarAna.avg+'</div></div>'
+        +'</div>'
+        +'<div id="classTrendRadar" style="width:100%;height:300px"></div>'
+        +'</div>'
+        +'</div>';
+    }
+  }
+
+  // 学生排名（沿用班级排行榜卡片样式，姓名左侧显示照片头像）
+  var students=d.students||[];
+  if(students.length){
+    var stRows=students.map(function(st,i){
+      var rank=i+1;
+      var change=st.recent_change;
+      var cc=change>0?'up':(change<0?'down':'zero');
+      var arrow=change>0?'&#8593;':(change<0?'&#8595;':'');
+      var sign=change>=0?'+':'';
+      var trendJson=escapeHtml(JSON.stringify(st.trends.map(function(t){return t.total;})));
+      var avatar=st.photo
+        ?'<span class="cb-avatar"><img src="'+escapeHtml(st.photo)+'" alt=""></span>'
+        :'<span class="cb-avatar">'+escapeHtml(st.student_name.slice(0,1))+'</span>';
+      return'<div class="cb-card" onclick="switchMainTab(\'student\');selectStudentById('+st.student_id+')">'
+        +'<div class="cb-rank"><div class="cb-rank-num">'+(rank<10?'0'+rank:rank)+'</div></div>'
+        +'<div class="cb-main">'
+        +'<div class="cb-name-line">'+avatar+'<div class="cb-name">'+escapeHtml(st.student_name)+'</div></div>'
+        +'<div class="cb-scores">'
+        +'<div class="cb-avg">'+st.avg_total+'</div>'
+        +'<div class="cr-change"><span class="change-val '+cc+'">'+sign+change+'</span>'+(arrow?'<span class="change-arrow '+cc+'">'+arrow+'</span>':'')+'</div>'
+        +'</div></div>'
+        +'<div class="cb-side">'
+        +'<canvas class="cb-spark" data-trend="'+trendJson+'"></canvas>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+    html+='<div class="class-leaderboard"><div class="class-leaderboard-title">学生排名</div>'+stRows+'</div>';
+  }
+
+  document.getElementById('classTrendContent').innerHTML=html;
+  renderClassHistogram();
+  renderClassRadar();
+  setTimeout(function(){bindClassTrendSubjBtns();drawClassLineChart();drawClassSubjectBars();drawClassSparklines();},100);
+}
+
+function renderClassHistogram(){
+  var container=document.getElementById('classDistChart');
+  if(container&&classHistogramData){
+    HistogramChart.render(container,classHistogramData,{key:'classDist',showValueLabel:true,emptyText:'暂无分布数据',gridLeft:30,gridRight:10});
+  }
+}
+
+function renderClassRadar(){
+  var container=document.getElementById('classTrendRadar');
+  if(container&&classRadarItems&&classRadarItems.length){
+    LiberalRadarChart.render(container,classRadarItems,{key:'class'});
+  }
+}
+
+function bindClassTrendSubjBtns(){
+  var btns=document.querySelectorAll('#classTrendSubjBtns .subj-btn');
+  btns.forEach(function(b){b.onclick=function(){switchClassTrendSubj(b.dataset.subj);};});
+}
+
+function drawClassSubjectBars(){}
+
+/* ===================================================================
+   Tab 4: 看个人
+   =================================================================== */
+var stuHistData=null,stuHistId=null,stuHistEType=null,stuTrendSubj='total',stuRadarItems=null,__allStudents=[];
+
+function updateStudentPicker(st){
+  var nameEl=document.getElementById('stuName');
+  var avEl=document.getElementById('stuAvatar');
+  var metaEl=document.getElementById('stuMeta');
+  if(!nameEl||!avEl||!metaEl)return;
+  nameEl.textContent=st.name;
+  if(st.photo)avEl.innerHTML='<img src="'+escapeHtml(st.photo)+'" alt="">';
+  else avEl.textContent=st.name.slice(0,1);
+  var parts=[];
+  if(st.class_name)parts.push('<span>'+escapeHtml(st.class_name)+'</span>');
+  if(st.student_no)parts.push('<span>'+escapeHtml(st.student_no)+'</span>');
+  if(st.class_role)parts.push('<span class="spc-role">'+escapeHtml(st.class_role)+'</span>');
+  metaEl.innerHTML=parts.join('');
+}
+
+function selectStudent(st){
+  stuHistId=st.id;
+  updateStudentPicker(st);
+  loadStudentHistory();
+}
+
+function selectStudentById(id){
+  fetch('/api/public/students/'+id).then(function(r){return r.json();}).then(function(st){
+    if(!st||st.error){renderStuHistError('学生不存在');return;}
+    selectStudent(st);
+  }).catch(function(){renderStuHistError('网络异常');});
+}
+
+async function openStudentPicker(){
+  if(!__allStudents.length){
+    try{
+      var r=await fetch('/api/public/students');
+      __allStudents=await r.json();
+    }catch(e){}
+  }
+  if(!__allStudents.length){
+    bsPopupOpen({title:'选择学生',contentHtml:'<div style="text-align:center;padding:30px 0;color:#86909C;font-size:14px">暂无学生数据</div>'});
+    return;
+  }
+  var byClass={};
+  __allStudents.forEach(function(s){var k=s.class_name||'未分班';(byClass[k]=byClass[k]||[]).push(s);});
+  var html=Object.keys(byClass).sort().map(function(k){
+    return'<div class="spc-group">'+escapeHtml(k)+'<span class="spc-group-n">'+byClass[k].length+'人</span></div>'
+      +byClass[k].map(function(s){
+        var av=s.photo?'<span class="spc-row-avatar"><img src="'+escapeHtml(s.photo)+'" alt=""></span>':'<span class="spc-row-avatar">'+escapeHtml(s.name.slice(0,1))+'</span>';
+        var sub='<span>'+escapeHtml(s.student_no||'')+'</span>';
+        if(s.class_role)sub+='<span class="spc-role">'+escapeHtml(s.class_role)+'</span>';
+        return'<div class="spc-row" onclick="pickStudent('+s.id+')">'+av+'<span class="spc-row-info"><span class="spc-row-name">'+escapeHtml(s.name)+'</span><span class="spc-row-sub">'+sub+'</span></span></div>';
+      }).join('');
+  }).join('');
+  bsPopupOpen({title:'选择学生',contentHtml:html,showCancel:false});
+  setTimeout(function(){document.getElementById('bsPopupFooter').style.display='none';},0);
+}
+
+function pickStudent(id){
+  var st=__allStudents.find(function(s){return s.id==id;});
+  if(!st)return;
+  bsPopupClose();
+  selectStudent(st);
+}
+
+function renderStuHistError(msg){
+  document.getElementById('stuHistContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>'+escapeHtml(msg)+'</div>';
+}
+
+async function loadStudentHistory(){
+  document.getElementById('stuHistContent').innerHTML='<div class="loading">加载中...</div>';
+  try{
+    var r=await fetch('/api/public/student-history?student_id='+stuHistId);
+    if(!r.ok){renderStuHistError('数据加载失败');return;}
+    stuHistData=await r.json();
+    if(!stuHistData.groups||!stuHistData.groups.length){renderStuHistError('暂无统考数据');return;}
+    renderStudentHistory();
+    setTimeout(function(){bindStuTrendSubjBtns();drawStuLineChart();renderStudentRadar();},100);
+  }catch(e){renderStuHistError('网络异常');}
+}
+
+function renderStudentHistory(){
+  var d=stuHistData,st=d.student;
+  updateStudentPicker(st);
+  var allTypes=[];
+  d.groups.forEach(function(g){if(allTypes.indexOf(g.exam_type)===-1)allTypes.push(g.exam_type);});
+  stuHistEType=stuHistEType||allTypes[0]||'';
+  var groups=d.groups.filter(function(g){return g.exam_type===stuHistEType;});
+  if(!groups.length)groups=d.groups;
+
+  var html='';
+  if(allTypes.length>1){
+    html+='<div class="module" style="padding-top:4px;padding-bottom:4px">'
+      +'<div class="type-switch">'
+      +allTypes.map(function(t){return'<button class="type-btn'+(t===stuHistEType?' active':'')+'" onclick="switchStuHistType(\''+t+'\')">'+examTypeShort(t)+'</button>';}).join('')
+      +'</div></div>';
+  }
+
+  // 成绩统计卡片（复用 class-stats-card 样式）
+  var srList=groups.map(function(g){return g.total_score>0?Math.round(g.student_total/g.total_score*100):0;});
+  var avgScoreRate=srList.length?Math.round(srList.reduce(function(a,b){return a+b;},0)/srList.length):0;
+  var totals=groups.map(function(g){return g.student_total;});
+  var avgTotal=totals.length?Math.round(totals.reduce(function(a,b){return a+b;},0)/totals.length):0;
+  var maxTotal=totals.length?Math.max.apply(null,totals):0;
+  var minTotal=totals.length?Math.min.apply(null,totals):0;
+
+  var subjSet={};
+  groups.forEach(function(g){g.subjects.forEach(function(s){subjSet[s.subject]=true;});});
+  var subjs=['total'].concat(Object.keys(subjSet));
+  var btns=subjs.map(function(s){
+    var label=s==='total'?'总分':s;
+    return'<span class="subj-btn'+(s===stuTrendSubj?' active':'')+'" data-subj="'+s+'">'+escapeHtml(label)+'</span>';
+  }).join('');
+
+  html+='<div class="class-stats-card">'
+    +'<div class="cs-rate">'
+    +'<div class="cs-rate-label">平均得分率</div>'
+    +'<div class="cs-rate-value">'+avgScoreRate+'<span class="cs-rate-unit">%</span></div>'
+    +'</div>'
+    +'<div class="gauge-stats">'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">历次均分</div><div class="gauge-stat-value">'+avgTotal+'</div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">最高总分</div><div class="gauge-stat-value">'+maxTotal+'</div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">最低总分</div><div class="gauge-stat-value">'+minTotal+'</div></div>'
+    +'</div>'
+    +'<div class="subject-toggle" id="stuTrendSubjBtns">'+btns+'</div>'
+    +'<div id="stuTrendChart" style="width:100%;height:200px;margin-top:10px;"></div>'
+    +'</div>';
+
+  // 科目均衡分析（雷达图）卡片：学生各科目历次成绩换算
+  var subjMap={};
+  groups.forEach(function(g){
+    g.subjects.forEach(function(sj){
+      if(sj.score===null)return;
+      if(!subjMap[sj.subject])subjMap[sj.subject]={scores:[],max:0};
+      subjMap[sj.subject].scores.push(sj.score);
+      if((sj.max_score||0)>subjMap[sj.subject].max)subjMap[sj.subject].max=sj.max_score||0;
+    });
+  });
+  var radarItems=LiberalRadarChart.SUBJECT_ORDER.map(function(name){
+    var sj=subjMap[name];
+    var avg=sj&&sj.scores.length?Math.round(sj.scores.reduce(function(a,b){return a+b;},0)/sj.scores.length*10)/10:0;
+    return {name:name,value:avg,max:sj?sj.max:0};
+  });
+  stuRadarItems=radarItems;
+  if(radarItems.some(function(it){return it.max>0;})){
+    var radarStds=radarItems.map(function(it){return LiberalRadarChart.normalize(it.value,it.max);});
+    var radarAna=LiberalRadarChart.analyze(radarStds);
+    var evalImgMap={'偏科':'/imgs/badge/badge-unbalance.png','文科优势':'/imgs/badge/badge-liberal-good.png','文科短板':'/imgs/badge/badge-liberal-weak.png','全科均衡':'/imgs/badge/badge-balance.png'};
+    var evalTags=radarAna.tags;
+    var evalImg='/imgs/badge/badge-balance.png';
+    if(evalTags.indexOf('偏科')>=0)evalImg=evalImgMap['偏科'];
+    else if(evalTags.indexOf('文科优势')>=0)evalImg=evalImgMap['文科优势'];
+    else if(evalTags.indexOf('文科短板')>=0)evalImg=evalImgMap['文科短板'];
+    else if(evalTags.indexOf('全科均衡')>=0)evalImg=evalImgMap['全科均衡'];
+    html+='<div class="radar-card">'
+      +'<div class="radar-card-bg"></div>'
+      +'<div class="radar-card-bg-mask"></div>'
+      +'<div class="radar-card-body">'
+      +'<div class="radar-card-title">科目均衡分析</div>'
+      +'<div class="radar-tags"><img class="radar-eval-img" src="'+evalImg+'" alt="'+escapeHtml(evalTags[0]||'')+'"></div>'
+      +'<div class="radar-stats">'
+      +'<div class="radar-stat"><div class="radar-stat-label">最高分</div><div class="radar-stat-value">'+radarAna.max+'</div></div>'
+      +'<div class="radar-stat"><div class="radar-stat-label">最低分</div><div class="radar-stat-value">'+radarAna.min+'</div></div>'
+      +'<div class="radar-stat"><div class="radar-stat-label">极差</div><div class="radar-stat-value">'+radarAna.range+'</div></div>'
+      +'<div class="radar-stat"><div class="radar-stat-label">平均分</div><div class="radar-stat-value">'+radarAna.avg+'</div></div>'
+      +'</div>'
+      +'<div id="stuTrendRadar" style="width:100%;height:300px"></div>'
+      +'</div>'
+      +'</div>';
+  }
+
+  // 历次统考（点击进入单科报告）
+  html+='<div class="module"><div class="module-title">历次统考</div>';
+  groups.forEach(function(g){
+    html+='<div class="exam-card" onclick="location.href=\'m-score-student-single-report.html?student_id='+st.id+'&group_id='+g.group_id+'\'">'
+      +'<div class="ec-header"><span class="ec-title">'+escapeHtml(g.group_name)+'</span><span class="ec-type">'+escapeHtml(g.exam_date||'')+'</span></div>'
+      +'<div class="ec-row">'
+      +'<div class="ec-item"><span class="ec-label">总分</span><span class="ec-val green">'+g.student_total+'</span></div>'
+      +'<div class="ec-item"><span class="ec-label">班排</span><span class="ec-val">'+(g.class_rank||'-')+'/'+g.class_total+'</span></div>'
+      +'<div class="ec-item"><span class="ec-label">级排</span><span class="ec-val">'+(g.grade_rank||'-')+'/'+g.grade_total+'</span></div>'
+      +'</div></div>';
+  });
+  html+='</div>';
+
+  document.getElementById('stuHistContent').innerHTML=html;
+}
+
+function switchStuHistType(type){
+  stuHistEType=type;
+  renderStudentHistory();
+  setTimeout(function(){bindStuTrendSubjBtns();drawStuLineChart();renderStudentRadar();},100);
+}
+
+function switchStuTrendSubj(subj){
+  stuTrendSubj=subj;
+  document.querySelectorAll('#stuTrendSubjBtns .subj-btn').forEach(function(b){
+    b.className='subj-btn'+(b.dataset.subj===subj?' active':'');
+  });
+  drawStuLineChart();
+}
+
+function bindStuTrendSubjBtns(){
+  var btns=document.querySelectorAll('#stuTrendSubjBtns .subj-btn');
+  btns.forEach(function(b){b.onclick=function(){switchStuTrendSubj(b.dataset.subj);};});
+}
+
+function drawStuLineChart(){
+  var d=stuHistData;
+  if(!d)return;
+  var allTypes=[];
+  d.groups.forEach(function(g){if(allTypes.indexOf(g.exam_type)===-1)allTypes.push(g.exam_type);});
+  var groups=d.groups.filter(function(g){return g.exam_type===stuHistEType;});
+  if(!groups.length)groups=d.groups;
+  var mapData=groups.map(function(g){
+    return {group_id:g.group_id,group_name:g.group_name,total_score:g.total_score,avg_total:g.student_total,subjects:g.subjects};
+  });
+  drawLineTrendChart('stu','stuTrendChart',mapData,stuTrendSubj);
+}
+
+function renderStudentRadar(){
+  var container=document.getElementById('stuTrendRadar');
+  if(container&&stuRadarItems&&stuRadarItems.length){
+    LiberalRadarChart.render(container,stuRadarItems,{key:'stu'});
+  }
+}
+
+/* ====== 通用底部选择弹窗组件 BottomSelectPopup ====== */
+var bsPopupState={};
+
+function bsPopupInit(){
+  var content=document.getElementById('bsPopupContent');
+  var mask=document.getElementById('bsPopupMask');
+  var cancel=document.getElementById('bsPopupCancel');
+  var confirm=document.getElementById('bsPopupConfirm');
+  content.addEventListener('click',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('.bs-option'):null;
+    if(!el)return;
+    var v=el.getAttribute('data-value');
+    if(bsPopupState.mode==='multiple'){
+      var i=bsPopupState.selected.indexOf(v);
+      if(i>-1)bsPopupState.selected.splice(i,1);else bsPopupState.selected.push(v);
+      bsPopupRender();
+    }else{
+      bsPopupState.selected=[v];
+      bsPopupRender();
+      if(bsPopupState.instantConfirm)bsPopupConfirm();
+    }
+  });
+  mask.addEventListener('click',bsPopupClose);
+  cancel.addEventListener('click',bsPopupClose);
+  confirm.addEventListener('click',bsPopupConfirm);
+}
+
+function bsPopupRender(){
+  var title=document.getElementById('bsPopupTitle');
+  var content=document.getElementById('bsPopupContent');
+  var footer=document.getElementById('bsPopupFooter');
+  var cancel=document.getElementById('bsPopupCancel');
+  var confirm=document.getElementById('bsPopupConfirm');
+  if(bsPopupState.title){title.style.display='block';title.textContent=bsPopupState.title;}
+  else{title.style.display='none';}
+  if(bsPopupState.contentHtml){
+    content.innerHTML=bsPopupState.contentHtml;
+  }else{
+    var opts=bsPopupState.options||[];
+    if(!opts.length){
+      content.innerHTML='<div style="text-align:center;padding:30px 0;color:#86909C;font-size:14px">暂无选项</div>';
+    }else{
+      content.innerHTML=opts.map(function(o){
+        var sel=bsPopupState.selected.indexOf(String(o.value))>-1;
+        return'<div class="bs-option'+(sel?' selected':'')+'" data-value="'+o.value+'">'
+          +'<span class="bs-option-label">'+o.label+(o.tag?'<span class="bs-option-tag">'+o.tag+'</span>':'')+'</span>'
+          +'<span class="bs-check"></span></div>';
+      }).join('');
+    }
+  }
+  var hasConfirm=bsPopupState.mode==='multiple'||!!bsPopupState.contentHtml;
+  if(hasConfirm){
+    footer.style.display='flex';
+    cancel.style.display='block';
+    confirm.style.display='block';
+  }else{
+    footer.style.display=bsPopupState.showCancel?'flex':'none';
+    cancel.style.display='block';
+    confirm.style.display='none';
+  }
+}
+
+function bsPopupOpen(cfg){
+  cfg=cfg||{};
+  bsPopupState={
+    title:cfg.title||'',
+    options:cfg.options||[],
+    mode:cfg.mode||'single',
+    value:cfg.value!=null?cfg.value:null,
+    showCancel:cfg.showCancel!==false,
+    instantConfirm:cfg.instantConfirm!==false,
+    contentHtml:cfg.contentHtml||null,
+    onConfirm:cfg.onConfirm||null,
+    onClose:cfg.onClose||null,
+    selected:[]
+  };
+  if(bsPopupState.mode==='multiple'){
+    bsPopupState.selected=(bsPopupState.value!=null?[].concat(bsPopupState.value):[]).map(String);
+  }else{
+    bsPopupState.selected=bsPopupState.value!=null?[String(bsPopupState.value)]:[];
+  }
+  bsPopupRender();
+  var popup=document.getElementById('bsPopup');
+  popup.style.display='block';
+  requestAnimationFrame(function(){requestAnimationFrame(function(){popup.classList.add('show');});});
+}
+
+function bsPopupClose(){
+  var popup=document.getElementById('bsPopup');
+  if(!popup.classList.contains('show'))return;
+  popup.classList.remove('show');
+  var cb=bsPopupState.onClose||null;
+  setTimeout(function(){
+    popup.style.display='none';
+    if(cb)cb();
+  },300);
+}
+
+function bsPopupConfirm(){
+  var result=bsPopupState.mode==='multiple'?bsPopupState.selected:bsPopupState.selected[0];
+  var cb=bsPopupState.onConfirm||null;
+  if(cb)cb(result);
+  bsPopupClose();
+}
+
+async function openClassPicker(){
+  var gid=document.getElementById('classTrendGrade').value;
+  if(!gid){
+    bsPopupOpen({
+      title:'选择班级',
+      contentHtml:'<div style="text-align:center;padding:30px 0;color:#86909C;font-size:14px">请先选择年级后选择班级</div>'
+    });
+    return;
+  }
+  var classes=await loadClasses(gid);
+  var opts=classes.map(function(c){return{label:c.name,value:c.id,tag:c.type};});
+  if(!opts.length){
+    bsPopupOpen({
+      title:'选择班级',
+      contentHtml:'<div style="text-align:center;padding:30px 0;color:#86909C;font-size:14px">该年级暂无班级</div>'
+    });
+    return;
+  }
+  bsPopupOpen({
+    title:'选择班级',
+    options:opts,
+    value:classTrendId||'',
+    mode:'single',
+    showCancel:true,
+    onConfirm:function(cid){
+      var s=document.getElementById('classTrendClass');
+      s.value=cid;
+      onClassTrendClassChange();
+    }
+  });
+}
+
+/* ====== Init ====== */
+async function init(){
+  await loadGrades();
+  await initExamTab();
+  initClassTabSelectors();
+  bsPopupInit();
+  // Check URL params for deep linking
+  var tab=getParam('tab');
+  if(tab&&['exam','grade','class','student'].indexOf(tab)>=0)switchMainTab(tab);
+}
 init();
 </script>
 </body>

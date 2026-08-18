@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import PhotoBatchBind from '../../components/PhotoBatchBind';
+import AvatarRemove from '../../components/AvatarRemove';
 
 const ROLE_OPTIONS = ['班长','副班长','学习委员','纪律委员','劳动委员','体育委员','文艺委员','生活委员','课代表','组长'];
 
@@ -11,6 +13,7 @@ export default function StudentMgmt() {
   const [classFilter, setClassFilter] = useState('all');
   const [showEdit, setShowEdit] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showPhotoBind, setShowPhotoBind] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
   const [importing, setImporting] = useState(false);
@@ -119,8 +122,11 @@ export default function StudentMgmt() {
           </select>
           <button className="btn btn-primary" onClick={handleSearch}>搜索</button>
           <button className="btn btn-default" onClick={() => { setShowImport(true); setImportFile(null); setImportResult(null); }}>批量导入</button>
+          <button className="btn btn-default" onClick={() => setShowPhotoBind(true)}>批量上传照片</button>
         </div>
       </div>
+
+      <PhotoBatchBind targetType="student" visible={showPhotoBind} onClose={() => setShowPhotoBind(false)} onBound={() => loadData()} />
 
       <div className="card" style={{padding:0}}>
         {students.length === 0 ? <div className="empty-state">暂无学生</div> : (
@@ -141,8 +147,9 @@ export default function StudentMgmt() {
                 <td><span className="tag tag-blue">{s.class_name || getClassName(s.class_id)}</span></td>
                 <td>{s.class_role ? <span className="tag tag-green">{s.class_role}</span> : '-'}</td>
                 <td>{s.phone || '-'}</td>
-                <td style={{display:'flex',gap:8}}>
+                <td style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                   <button className="btn btn-default btn-sm" onClick={() => openEdit(s)}>编辑/调班</button>
+                  {s.photo && <AvatarRemove target="student" id={s.id} onRemoved={loadData} />}
                   <button className="btn btn-danger btn-sm" onClick={() => handleDelete(s.id)}>删除</button>
                 </td>
               </tr>

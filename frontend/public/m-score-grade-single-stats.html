@@ -52,7 +52,7 @@ body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content
 <div class="app">
   <div class="page-header mode-nav">
     <div class="header-top">
-      <button class="back-btn" onclick="history.back()"><span class="back-arrow">&#8249;</span></button>
+      <button class="back-btn" onclick="location.href='m-score-exam-group-list.html'"><span class="back-arrow">&#8249;</span></button>
       <span class="header-label" id="headerTitle">本场统计</span>
       <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
     </div>
@@ -101,7 +101,7 @@ function renderMetrics(){
     +'<div class="mcard"><div class="mcard-val green">'+m.avg_total+'</div><div class="mcard-label">年级平均分</div></div>'
     +'<div class="mcard"><div class="mcard-val">'+m.max_total+'</div><div class="mcard-label">最高分</div></div>'
     +'<div class="mcard"><div class="mcard-val">'+m.min_total+'</div><div class="mcard-label">最低分</div></div>'
-    +'<div class="mcard"><div class="mcard-val green">'+m.pass_rate+'%</div><div class="mcard-label">及格率</div></div>'
+    +'<div class="mcard"><div class="mcard-val green">'+m.pass_rate+'%</div><div class="mcard-label">一般率</div></div>'
     +'<div class="mcard"><div class="mcard-val orange">'+m.excellent_rate+'%</div><div class="mcard-label">优秀率</div></div>'
     +'<div class="mcard"><div class="mcard-val red">'+m.low_rate+'%</div><div class="mcard-label">低分率</div></div>'
     +'</div></div>';
@@ -212,11 +212,8 @@ function renderClasses(){
       +'<td>'+escapeHtml(c.class_name)+'</td>'
       +'<td>'+c.avg_total+'</td>'
       +'<td>'+c.pass_rate+'%</td>'
-      +'<td>'+c.student_count+'人</td>'
-      +'<td>'+badge(c.rank)+'</td>'
-      +'</tr>';
   }).join('');
-  return'<div class="module"><div class="module-title">班级排行</div><div class="class-table-wrap"><table class="class-table"><thead><tr><th>班级</th><th>平均分</th><th>及格率</th><th>人数</th><th>排名</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  return'<div class="module"><div class="module-title">班级排行</div><div class="class-table-wrap"><table class="class-table"><thead><tr><th>班级</th><th>平均分</th><th>一般率</th><th>人数</th><th>排名</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 }
 
 window.addEventListener('resize',function(){drawDistChart();drawSubjChart();});

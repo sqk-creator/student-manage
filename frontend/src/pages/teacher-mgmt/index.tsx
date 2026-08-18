@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import PhotoBatchBind from '../../components/PhotoBatchBind';
+import AvatarRemove from '../../components/AvatarRemove';
 
 const ALL_SUBJECTS = ['语文','数学','英语','物理','化学','生物','政治','历史','地理','体育'];
 
@@ -11,10 +13,11 @@ export default function TeacherMgmt() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number>(0);
-  const [form, setForm] = useState({ name:'', phone:'', photo:'' });
+  const [form, setForm] = useState({ name:'', phone:'', photo:'', employee_no:'' });
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<Record<number,{subjects:string[],is_head:boolean}>>({});
   const [honors, setHonors] = useState<HonorItem[]>([]);
+  const [showPhotoBind, setShowPhotoBind] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -27,7 +30,7 @@ export default function TeacherMgmt() {
 
   const openAdd = () => {
     setEditingId(0);
-    setForm({ name:'', phone:'', photo:'' });
+    setForm({ name:'', phone:'', photo:'', employee_no:'' });
     setSelectedSubjects([]);
     setSelectedClasses({});
     setHonors([]);
@@ -36,7 +39,7 @@ export default function TeacherMgmt() {
 
   const openEdit = (t: any) => {
     setEditingId(t.id);
-    setForm({ name:t.name, phone:t.phone||'', photo:t.photo||'' });
+    setForm({ name:t.name, phone:t.phone||'', photo:t.photo||'', employee_no:t.employee_no||'' });
     setSelectedSubjects(t.subjects ? t.subjects.split(',').filter(Boolean) : []);
     const sc: Record<number,{subjects:string[],is_head:boolean}> = {};
     (t.classes||[]).forEach((c: any) => {
@@ -93,6 +96,7 @@ export default function TeacherMgmt() {
       name: form.name.trim(),
       phone: form.phone,
       photo: form.photo,
+      employee_no: form.employee_no.trim(),
       subjects: selectedSubjects.join(','),
       class_ids,
       class_roles
@@ -150,8 +154,13 @@ export default function TeacherMgmt() {
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
         <div style={{fontSize:14,color:'#666'}}>共 {teachers.length} 位教师</div>
-        <button className="btn btn-primary" onClick={openAdd}>+ 新增教师</button>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-default" onClick={() => setShowPhotoBind(true)}>批量上传照片</button>
+          <button className="btn btn-primary" onClick={openAdd}>+ 新增教师</button>
+        </div>
       </div>
+
+      <PhotoBatchBind targetType="teacher" visible={showPhotoBind} onClose={() => setShowPhotoBind(false)} onBound={() => loadData()} />
 
       {teachers.length === 0 ? (
         <div className="empty-state">暂无教师，请新增</div>
@@ -198,6 +207,7 @@ export default function TeacherMgmt() {
                 </div>
                 <div style={{display:'flex',gap:8,flexShrink:0}}>
                   <button className="btn btn-default btn-sm" onClick={() => openEdit(t)}>编辑</button>
+                  {t.photo && <AvatarRemove target="teacher" id={t.id} onRemoved={loadData} />}
                   <button className="btn btn-danger btn-sm" onClick={() => handleDelete(t.id)}>删除</button>
                 </div>
               </div>
@@ -220,6 +230,11 @@ export default function TeacherMgmt() {
                 <label className="form-label">手机号</label>
                 <input className="form-input" value={form.phone} onChange={e => setForm({...form,phone:e.target.value})} placeholder="请输入手机号" />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">工号（用于照片批量绑定）</label>
+              <input className="form-input" value={form.employee_no} onChange={e => setForm({...form, employee_no: e.target.value})} placeholder="如 T2026001" />
             </div>
 
             <div className="form-group">

@@ -1,0 +1,14 @@
+<view class="sr-bar-wrap">
+  <!-- 等级标签 + 倒三角指示器（空分数时隐藏） -->
+  <view wx:if="{{!hidden}}" class="sr-ind">
+    <view class="sr-tag {{tagClass}}" style="left: {{leftPct}}%; transform: translateX(-50%);">{{label}}</view>
+    <view class="sr-tri" style="left: {{leftPct}}%; transform: translateX(-50%);"></view>
+  </view>
+  <!-- 4 段横向等级色条：等分铺满 -->
+  <view class="sr-bar">
+    <view class="sr-seg seg-fail"></view>
+    <view class="sr-seg seg-pass"></view>
+    <view class="sr-seg seg-good"></view>
+    <view class="sr-seg seg-excellent"></view>
+  </view>
+</view>

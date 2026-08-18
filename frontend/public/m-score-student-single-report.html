@@ -8,38 +8,114 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;min-height:100vh;background:#F1F8F7}
-.app{width:100%;max-width:430px;min-height:100vh;padding-bottom:80px}
+.app{position:relative;z-index:1;width:100%;max-width:430px;min-height:100vh;padding-bottom:80px;background:transparent}
 
-.page-header.mode-nav{background:linear-gradient(to bottom,#B7EAD8,#FFF 40%,#FFF)}
-.page-header.mode-nav .header-label{font-size:16px;font-weight:500}
-.student-hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 10px}
-.hero-photo-wrap{width:80px;height:106px;border-radius:12px;overflow:hidden;margin-bottom:10px;background:linear-gradient(135deg,#BEEFDA,#35B9AA);display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;font-weight:700}
-.hero-photo-wrap img{width:80px;height:106px;object-fit:cover;display:block}
-.hero-name{font-size:22px;font-weight:700;color:#1D2129}
-.hero-meta{font-size:12px;color:#86909C;margin-top:2px;display:flex;gap:8px;align-items:center}
-.hero-meta span{background:#F2F3F5;padding:2px 8px;border-radius:4px}
+/* 页面背景（0~590px 光斑区）：容器 absolute 铺满视口宽度（body 为 flex 容器，
+   relative 会宽度塌缩为 0 导致光斑全被裁切），overflow:hidden + max-height:590px 裁切，
+   光斑只存在页面顶部 0~590px 区间，590px 下方完全无色晕，底色固定 #F1F8F7 */
+.bg-wrapper{position:absolute;left:0;right:0;top:0;width:100%;overflow:hidden;max-height:590px;height:590px;pointer-events:none;z-index:0}
+.soft-spot{position:absolute;border-radius:50%;pointer-events:none;z-index:0}
+
+/* spot1 左上薄荷绿 */
+.spot-1{width:440px;height:440px;background:#A3E4CD;filter:blur(95px);opacity:0.36;top:-110px;left:-80px;animation:flow1 16s ease-in-out infinite alternate}
+/* spot2 右上浅天蓝 */
+.spot-2{width:410px;height:410px;background:#B6E3F7;filter:blur(90px);opacity:0.34;top:-80px;right:-60px;animation:flow2 18s ease-in-out infinite alternate}
+/* spot3 顶部中心亮白提亮层 */
+.spot-3{width:360px;height:270px;background:#F7F9FA;filter:blur(82px);opacity:0.80;top:10px;left:50%;transform:translateX(-50%);animation:flow3 20s ease-in-out infinite alternate}
+/* spot4 左中部暖色鹅黄（核心区分色块） */
+.spot-4{width:300px;height:300px;background:#FFEE99;filter:blur(88px);opacity:0.26;top:120px;left:-10px;animation:flow4 22s ease-in-out infinite alternate}
+/* spot5 右中部湖青色 */
+.spot-5{width:320px;height:320px;background:#AEDBEA;filter:blur(92px);opacity:0.32;top:140px;right:-20px;animation:flow5 24s ease-in-out infinite alternate}
+/* spot6 中心偏右暖杏黄（第二暖色区分块） */
+.spot-6{width:220px;height:220px;background:#F7F9FA;filter:blur(75px);opacity:0.94;top:180px;left:24%;animation:flow6 26s ease-in-out infinite alternate}
+/* spot7 中右侧嫩草绿 */
+.spot-7{width:280px;height:280px;background:#B6E8C9;filter:blur(86px);opacity:0.30;top:220px;right:14%;animation:flow7 28s ease-in-out infinite alternate}
+/* spot8 靠近590px底线右下浅草绿 */
+.spot-8{width:240px;height:240px;background:#F7F9FA;filter:blur(84px);opacity:0.93;top:180px;right:18%;animation:flow8 30s ease-in-out infinite alternate}
+
+/* 8 个独立动画，禁止共用；移动幅度 ±16~26px 微小浮动 */
+@keyframes flow1{0%{transform:translate(0,0);}100%{transform:translate(26px,18px);}}
+@keyframes flow2{0%{transform:translate(0,0);}100%{transform:translate(-22px,20px);}}
+@keyframes flow3{0%{transform:translateX(-50%) translate(0,0);}100%{transform:translateX(-50%) translate(16px,-22px);}}
+@keyframes flow4{0%{transform:translate(0,0);}100%{transform:translate(-24px,22px);}}
+@keyframes flow5{0%{transform:translate(0,0);}100%{transform:translate(22px,-18px);}}
+@keyframes flow6{0%{transform:translate(0,0);}100%{transform:translate(18px,24px);}}
+@keyframes flow7{0%{transform:translate(0,0);}100%{transform:translate(-20px,-22px);}}
+@keyframes flow8{0%{transform:translate(0,0);}100%{transform:translate(-24px,16px);}}
+
+.page-header.mode-nav{background:#fff}
+.page-header.mode-nav .header-top{margin-bottom:0;padding:0 0 14px}
+
+/* Header student info (top bar, right of back arrow) */
+.stu-info{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.stu-avatar{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#BEEFDA,#35B9AA);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px}
+.stu-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.stu-lines{min-width:0;flex:1}
+.stu-line1{display:flex;align-items:center;gap:6px;min-width:0}
+.stu-name{font-size:16px;font-weight:600;color:#1D2129;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stu-role{flex-shrink:0;font-size:12px;font-weight:600;color:#14A89A;background:rgba(20,168,154,.1);padding:2px 6px;border-radius:8px}
+.stu-line2{font-size:12px;color:#86909C;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Exam head */
+.exam-head{display:flex;align-items:center;gap:14px;padding:16px 24px;background:linear-gradient(180deg, rgb(255, 255, 255), rgb(255, 255, 255, .7), rgb(255, 255, 255, .4), transparent);margin-top:1px;cursor:pointer}
+.exam-head:active{opacity:.85}
+.exam-name{flex:none;display:flex;align-items:center;justify-content:center}
+.exam-name .exam-ico{width:46px;height:46px;flex:none;display:block}
+.exam-info{min-width:0;flex:1}
+.exam-title{font-size:18px;font-weight:600;color:#1D2129;line-height:1.3}
+.exam-info-row{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px}
+.exam-info-item{min-width:0}
+.exam-info-val{font-size:13px;color:#86909C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exam-arrow{flex:none;display:flex;align-items:center;justify-content:center;width:24px;height:24px;color:#86909C}
+.exam-arrow::after{content:'';display:block;width:8px;height:8px;border-right:2px solid #86909C;border-bottom:2px solid #86909C;transform:rotate(45deg);margin-top:-4px}
 
 .module{padding:12px 16px}
 .module-title{font-size:16px;font-weight:700;color:#1D2129;margin-bottom:12px;padding-left:6px;border-left:3px solid #14A89A}
 
 /* Module 1: Summary Card */
-.summary-card{background:#fff;border-radius:14px;padding:20px 16px;box-shadow:0 2px 6px rgba(0,0,0,.04);text-align:center}
-.total-score{font-size:52px;font-weight:800;color:#14A89A;line-height:1}
-.total-score-sm{font-size:14px;color:#86909C;font-weight:400}
-.score-level{display:inline-block;font-size:14px;font-weight:600;padding:4px 14px;border-radius:12px;margin-top:6px}
+.ring-wrap{position:relative;width:300px;height:300px;margin:-30px auto -5px;display:flex;align-items:center;justify-content:center}
+.ring-svg{width:300px;height:300px;display:block;background:transparent;overflow:visible}
+.ring-svg path{stroke-linecap:round;stroke-linejoin:round}
+/* 主环：0.72~0.88 呼吸动画（基线 0.8，通透可见背景）；butt 线帽保证段间无缝 */
+.ring-svg .ring-progress{opacity:.8;animation:ring-breathe 7s ease-in-out infinite alternate;stroke-linecap:butt;stroke-linejoin:round}
+/* 外圈宽幅虚光环：完整圆，比主环大16px，blur2 已在 SVG filter，固定 0.16 柔亮弥散 */
+.ring-svg .ring-halo{opacity:.16}
+/* 轨道：浅薄荷灰托底 */
+.ring-svg .ring-track{opacity:.9}
+/* 内外圆完整边线：百分百白色细线 */
+.ring-svg .ring-in-circle{opacity:1}
+.ring-svg .ring-out-circle{opacity:1}
+/* 内外圆细白发光：1px 轻微 blur，向内/向外弥散 */
+.ring-svg .ring-in-glow{opacity:.8}
+.ring-svg .ring-out-glow{opacity:.8}
+@keyframes ring-breathe{from{opacity:.72}to{opacity:.88}}
+.ring-center{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.ring-num-row{display:flex;align-items:baseline;line-height:1;transform:scaleY(1.2)}
+.ring-total{font-size:52px;font-weight:800;color:#14A89A;line-height:1}
+.ring-total-dec{font-size:26px;font-weight:800;color:#14A89A;line-height:1}
+.ring-rate{font-size:18px;color:#666;margin-top:12px;font-weight:600}
+.score-level{display:inline-block;font-size:16px;font-weight:600;padding:6px 18px;border-radius:12px}
 .level-excellent{background:rgba(20,168,154,.1);color:#14A89A}
 .level-good{background:rgba(20,168,154,.08);color:#0B6D55}
 .level-pass{background:rgba(255,143,90,.08);color:#FF8F5A}
 .level-fail{background:rgba(255,92,74,.08);color:#FF5C4A}
-.summary-meta{display:flex;justify-content:center;gap:24px;margin-top:14px;flex-wrap:wrap}
-.meta-item{text-align:center}
-.meta-label{font-size:11px;color:#86909C}
-.meta-val{font-size:16px;font-weight:700;color:#1D2129}
-.meta-val.green{color:#14A89A}
+.level-card{margin-top:16px;background:#F7FCFB;border-radius:12px;padding:14px}
+.level-card .score-level{font-size:18px;padding:7px 22px}
+
+/* Rank cards */
+.rank-cards{display:flex;gap:10px;margin-top:14px}
+.rank-card{flex:1;background:rgba(255,255,255,.82);border-radius:14px;padding:14px 12px;box-shadow:0 2px 6px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.rank-left{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.rank-label{font-size:11px;color:#86909C}
+.rank-num-row{display:flex;align-items:baseline;margin-top:6px;white-space:nowrap}
+.rank-num{font-size:24px;font-weight:700;color:#1D2129;line-height:1}
+.rank-total{font-size:16px;color:#86909C;margin-left:4px;white-space:nowrap}
+.rank-right{flex-shrink:0}
+.cb-spark{width:86px;height:36px;display:block}
 
 /* Module 2: Table */
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.subj-table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.04);font-size:13px;table-layout:fixed}
+.subj-table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.82);border-radius:14px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.04);font-size:13px;table-layout:fixed}
 .subj-table thead th{background:#F1F8F7;color:#1D2129;font-weight:600;padding:10px 8px;border-bottom:1px solid #E5E6EB;text-align:center;overflow:hidden;text-overflow:ellipsis}
 .subj-table tbody td{padding:10px 8px;text-align:center;border-bottom:1px solid #F2F3F5;color:#4E5969;overflow:hidden;text-overflow:ellipsis}
 .subj-table tbody td:first-child{color:#1D2129;font-weight:500}
@@ -48,7 +124,7 @@ body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content
 .score-low{color:#FF5C4A}
 
 /* Module 3: Analysis */
-.analysis-card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.analysis-card{background:rgba(255,255,255,.82);border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
 .analysis-row{margin-bottom:12px}
 .analysis-row:last-child{margin-bottom:0}
 .analysis-label{font-size:13px;font-weight:600;color:#1D2129;margin-bottom:6px}
@@ -68,19 +144,68 @@ body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content
 .empty-state{text-align:center;padding:60px 20px;color:#86909C;font-size:14px}
 .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
 .loading{text-align:center;padding:40px;color:#86909C;font-size:14px}
+
+/* ====== 通用底部选择弹窗组件 BottomSelectPopup ====== */
+.bs-popup{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:1000}
+.bs-popup-mask{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:opacity .3s ease}
+.bs-popup.show .bs-popup-mask{opacity:1}
+.bs-popup-sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;max-height:70vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s ease;padding-bottom:env(safe-area-inset-bottom)}
+.bs-popup.show .bs-popup-sheet{transform:translateY(0)}
+.bs-popup-handle{width:36px;height:4px;border-radius:2px;background:#E5E6EB;margin:10px auto 0;flex-shrink:0}
+.bs-popup-title{font-size:16px;font-weight:700;color:#1D2129;text-align:center;padding:14px 16px 10px;flex-shrink:0}
+.bs-popup-body{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0}
+.bs-popup-content{padding:4px 16px 12px}
+.bs-popup-footer{display:flex;gap:12px;padding:12px 16px;flex-shrink:0;border-top:1px solid #F2F3F5}
+.bs-popup-btn{flex:1;padding:12px 0;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer}
+.bs-popup-btn.bs-cancel{background:#F2F3F5;color:#4E5969}
+.bs-popup-btn.bs-confirm{background:#14A89A;color:#fff}
+.bs-option{display:flex;align-items:center;justify-content:space-between;padding:14px 12px;font-size:15px;color:#1D2129;border-radius:10px;cursor:pointer}
+.bs-option:active{background:#F7F8FA}
+.bs-option.selected{color:#14A89A;font-weight:600}
+.bs-option .bs-check{width:18px;height:18px;border-radius:50%;border:1.5px solid #D8DCE0;flex-shrink:0;box-sizing:border-box}
+.bs-option-label{display:flex;align-items:center;gap:8px;min-width:0}
+.bs-option-tag{font-size:11px;color:#14A89A;background:rgba(20,168,154,.1);padding:2px 8px;border-radius:8px;font-weight:500;flex-shrink:0}
+.bs-option.selected .bs-check{border-color:#14A89A;background:#14A89A;position:relative}
+.bs-option.selected .bs-check::after{content:'';position:absolute;left:5px;top:2px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.bs-option-sub{display:block;font-size:12px;color:#86909C;font-weight:400;margin-top:3px}
 </style>
 </head>
 <body>
+<div class="bg-wrapper" aria-hidden="true">
+  <i class="soft-spot spot-1"></i>
+  <i class="soft-spot spot-2"></i>
+  <i class="soft-spot spot-3"></i>
+  <i class="soft-spot spot-4"></i>
+  <i class="soft-spot spot-5"></i>
+  <i class="soft-spot spot-6"></i>
+  <i class="soft-spot spot-7"></i>
+  <i class="soft-spot spot-8"></i>
+</div>
 <div class="app">
   <div class="page-header mode-nav">
     <div class="header-top">
       <button class="back-btn" onclick="history.back()"><span class="back-arrow">&#8249;</span></button>
-      <span class="header-label">成绩单</span>
+      <div class="stu-info" id="stuInfo"></div>
       <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
     </div>
-    <div class="student-hero" id="studentHero"></div>
   </div>
   <div id="pageContent"><div class="loading">加载中...</div></div>
+</div>
+
+<!-- ====== 通用底部选择弹窗组件 BottomSelectPopup ====== -->
+<div class="bs-popup" id="bsPopup" style="display:none">
+  <div class="bs-popup-mask" id="bsPopupMask"></div>
+  <div class="bs-popup-sheet" id="bsPopupSheet">
+    <div class="bs-popup-handle"></div>
+    <div class="bs-popup-title" id="bsPopupTitle" style="display:none"></div>
+    <div class="bs-popup-body">
+      <div class="bs-popup-content" id="bsPopupContent"></div>
+    </div>
+    <div class="bs-popup-footer" id="bsPopupFooter">
+      <button class="bs-popup-btn bs-cancel" id="bsPopupCancel">取消</button>
+      <button class="bs-popup-btn bs-confirm" id="bsPopupConfirm">确定</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -88,26 +213,39 @@ var data=null;
 
 function getParam(k){return new URLSearchParams(location.search).get(k);}
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function examTypeLabel(t){if(t==='comprehensive')return'综合考试';if(t==='liberal_arts')return'文科考试';if(t==='science')return'理科考试';return t||'-';}
 
-async function init(){
-  var sid=getParam('student_id'),gid=getParam('group_id');
-  if(!sid||!gid){renderError('缺少参数');return;}
+var curSid=null,curGid=null;
+
+async function loadReport(sid,gid){
+  curSid=sid;curGid=gid;
   try{
     var r=await fetch('/api/public/student-single-report?student_id='+sid+'&group_id='+gid);
     if(!r.ok){renderError('数据加载失败');return;}
     data=await r.json();
-    renderHero();
+    renderTopInfo();
     render();
+    history.replaceState(null,'','?student_id='+sid+'&group_id='+gid);
   }catch(e){renderError('网络异常');}
 }
 
-function renderHero(){
+async function init(){
+  var sid=getParam('student_id'),gid=getParam('group_id');
+  if(!sid||!gid){renderError('缺少参数');return;}
+  bsPopupInit();
+  await loadReport(sid,gid);
+}
+
+function renderTopInfo(){
   var s=data.student;
-  var ph=s.photo?'<img src="'+s.photo+'" alt="">':s.name.charAt(0);
-  document.getElementById('studentHero').innerHTML=
-    '<div class="hero-photo-wrap">'+ph+'</div>'
-    +'<div class="hero-name">'+escapeHtml(s.name)+'</div>'
-    +'<div class="hero-meta"><span>'+escapeHtml(s.class_name||'')+'</span><span>'+escapeHtml(s.grade_name||'')+'</span><span>学号 '+escapeHtml(s.student_no||'')+'</span></div>';
+  var ph=s.photo?'<img src="'+s.photo+'" alt="">':escapeHtml((s.name||'?').charAt(0));
+  var roleHtml=s.class_role?'<span class="stu-role">'+escapeHtml(s.class_role)+'</span>':'';
+  document.getElementById('stuInfo').innerHTML=
+    '<div class="stu-avatar">'+ph+'</div>'
+    +'<div class="stu-lines">'
+    +'<div class="stu-line1"><span class="stu-name">'+escapeHtml(s.name)+'</span>'+roleHtml+'</div>'
+    +'<div class="stu-line2">'+escapeHtml(s.class_name||'')+(s.student_no?' · '+escapeHtml(s.student_no):'')+'</div>'
+    +'</div>';
 }
 
 function renderError(msg){
@@ -117,25 +255,288 @@ function renderError(msg){
 function render(){
   if(!data)return;
   var html='';
+  html+=renderExamHead();
   html+=renderSummary();
   html+=renderTable();
   html+=renderAnalysis();
   html+=renderButton();
   document.getElementById('pageContent').innerHTML=html;
+  setTimeout(function(){drawRankSparks();animateRing();},60);
+}
+
+/* Exam head */
+function renderExamHead(){
+  var g=data.group;
+  return'<div class="exam-head" onclick="openExamPicker()">'
+    +'<div class="exam-name"><img class="exam-ico" src="imgs/decor/student-exam.png" alt=""/></div>'
+    +'<div class="exam-info">'
+    +'<div class="exam-title">'+escapeHtml(g.group_name)+'</div>'
+    +'<div class="exam-info-row">'
+    +'<div class="exam-info-item"><div class="exam-info-val">'+escapeHtml(examTypeLabel(g.exam_type))+'</div></div>'
+    +'<div class="exam-info-item"><div class="exam-info-val">'+data.subjects.length+'科</div></div>'
+    +'<div class="exam-info-item"><div class="exam-info-val">'+(data.summary.exam_total||'-')+'人</div></div>'
+    +'<div class="exam-info-item"><div class="exam-info-val">'+escapeHtml(g.exam_date||'-')+'</div></div>'
+    +'</div></div>'
+    +'<div class="exam-arrow"></div>'
+    +'</div>';
 }
 
 /* Module 1 */
+/* ---- 圆环（竖向椭圆环，多层 SVG 叠加） ----
+   结构：内侧圆（完整圆）→ 外侧圆（完整圆）→ 内外两圆之间形成圆环带，弧形进度条严格控制在此环带内
+    进度条渐变沿弧线方向（非对称）：起始位置（顶部）完全透明 → 顺时针 → 白色 → 白色高光 → 薄荷绿 → 青色 → 蓝绿色 → 深蓝 → 浅蓝（分段弧线近似）
+    椭圆比例宽:高 = 1:1.1（rx:ry = 110:121），坐标系 336x336 四周预留 blur 弥散不被裁切
+    白色发光（非进度条边线）：内圆一层 3px 细白发光向内，外圆一层 6px 细白发光向外，轻微 blur
+    外圈虚光环：紧接外圆白发光之外，比主圆环大 16px，宽度 42 宽幅，渐变与主环一致，opacity .16 + blur2 柔亮弥散（完整圆，不随进度） */
+var RING_CX=168,RING_CY=168;
+var RING_TRACK={rx:110,ry:121,w:26};
+var RING_HALO={rx:126,ry:139,w:42};
+var RING_MAIN={rx:110,ry:121,w:24};
+var RING_CIRC_IN={rx:98,ry:108,w:1};
+var RING_CIRC_OUT={rx:122,ry:134,w:3};
+var RING_IGLOW={rx:95,ry:105,w:3};
+var RING_OGLOW={rx:125,ry:137,w:6};
+/* 椭圆路径：起点在顶部，顺时针走完整圈，配合 dashoffset 从顶部开始收缩 */
+function ellipsePath(r){return'M'+RING_CX+' '+(RING_CY-r.ry).toFixed(1)+' A'+r.rx+' '+r.ry+' 0 1 1 '+RING_CX+' '+(RING_CY+r.ry).toFixed(1)+' A'+r.rx+' '+r.ry+' 0 1 1 '+RING_CX+' '+(RING_CY-r.ry).toFixed(1);}
+/* 拉马努金椭圆周长近似 */
+function ellipseLen(r){var a=r.rx,b=r.ry;return Math.PI*(3*(a+b)-Math.sqrt((3*a+b)*(a+3*b)));}
+
+/* ---- 进度条沿弧线渐变（非对称）----
+    起点（顶部，顺时针方向起始处）完全透明 → 白色 → 白色高光 → 薄荷绿 → 青色 → 蓝绿色 → 深蓝 → 浅蓝
+    拆分为 RING_PROG_SEGS 段弧，每段一个插值色，每段 butt 平头 + 尾部重叠 ov 无缝衔接，共同受 dasharray 控制进度（显示区从顶部顺时针延伸）；
+    末段由 setRingProgress 动态设为 round linecap 并置底（起点半圆被前段覆盖、末端半圆朝进度外凸出），形成唯一末端圆头 */
+var RING_PROG_SEGS=180;
+var RING_PROG_STOPS=[
+  [0.00,[255,255,255,0]],     /* 完全透明（起始位置） */
+  [0.05,[255,255,255,0.55]],  /* 白色 */
+  [0.10,[255,255,255,0.95]],  /* 白色高光 */
+  [0.18,[223,245,243,1]],     /* 薄荷绿 #DFF5F3 */
+  [0.30,[163,228,205,1]],     /* 薄荷绿 #A3E4CD */
+  [0.42,[56,184,194,1]],      /* 青色 #38B8C2 */
+  [0.55,[43,176,181,1]],      /* 蓝绿色 */
+  [0.68,[27,159,168,1]],      /* 蓝绿色 */
+  [0.80,[27,111,216,1]],      /* 深蓝 */
+  [0.90,[59,130,232,1]],      /* 深蓝 */
+  [1.00,[82,169,248,1]]       /* 浅蓝 #52A9F8 */
+];
+function progColor(t){
+  t=Math.max(0,Math.min(1,t));
+  for(var i=0;i<RING_PROG_STOPS.length-1;i++){
+    var a=RING_PROG_STOPS[i],b=RING_PROG_STOPS[i+1];
+    if(t>=a[0]&&t<=b[0]){
+      var f=(b[0]===a[0])?0:(t-a[0])/(b[0]-a[0]);
+      return 'rgba('+Math.round(a[1][0]+(b[1][0]-a[1][0])*f)+','+Math.round(a[1][1]+(b[1][1]-a[1][1])*f)+','+Math.round(a[1][2]+(b[1][2]-a[1][2])*f)+','+(a[1][3]+(b[1][3]-a[1][3])*f).toFixed(3)+')';
+    }
+  }
+  var e=RING_PROG_STOPS[RING_PROG_STOPS.length-1][1];
+  return 'rgba('+e[0]+','+e[1]+','+e[2]+','+e[3]+')';
+}
+function ringPointAt(r,ang){
+  var t=ang*Math.PI/180;
+  return{x:RING_CX+r.rx*Math.cos(t),y:RING_CY+r.ry*Math.sin(t)};
+}
+function ringArcLen(r,a1,a2){
+  var n=Math.max(8,Math.round(Math.abs(a2-a1)*4));
+  var len=0,p=ringPointAt(r,a1);
+  for(var i=1;i<=n;i++){
+    var q=ringPointAt(r,a1+(a2-a1)*i/n);
+    len+=Math.sqrt((q.x-p.x)*(q.x-p.x)+(q.y-p.y)*(q.y-p.y));
+    p=q;
+  }
+  return len;
+}
+function ringSegPath(r,a1,a2){
+  var p=ringPointAt(r,a1),q=ringPointAt(r,a2);
+  return 'M'+p.x.toFixed(2)+' '+p.y.toFixed(2)+' A'+r.rx+' '+r.ry+' 0 '+((Math.abs(a2-a1)>180)?1:0)+' 1 '+q.x.toFixed(2)+' '+q.y.toFixed(2);
+}
+function buildProgSegs(){
+  var segs=[],s=0,step=360/RING_PROG_SEGS;
+  var ov=0.2, tail=8;
+  for(var i=0;i<RING_PROG_SEGS;i++){
+    var a1=-90+i*step,a2=a1+step;
+    var l=ringArcLen(RING_MAIN,a1,a2);
+    var lt=ringArcLen(RING_MAIN,a1,a2+ov);
+    var L=ringArcLen(RING_MAIN,a1,a2+tail);
+    var p1=ringPointAt(RING_MAIN,a1),p2=ringPointAt(RING_MAIN,a2);
+    segs.push({s:s,l:l,lt:lt,L:L,a1:a1,a2:a2,path:ringSegPath(RING_MAIN,a1,a2+tail),x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,c0:progColor(i/RING_PROG_SEGS),c1:progColor((i+1)/RING_PROG_SEGS)});
+    s+=l;
+  }
+  return segs;
+}
+
+function buildRingSvg(){
+  var progSegs=buildProgSegs();
+  window._progSegs=progSegs;
+  return '<defs>'
+    /* 主渐变：左上白色高亮 → 薄荷绿 → 青色 → 浅蓝（主环与虚光环共用） */
+    +'<linearGradient id="ringGrad" x1="50%" y1="0%" x2="50%" y2="100%">'
+    +'<stop offset="0%" stop-color="rgba(255,255,255,0.85)"/>'
+    +'<stop offset="16%" stop-color="#DFF5F3"/>'
+    +'<stop offset="38%" stop-color="#A3E4CD"/>'
+    +'<stop offset="64%" stop-color="#38B8C2"/>'
+    +'<stop offset="100%" stop-color="#52A9F8"/>'
+    +'</linearGradient>'
+    /* 进度条分段渐变：每段从段起点颜色平滑过渡到段终点颜色，相邻段边界颜色一致实现无缝衔接 */
+    +progSegs.map(function(g,i){
+      return '<linearGradient id="progGrad'+i+'" gradientUnits="userSpaceOnUse" x1="'+g.x1.toFixed(2)+'" y1="'+g.y1.toFixed(2)+'" x2="'+g.x2.toFixed(2)+'" y2="'+g.y2.toFixed(2)+'">'
+        +'<stop offset="0%" stop-color="'+g.c0+'"/>'
+        +'<stop offset="100%" stop-color="'+g.c1+'"/>'
+        +'</linearGradient>';
+    }).join('')
+    /* 白发光 blur（轻微，细 3px 弥散） */
+    +'<filter id="ringGlowBlur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3"/></filter>'
+    /* 虚光环 blur（柔亮弥散，轻微虚化） */
+    +'<filter id="ringHaloBlur" x="-90%" y="-90%" width="280%" height="280%"><feGaussianBlur stdDeviation="2"/></filter>'
+    +'</defs>'
+    /* ① 底层浅色半透明轨道（完整椭圆，托底环带，不随进度） */
+    +'<path class="ring-track" d="'+ellipsePath(RING_TRACK)+'" fill="none" stroke="rgba(232,243,241,0.65)" stroke-width="'+RING_TRACK.w+'"/>'
+    /* ② 外圈宽幅半透明渐变虚光环（完整椭圆，紧接外圆白发光之外，blur6 弥散，不随进度） */
+    +'<path class="ring-halo" d="'+ellipsePath(RING_HALO)+'" fill="none" stroke="url(#ringGrad)" stroke-width="'+RING_HALO.w+'" filter="url(#ringHaloBlur)"/>'
+    /* ③ 外侧圆细白发光：完整圆 3px 白发光，向外弥散 */
+    +'<path class="ring-out-glow" d="'+ellipsePath(RING_OGLOW)+'" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="'+RING_OGLOW.w+'" filter="url(#ringGlowBlur)"/>'
+    /* ④ 外侧圆（完整圆）：细白边线 */
+    +'<path class="ring-out-circle" d="'+ellipsePath(RING_CIRC_OUT)+'" fill="none" stroke="rgba(255,255,255,1)" stroke-width="'+RING_CIRC_OUT.w+'"/>'
+    /* ⑤ 内侧圆（完整圆）：细白边线 */
+    +'<path class="ring-in-circle" d="'+ellipsePath(RING_CIRC_IN)+'" fill="none" stroke="rgba(255,255,255,1)" stroke-width="'+RING_CIRC_IN.w+'"/>'
+    /* ⑥ 内侧圆细白发光：完整圆 3px 白发光，向内弥散 */
+    +'<path class="ring-in-glow" d="'+ellipsePath(RING_IGLOW)+'" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="'+RING_IGLOW.w+'" filter="url(#ringGlowBlur)"/>'
+    /* ⑦ 弧形进度条：沿弧线渐变（起点透明→顺时针→浅蓝），每段 butt 平头 + dasharray 控制可见长度，段尾重叠 ov 无缝衔接；末端圆头由 ring-prog-cap（circle 置于进度段之下，上半被带覆盖仅露出凸出半圆）形成，颜色与带末端一致 */
+    +'<g>'
+    +'<circle class="ring-prog-cap" cx="168" cy="168" r="'+(RING_MAIN.w/2)+'" fill="rgba(255,255,255,0)"/>'
+    +progSegs.map(function(g,i){
+      return '<path class="ring-progress" d="'+g.path+'" fill="none" stroke="url(#progGrad'+i+')" stroke-width="'+RING_MAIN.w+'" stroke-linecap="butt" stroke-dasharray="0 '+g.L.toFixed(2)+'"/>';
+    }).join('')
+    +'</g>';
+}
+
 function renderSummary(){
   var s=data.summary;
   var lvlClass=s.score_rate>=90?'level-excellent':(s.score_rate>=80?'level-good':(s.score_rate>=60?'level-pass':'level-fail'));
-  return'<div class="module"><div class="module-title">本场总分</div>'
-    +'<div class="summary-card">'
-    +'<div class="total-score">'+s.total_score+'<span class="total-score-sm"> / '+s.max_score+'</span></div>'
-    +'<div class="'+lvlClass+' score-level">'+s.level+' · 得分率 '+s.score_rate+'%</div>'
-    +'<div class="summary-meta">'
-    +'<div class="meta-item"><div class="meta-label">班级排名</div><div class="meta-val green">'+(s.class_rank||'-')+'<span style="font-size:11px;color:#86909C;font-weight:400">/'+s.class_total+'</span></div></div>'
-    +'<div class="meta-item"><div class="meta-label">年级排名</div><div class="meta-val">'+(s.grade_rank||'-')+'<span style="font-size:11px;color:#86909C;font-weight:400">/'+s.grade_total+'</span></div></div>'
-    +'</div></div>';
+  var clsTrend=buildTrend(data.rank_trend,'class_rank');
+  var grdTrend=buildTrend(data.rank_trend,'grade_rank');
+  return'<div class="module">'
+    +'<div class="ring-wrap">'
+    +'<svg class="ring-svg" viewBox="0 0 336 336">'+buildRingSvg()+'</svg>'
+    +'<div class="ring-center">'
+    +'<div class="ring-num-row"><span class="ring-total" id="ringTotal">0</span><span class="ring-total-dec" id="ringTotalDec"></span></div>'
+    +'<div class="ring-rate">满分 '+s.max_score+'</div>'
+    +'</div>'
+    +'</div>'
+    +'<div class="level-card"><span class="'+lvlClass+' score-level">'+escapeHtml(s.level)+' · 得分率 '+s.score_rate+'%</span></div>'
+    +'<div class="rank-cards">'
+    +'<div class="rank-card">'
+    +'<div class="rank-left"><div class="rank-label">班排名</div><div class="rank-num-row"><span class="rank-num">'+(s.class_rank||'-')+'</span><span class="rank-total">/ '+s.class_total+'</span></div></div>'
+    +'<div class="rank-right"><canvas class="cb-spark" data-trend="'+escapeHtml(JSON.stringify(clsTrend))+'"></canvas></div>'
+    +'</div>'
+    +'<div class="rank-card">'
+    +'<div class="rank-left"><div class="rank-label">级排名</div><div class="rank-num-row"><span class="rank-num">'+(s.grade_rank||'-')+'</span><span class="rank-total">/ '+s.grade_total+'</span></div></div>'
+    +'<div class="rank-right"><canvas class="cb-spark" data-trend="'+escapeHtml(JSON.stringify(grdTrend))+'"></canvas></div>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
+/* Ring progress: 每段弧用 dasharray 控制可见长度（butt 平头，段尾重叠 ov 无缝）；末段动态 round linecap 并置底形成唯一末端圆头 */
+function angleForArcLen(r,L){
+  var lo=-90,hi=270;
+  for(var i=0;i<40;i++){
+    var mid=(lo+hi)/2;
+    if(ringArcLen(r,-90,mid)<L)lo=mid;else hi=mid;
+  }
+  return (lo+hi)/2;
+}
+function setRingProgress(pct){
+  pct=Math.min(100,Math.max(0,pct||0));
+  var segs=window._progSegs;
+  var els=document.querySelectorAll('.ring-progress');
+  if(!segs||!els.length)return;
+  var total=ringArcLen(RING_MAIN,-90,270);
+  var D=total*pct/100;
+  var ang=angleForArcLen(RING_MAIN,Math.min(D,total));
+  var step=360/RING_PROG_SEGS;
+  var k=Math.ceil((ang+90)/step)-1;
+  if(k<0)k=0;
+  if(k>segs.length-1)k=segs.length-1;
+  for(var i=0;i<segs.length;i++){
+    var g=segs[i];
+    var d;
+    if(ang<=g.a1)d=0;
+    else if(ang>=g.a2)d=g.lt;
+    else d=ringArcLen(RING_MAIN,g.a1,ang);
+    els[i].setAttribute('stroke-dasharray',d.toFixed(2)+' '+(g.L-d).toFixed(2));
+  }
+  var capEl=document.querySelector('.ring-prog-cap');
+  if(capEl){
+    var p=ringPointAt(RING_MAIN,ang);
+    capEl.setAttribute('cx',p.x.toFixed(2));
+    capEl.setAttribute('cy',p.y.toFixed(2));
+    capEl.setAttribute('fill',progColor((ang+90)/360));
+  }
+}
+
+function animateRing(){
+  var s=data.summary;
+  var rate=Math.min(100,Math.max(0,s.score_rate||0));
+  var targetNum=s.total_score||0;
+  var numEl=document.getElementById('ringTotal');
+  var decEl=document.getElementById('ringTotalDec');
+  var t0=performance.now(),dur=1200;
+  function frame(t){
+    var p=Math.min(1,(t-t0)/dur);
+    var eased=1-Math.pow(1-p,3);
+    setRingProgress(rate*eased);
+    var v=targetNum*eased;
+    if(numEl)numEl.textContent=Math.floor(v);
+    if(decEl)decEl.textContent='.'+Math.round((v-Math.floor(v))*10);
+    if(p<1)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* Convert rank trend (lower is better) into an up-is-good series for the sparkline */
+function buildTrend(trend,key){
+  var ranks=(trend||[]).map(function(t){return t[key];}).filter(function(v){return v!==null&&v>0;});
+  if(!ranks.length)return[];
+  var maxRank=Math.max.apply(null,ranks);
+  return ranks.map(function(r){return maxRank+1-r;});
+}
+
+function drawRankSparks(){
+  document.querySelectorAll('.cb-spark').forEach(function(cv){
+    var arr;
+    try{arr=JSON.parse(cv.getAttribute('data-trend')||'[]');}catch(e){arr=[];}
+    if(!arr.length)return;
+    var rect=cv.getBoundingClientRect();
+    var dpr=window.devicePixelRatio||1;
+    var W=rect.width,H=rect.height;
+    if(W<1||H<1)return;
+    cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+    var ctx=cv.getContext('2d');
+    ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,W,H);
+    var min=Math.min.apply(null,arr),max=Math.max.apply(null,arr);
+    var span=max-min||1;
+    var padX=4,padTop=4,padBottom=14;
+    var xs=arr.map(function(_,i){return arr.length>1?padX+i*(W-2*padX)/(arr.length-1):W/2;});
+    var ys=arr.map(function(v){return padTop+(max-v)/span*(H-padTop-padBottom);});
+    var grad=ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'rgba(20,168,154,0.45)');
+    grad.addColorStop(1,'rgba(20,168,154,0)');
+    ctx.beginPath();
+    ctx.moveTo(xs[0],H);
+    xs.forEach(function(x,i){ctx.lineTo(x,ys[i]);});
+    ctx.lineTo(xs[xs.length-1],H);
+    ctx.closePath();
+    ctx.fillStyle=grad;
+    ctx.fill();
+    ctx.beginPath();
+    xs.forEach(function(x,i){i===0?ctx.moveTo(x,ys[i]):ctx.lineTo(x,ys[i]);});
+    ctx.strokeStyle='#14A89A';
+    ctx.lineWidth=2;
+    ctx.lineJoin='round';
+    ctx.lineCap='round';
+    ctx.stroke();
+  });
 }
 
 /* Module 2 */
@@ -187,6 +588,156 @@ function renderAnalysis(){
 /* Module 4 */
 function renderButton(){
   return'<div class="module"><button class="btn-full btn-primary" onclick="location.href=\'m-score-student-history.html?student_id='+data.student.id+'\'">查看全部历史统考</button></div>';
+}
+
+/* ====== 通用底部选择弹窗组件 BottomSelectPopup ====== */
+var bsPopupState={};
+
+function bsPopupInit(){
+  var content=document.getElementById('bsPopupContent');
+  var mask=document.getElementById('bsPopupMask');
+  var cancel=document.getElementById('bsPopupCancel');
+  var confirm=document.getElementById('bsPopupConfirm');
+  content.addEventListener('click',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('.bs-option'):null;
+    if(!el)return;
+    var v=el.getAttribute('data-value');
+    if(bsPopupState.mode==='multiple'){
+      var i=bsPopupState.selected.indexOf(v);
+      if(i>-1)bsPopupState.selected.splice(i,1);else bsPopupState.selected.push(v);
+      bsPopupRender();
+    }else{
+      bsPopupState.selected=[v];
+      bsPopupRender();
+      if(bsPopupState.instantConfirm)bsPopupConfirm();
+    }
+  });
+  mask.addEventListener('click',bsPopupClose);
+  cancel.addEventListener('click',bsPopupClose);
+  confirm.addEventListener('click',bsPopupConfirm);
+}
+
+function bsPopupRender(){
+  var title=document.getElementById('bsPopupTitle');
+  var content=document.getElementById('bsPopupContent');
+  var footer=document.getElementById('bsPopupFooter');
+  var cancel=document.getElementById('bsPopupCancel');
+  var confirm=document.getElementById('bsPopupConfirm');
+  if(bsPopupState.title){title.style.display='block';title.textContent=bsPopupState.title;}
+  else{title.style.display='none';}
+  if(bsPopupState.contentHtml){
+    content.innerHTML=bsPopupState.contentHtml;
+  }else{
+    var opts=bsPopupState.options||[];
+    if(!opts.length){
+      content.innerHTML='<div style="text-align:center;padding:30px 0;color:#86909C;font-size:14px">暂无选项</div>';
+    }else{
+      content.innerHTML=opts.map(function(o){
+        var sel=bsPopupState.selected.indexOf(String(o.value))>-1;
+        return'<div class="bs-option'+(sel?' selected':'')+'" data-value="'+o.value+'">'
+          +'<span class="bs-option-label">'+o.label+(o.tag?'<span class="bs-option-tag">'+o.tag+'</span>':'')+'</span>'
+          +(o.sub?'<span class="bs-option-sub">'+o.sub+'</span>':'')
+          +'<span class="bs-check"></span></div>';
+      }).join('');
+    }
+  }
+  var hasConfirm=bsPopupState.mode==='multiple'||!!bsPopupState.contentHtml;
+  if(hasConfirm){
+    footer.style.display='flex';
+    cancel.style.display='block';
+    confirm.style.display='block';
+  }else{
+    footer.style.display=bsPopupState.showCancel?'flex':'none';
+    cancel.style.display='block';
+    confirm.style.display='none';
+  }
+}
+
+function bsPopupOpen(cfg){
+  cfg=cfg||{};
+  bsPopupState={
+    title:cfg.title||'',
+    options:cfg.options||[],
+    mode:cfg.mode||'single',
+    value:cfg.value!=null?cfg.value:null,
+    showCancel:cfg.showCancel!==false,
+    instantConfirm:cfg.instantConfirm!==false,
+    contentHtml:cfg.contentHtml||null,
+    onConfirm:cfg.onConfirm||null,
+    onClose:cfg.onClose||null,
+    selected:[]
+  };
+  if(bsPopupState.mode==='multiple'){
+    bsPopupState.selected=(bsPopupState.value!=null?[].concat(bsPopupState.value):[]).map(String);
+  }else{
+    bsPopupState.selected=bsPopupState.value!=null?[String(bsPopupState.value)]:[];
+  }
+  bsPopupRender();
+  var popup=document.getElementById('bsPopup');
+  popup.style.display='block';
+  requestAnimationFrame(function(){requestAnimationFrame(function(){popup.classList.add('show');});});
+}
+
+function bsPopupClose(){
+  var popup=document.getElementById('bsPopup');
+  if(!popup.classList.contains('show'))return;
+  popup.classList.remove('show');
+  var cb=bsPopupState.onClose||null;
+  setTimeout(function(){
+    popup.style.display='none';
+    if(cb)cb();
+  },300);
+}
+
+function bsPopupConfirm(){
+  var result=bsPopupState.mode==='multiple'?bsPopupState.selected:bsPopupState.selected[0];
+  var cb=bsPopupState.onConfirm||null;
+  if(cb)cb(result);
+  bsPopupClose();
+}
+
+/* 选择考试：加载该学生全部考试列表，选中当前考试，点击切换数据 */
+var examListCache=null;
+async function loadExamList(){
+  if(examListCache)return examListCache;
+  try{
+    var r=await fetch('/api/public/student-history?student_id='+curSid);
+    if(!r.ok)return[];
+    var j=await r.json();
+    examListCache=j.groups||[];
+    return examListCache;
+  }catch(e){return[];}
+}
+
+async function openExamPicker(){
+  var list=await loadExamList();
+  var opts=list.map(function(h){
+    return {
+      value:h.group_id,
+      label:escapeHtml(h.group_name),
+      tag:escapeHtml(examTypeLabel(h.exam_type)),
+      sub:escapeHtml(h.exam_date||'')
+    };
+  });
+  if(!opts.length){
+    bsPopupOpen({
+      title:'选择考试',
+      contentHtml:'<div style="text-align:center;padding:30px 0;color:#86909C;font-size:14px">暂无考试记录</div>'
+    });
+    return;
+  }
+  bsPopupOpen({
+    title:'选择考试',
+    options:opts,
+    value:curGid,
+    instantConfirm:true,
+    onConfirm:function(gid){
+      if(gid && String(gid)!==String(curGid)){
+        document.getElementById('pageContent').innerHTML='<div class="loading">加载中...</div>';
+        loadReport(curSid,gid);
+      }
+    }
+  });
 }
 
 init();

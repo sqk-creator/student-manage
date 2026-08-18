@@ -258,4 +258,10 @@ try { db.exec('CREATE TABLE IF NOT EXISTS feature_cards (id INTEGER PRIMARY KEY 
   }
 })();
 
+// 迁移：teacher_profiles 添加工号
+try { db.exec('ALTER TABLE teacher_profiles ADD COLUMN employee_no VARCHAR(30) NOT NULL DEFAULT \'\''); } catch (_) {}
+
+// 照片批量绑定操作日志表
+try { db.exec('CREATE TABLE IF NOT EXISTS photo_batch_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id VARCHAR(64) NOT NULL DEFAULT \'\', target_type VARCHAR(10) NOT NULL DEFAULT \'student\', operator_id INTEGER NOT NULL DEFAULT 0, operator_name VARCHAR(50) NOT NULL DEFAULT \'\', total INTEGER NOT NULL DEFAULT 0, success INTEGER NOT NULL DEFAULT 0, failed INTEGER NOT NULL DEFAULT 0, skipped INTEGER NOT NULL DEFAULT 0, unmatched INTEGER NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)'); } catch (_) {}
+
 module.exports = db;

@@ -1,0 +1,42 @@
+.pbb-modal{width:600px;}
+.pbb-guide{
+  background:#f7f8fa;
+  border:1px solid #eee;
+  border-radius:8px;
+  padding:12px 16px;
+  margin-bottom:14px;
+}
+.pbb-guide-title{font-size:13px;font-weight:600;color:#262626;margin-bottom:8px;}
+.pbb-guide-list{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666;line-height:1.6;}
+.pbb-guide-list code{background:#fff;border:1px solid #e5e6eb;border-radius:4px;padding:1px 6px;color:#1890ff;font-size:12px;}
+.pbb-overwrite{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:#666;margin-bottom:12px;cursor:pointer;
+}
+.pbb-running{min-height:120px;display:flex;flex-direction:column;justify-content:center;gap:16px;}
+.pbb-running-title{font-size:13px;color:#262626;text-align:center;}
+.pbb-result-msg{font-size:13px;color:#ff4d4f;padding:12px 0;}
+.pbb-stats{display:flex;gap:10px;margin-bottom:14px;}
+.pbb-stat{
+  flex:1;text-align:center;padding:12px 8px;border-radius:8px;
+  display:flex;flex-direction:column;gap:4px;
+}
+.pbb-stat b{font-size:22px;font-weight:700;line-height:1;}
+.pbb-stat span{font-size:12px;color:#666;}
+.pbb-stat-ok{background:#f6ffed;color:#52c41a;}
+.pbb-stat-ok b{color:#52c41a;}
+.pbb-stat-skip{background:#fffbe6;color:#faad14;}
+.pbb-stat-skip b{color:#faad14;}
+.pbb-stat-fail{background:#fff2f0;color:#ff4d4f;}
+.pbb-stat-fail b{color:#ff4d4f;}
+.pbb-stat-unmatch{background:#f0f7ff;color:#1890ff;}
+.pbb-stat-unmatch b{color:#1890ff;}
+.pbb-unmatched{border:1px solid #f0f0f0;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.pbb-unmatched-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;color:#262626;font-weight:600;}
+.pbb-unmatched-list{list-style:none;margin:0;padding:0;max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+.pbb-unmatched-list li{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#666;}
+.pbb-unmatched-name{color:#262626;word-break:break-all;}
+.pbb-unmatched-reason{color:#ff4d4f;flex-shrink:0;}
+.pbb-errors{background:#fff2f0;border:1px solid #ffccc7;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.pbb-errors-title{font-size:13px;font-weight:600;color:#ff4d4f;margin-bottom:8px;}
+.pbb-error-item{font-size:12px;color:#ff7875;padding:3px 0;word-break:break-all;}

@@ -33,14 +33,14 @@ exports.get = (req, res) => {
 };
 
 exports.create = (req, res) => {
-  const { name, phone, subjects, photo, class_ids, class_roles } = req.body;
+  const { name, phone, subjects, photo, class_ids, class_roles, employee_no } = req.body;
   if (!name || !name.trim()) return res.status(422).json({ error: '教师姓名为必填项' });
 
   const existing = db.prepare('SELECT id FROM teacher_profiles WHERE name = ?').get(name.trim());
   if (existing) return res.status(409).json({ error: '教师姓名已存在' });
 
-  const result = db.prepare('INSERT INTO teacher_profiles (name, phone, subjects, photo) VALUES (?, ?, ?, ?)')
-    .run(name.trim(), phone || '', subjects || '', photo || '');
+  const result = db.prepare('INSERT INTO teacher_profiles (name, phone, subjects, photo, employee_no) VALUES (?, ?, ?, ?, ?)')
+    .run(name.trim(), phone || '', subjects || '', photo || '', employee_no || '');
   const teacherId = result.lastInsertRowid;
 
   if (class_ids && class_ids.length > 0) {
@@ -56,7 +56,7 @@ exports.create = (req, res) => {
 };
 
 exports.update = (req, res) => {
-  const { name, phone, subjects, photo, class_ids, class_roles } = req.body;
+  const { name, phone, subjects, photo, class_ids, class_roles, employee_no } = req.body;
   const t = db.prepare('SELECT * FROM teacher_profiles WHERE id = ?').get(req.params.id);
   if (!t) return res.status(404).json({ error: '教师不存在' });
 
@@ -64,8 +64,8 @@ exports.update = (req, res) => {
   const conflicting = db.prepare('SELECT id FROM teacher_profiles WHERE name = ? AND id != ?').get(newName, req.params.id);
   if (conflicting) return res.status(409).json({ error: '教师姓名已存在' });
 
-  db.prepare('UPDATE teacher_profiles SET name = ?, phone = ?, subjects = ?, photo = ? WHERE id = ?')
-    .run(newName, phone !== undefined ? phone : t.phone, subjects !== undefined ? subjects : t.subjects, photo !== undefined ? photo : t.photo, req.params.id);
+  db.prepare('UPDATE teacher_profiles SET name = ?, phone = ?, subjects = ?, photo = ?, employee_no = ? WHERE id = ?')
+    .run(newName, phone !== undefined ? phone : t.phone, subjects !== undefined ? subjects : t.subjects, photo !== undefined ? photo : t.photo, employee_no !== undefined ? employee_no : t.employee_no, req.params.id);
 
   if (class_ids !== undefined) {
     db.prepare('DELETE FROM class_teachers WHERE teacher_id = ?').run(req.params.id);

@@ -16,3 +16,6 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Runtime uploads (含用户隐私，不入库)
+backend/public/

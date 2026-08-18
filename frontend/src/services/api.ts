@@ -434,5 +434,13 @@ export const api = {
 
   deleteStudentComment(studentId: number, id: number) {
     return request(`/students/${studentId}/comments/${id}`, { method: 'DELETE' });
+  },
+
+  photoBatchTask(taskId: string) {
+    return request(`/photo-batch/tasks/${taskId}`);
+  },
+
+  removePhoto(target: 'student' | 'teacher', id: number) {
+    return request(`/photo/${target}/${id}`, { method: 'DELETE' });
   }
 };

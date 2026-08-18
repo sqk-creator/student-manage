@@ -76,7 +76,7 @@ body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content
 <div class="app">
   <div class="page-header mode-nav">
     <div class="header-top">
-      <button class="back-btn" onclick="history.back()"><span class="back-arrow">&#8249;</span></button>
+      <button class="back-btn" onclick="location.href='m-score-exam-group-list.html'"><span class="back-arrow">&#8249;</span></button>
       <span class="header-label">成绩统计</span>
       <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
     </div>
@@ -206,7 +206,7 @@ function showMetrics(avg,vmax,vmin,pass){
     {label:'平均分',value:avg,high:true},
     {label:'最高分',value:vmax},
     {label:'最低分',value:vmin},
-    {label:'及格率',value:pass}
+    {label:'一般率',value:pass}
   ];
   items.forEach(function(item){
     html+='<div class="metric-card"><div class="metric-label">'+item.label+'</div><div class="metric-value'+(item.high?' high':'')+'">'+item.value+'</div></div>';

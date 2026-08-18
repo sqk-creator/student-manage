@@ -13,6 +13,10 @@ export default defineConfig({
       '/uploads': {
         target: 'http://localhost:3001',
         changeOrigin: true
+      },
+      '/avatar': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
       }
     },
     allowedHosts: ['.monkeycode-ai.online']

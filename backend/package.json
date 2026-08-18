@@ -7,11 +7,13 @@
     "dev": "node src/app.js"
   },
   "dependencies": {
+    "adm-zip": "^0.6.0",
     "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
+    "sharp": "^0.35.3",
     "xlsx": "^0.18.5"
   }
 }
