@@ -1,0 +1,111 @@
+<view class="page">
+
+  <view class="page-header" style="padding-top: {{statusBarHeight}}px;">
+    <view class="header-top">
+      <view class="back-btn" bindtap="onBack"><text class="back-arrow">‹</text></view>
+      <view class="capsule-space" style="width: {{capsuleSpace}}px;"></view>
+    </view>
+    <view class="header-title-row">
+      <text class="page-title">成绩档案</text>
+      <picker
+        class="grade-picker"
+        range="{{gradeOptions}}"
+        range-key="name"
+        value="{{gradeIndex}}"
+        bindchange="onGradeChange"
+      >
+        <view class="grade-select">
+          <text class="grade-select-text">{{gradeOptions[gradeIndex].name}}</text>
+          <text class="grade-select-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+    <view class="main-tabs">
+      <view class="main-tab active">看考试</view>
+      <view class="main-tab" data-tab="grade" bindtap="onMainTab">看年级</view>
+      <view class="main-tab" data-tab="class" bindtap="onMainTab">看班级</view>
+      <view class="main-tab" data-tab="student" bindtap="onMainTab">看个人</view>
+    </view>
+  </view>
+
+  <view class="exam-filter-row">
+    <view class="sub-tab-wrap">
+      <view
+        class="sub-tab {{examSubTab === 'group' ? 'active' : ''}}"
+        data-tab="group"
+        bindtap="onExamSubTab"
+      >年级统考</view>
+      <view
+        class="sub-tab {{examSubTab === 'single' ? 'active' : ''}}"
+        data-tab="single"
+        bindtap="onExamSubTab"
+      >单科测验</view>
+    </view>
+  </view>
+
+  <view class="tab-content">
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+
+    <block wx:elif="{{examSubTab === 'group'}}">
+      <view class="empty-state" wx:if="{{groups.length === 0}}">
+        <view class="empty-icon">--</view>
+        <view>暂无年级统考数据</view>
+      </view>
+      <view class="group-card" wx:for="{{groups}}" wx:key="id">
+        <view class="card-header">
+          <text class="card-title">{{item.groupName}}</text>
+          <text class="card-grade">{{item.gradeName}}</text>
+        </view>
+        <view class="card-meta">
+          <text class="meta-tag">{{item.examType}}</text>
+          <text class="meta-tag">{{item.examDate}}</text>
+          <text class="meta-tag">满分 {{item.totalScore}}</text>
+          <text class="meta-tag">{{item.studentCount}}人参考</text>
+        </view>
+        <view class="card-stats">
+          <view class="stat-item">
+            <view class="stat-label">年级均分</view>
+            <view class="stat-value green">{{item.avgTotal}}</view>
+          </view>
+          <view class="stat-item">
+            <view class="stat-label">一般率</view>
+            <view class="stat-value">{{item.passRate}}</view>
+          </view>
+          <view class="stat-item">
+            <view class="stat-label">科目数</view>
+            <view class="stat-value">{{item.subjectCount}}</view>
+          </view>
+        </view>
+        <view class="card-actions">
+          <view class="card-btn btn-outline" data-gid="{{item.gradeId}}" bindtap="onCompareTap">多考对比</view>
+          <view class="card-btn btn-primary" data-gid="{{item.id}}" bindtap="onGroupDetail">本场详情</view>
+        </view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="empty-state" wx:if="{{needGrade}}">
+        <view class="empty-icon">--</view>
+        <view>请先选择年级</view>
+      </view>
+      <view class="empty-state" wx:elif="{{singles.length === 0}}">
+        <view class="empty-icon">--</view>
+        <view>暂无单科测验数据</view>
+      </view>
+      <view class="group-card" wx:for="{{singles}}" wx:key="id">
+        <view class="card-header">
+          <text class="card-title">{{item.examName}}</text>
+          <text class="card-grade">{{item.subject}}</text>
+        </view>
+        <view class="card-meta">
+          <text class="meta-tag">{{item.examDate}}</text>
+          <text class="meta-tag">满分 {{item.totalScore}}</text>
+        </view>
+        <view class="card-actions">
+          <view class="card-btn btn-primary" data-eid="{{item.id}}" bindtap="onSingleDetail">查看详情</view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+</view>

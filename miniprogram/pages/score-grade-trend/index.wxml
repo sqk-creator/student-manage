@@ -1,0 +1,146 @@
+<view class="page">
+
+  <view class="page-header" style="padding-top: {{statusBarHeight}}px;">
+    <view class="header-top">
+      <view class="back-btn" bindtap="onBack"><text class="back-arrow">‹</text></view>
+      <view class="capsule-space" style="width: {{capsuleSpace}}px;"></view>
+    </view>
+    <view class="header-title-row">
+      <text class="page-title">成绩档案</text>
+      <picker
+        class="grade-picker"
+        range="{{gradeOptions}}"
+        range-key="name"
+        value="{{gradeIndex}}"
+        bindchange="onGradeChange"
+      >
+        <view class="grade-select">
+          <text class="grade-select-text">{{gradeOptions[gradeIndex].name}}</text>
+          <text class="grade-select-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+    <view class="main-tabs">
+      <view class="main-tab" data-tab="exam" bindtap="onMainTab">看考试</view>
+      <view class="main-tab active">看年级</view>
+      <view class="main-tab" data-tab="class" bindtap="onMainTab">看班级</view>
+      <view class="main-tab" data-tab="student" bindtap="onMainTab">看个人</view>
+    </view>
+  </view>
+
+  <view class="type-switch" wx:if="{{showTypeSwitch}}">
+    <view
+      class="type-btn {{activeType === item.key ? 'active' : ''}}"
+      wx:for="{{types}}"
+      wx:key="key"
+      data-type="{{item.key}}"
+      bindtap="onTypeTap"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="tab-content">
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+
+    <view class="empty-state" wx:elif="{{!hasData}}">
+      <view class="empty-icon">--</view>
+      <view>{{emptyMsg}}</view>
+    </view>
+
+    <block wx:else>
+
+      <view class="card-large grade-trend-card">
+        <view class="grade-rate-card">
+          <canvas type="2d" id="gaugeCanvas" class="gauge-canvas"></canvas>
+          <view class="gauge-text">
+            <view class="gauge-label">平均得分率</view>
+            <view class="gauge-value">{{summary.scoreRate}}<text class="gauge-unit">%</text></view>
+            <view class="gauge-sub">{{summary.totalExams}}场考试</view>
+          </view>
+        </view>
+        <view class="gauge-stats">
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">总平均分</view>
+            <view class="gauge-stat-value">{{summary.totalAvg}}</view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">最高均分</view>
+            <view class="gauge-stat-value">{{summary.maxAvg}}</view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">最低均分</view>
+            <view class="gauge-stat-value">{{summary.minAvg}}</view>
+          </view>
+        </view>
+
+        <scroll-view class="subject-toggle" scroll-x enable-flex>
+          <view
+            class="subj-btn {{activeSubj === item.key ? 'active' : ''}}"
+            wx:for="{{subjBtns}}"
+            wx:key="key"
+            data-subj="{{item.key}}"
+            bindtap="onSubjTap"
+          >{{item.label}}</view>
+        </scroll-view>
+        <canvas
+          type="2d"
+          id="trendCanvas"
+          class="trend-canvas"
+          bindtouchstart="onTrendTouchStart"
+          bindtouchmove="onTrendTouchMove"
+          bindtouchend="onTrendTouchEnd"
+          bindtouchcancel="onTrendTouchEnd"
+        ></canvas>
+      </view>
+
+      <view class="card-normal grade-rate2-card">
+        <view class="rate-avg-cards">
+          <view class="cs-rate">
+            <view class="cs-rate-label">优秀率-平均</view>
+            <view class="cs-rate-value grade-a">{{summary.excRate}}<text class="cs-rate-unit">%</text></view>
+          </view>
+          <view class="cs-rate">
+            <view class="cs-rate-label">良好率-平均</view>
+            <view class="cs-rate-value grade-b">{{summary.goodRate}}<text class="cs-rate-unit">%</text></view>
+          </view>
+        </view>
+        <view class="dual-legend">
+          <view class="legend-item"><view class="legend-dot dot-good"></view>良好</view>
+          <view class="legend-item"><view class="legend-dot dot-exc"></view>优秀</view>
+        </view>
+        <canvas type="2d" id="rateDistCanvas" class="hist-canvas"></canvas>
+      </view>
+
+      <view class="card-normal grade-rate2-card">
+        <view class="cs-rate">
+          <view class="cs-rate-label">平均及格率</view>
+          <view class="cs-rate-value grade-c">{{summary.passRate}}<text class="cs-rate-unit">%</text></view>
+        </view>
+        <canvas type="2d" id="passDistCanvas" class="hist-canvas"></canvas>
+      </view>
+
+      <view class="card-normal class-leaderboard" wx:if="{{classList.length}}">
+        <view class="class-leaderboard-title">班级排行榜</view>
+        <view class="cb-card" wx:for="{{classList}}" wx:key="rank" data-index="{{index}}" bindtap="onClassTap">
+          <view class="cb-rank">
+            <view class="cb-rank-num">{{item.rank}}</view>
+          </view>
+          <view class="cb-main">
+            <view class="cb-name">{{item.name}}</view>
+            <view class="cb-scores">
+              <view class="cb-avg">{{item.avg}}</view>
+              <view class="cr-change">
+                <text class="change-val {{item.changeClass}}">{{item.changeText}}</text>
+                <text class="change-arrow {{item.changeClass}}" wx:if="{{item.arrow}}">{{item.arrow}}</text>
+              </view>
+            </view>
+          </view>
+          <view class="cb-side">
+            <canvas type="2d" id="spark{{index}}" class="cb-spark"></canvas>
+          </view>
+        </view>
+      </view>
+
+    </block>
+  </view>
+
+</view>

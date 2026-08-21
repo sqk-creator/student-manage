@@ -1,0 +1,65 @@
+page {
+  background-color: #F0F8F6;
+  padding-bottom: env(safe-area-inset-bottom);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 1.5;
+}
+
+view,
+text,
+image,
+button,
+swiper,
+scroll-view {
+  box-sizing: border-box;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 大卡片 */
+.card-large {
+  background: #ffffff;
+  border-radius: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(20, 168, 154, 0.08);
+  padding: 32rpx;
+  margin-bottom: 40rpx;
+}
+
+/* 普通卡片 */
+.card-normal {
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(20, 168, 154, 0.08);
+  padding: 32rpx;
+  margin-bottom: 32rpx;
+}
+
+/* 主按钮 */
+.btn-primary {
+  background-color: #14A89A;
+  color: #ffffff;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.btn-primary:active {
+  background-color: #0F8478;
+}
+
+/* 绿色标签 */
+.tag-green {
+  background: #E6F7F5;
+  color: #14A89A;
+  font-size: 24rpx;
+  border-radius: 12rpx;
+  padding: 6rpx 16rpx;
+  display: inline-block;
+}

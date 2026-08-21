@@ -1,0 +1,130 @@
+<view class="page">
+
+  <view class="top-bar" style="padding-top: {{statusBarHeight}}px;">
+    <view class="left-group">
+      <view class="avatar">陈</view>
+      <text class="username">{{user.name}}</text>
+      <text class="nickname">{{user.nickname}}</text>
+    </view>
+    <view class="capsule-space" style="width: {{capsuleSpace}}px;"></view>
+  </view>
+
+  <view class="banner">
+    <view class="banner-fallback" wx:if="{{bannerMode === 'none'}}">
+      <view class="banner-content">
+        <view class="banner-illustration">
+          <view class="illus-book">
+            <view class="illus-book-tri"></view>
+          </view>
+          <view class="illus-people">
+            <view class="illus-person tall"></view>
+            <view class="illus-person med"></view>
+            <view class="illus-person tall"></view>
+          </view>
+        </view>
+        <view class="banner-title">高校学生教育发展大会</view>
+        <view class="banner-sub">2024年10月 · 学术报告厅</view>
+      </view>
+    </view>
+
+    <image
+      wx:elif="{{bannerMode === 'single'}}"
+      class="banner-slide-img"
+      src="{{banners[0].fullUrl}}"
+      mode="aspectFill"
+    />
+
+    <block wx:else>
+      <swiper
+        class="banner-swiper"
+        circular
+        autoplay
+        interval="{{3000}}"
+        duration="{{400}}"
+        current="{{bannerCurrent}}"
+        bindchange="onBannerChange"
+      >
+        <swiper-item wx:for="{{banners}}" wx:key="id">
+          <image class="banner-slide-img" src="{{item.fullUrl}}" mode="aspectFill" />
+        </swiper-item>
+      </swiper>
+      <view class="banner-dots">
+        <view
+          class="banner-dot {{bannerCurrent === index ? 'active' : ''}}"
+          wx:for="{{banners}}"
+          wx:for-index="index"
+          wx:key="id"
+          data-index="{{index}}"
+          bindtap="onBannerDot"
+        ></view>
+      </view>
+    </block>
+  </view>
+
+  <view class="quick-actions">
+    <view class="action-item" wx:for="{{quickActions}}" wx:key="key" data-key="{{item.key}}" bindtap="onQuickTap">
+      <view class="action-icon">
+        <view class="badge" wx:if="{{item.badge}}">{{item.badge}}</view>
+        <image class="action-img" src="{{item.icon}}" mode="aspectFit" />
+      </view>
+      <text class="action-label">{{item.label}}</text>
+    </view>
+  </view>
+
+  <view class="feature-zone" wx:if="{{firstCard}}">
+    <view class="feature-left" style="{{firstCard.bgStyle}}" data-key="{{firstCard.cardKey}}" bindtap="onCardTap">
+      <view class="feature-left-head">
+        <view class="feature-left-title">{{firstCard.title}}</view>
+        <view class="feature-left-sub" wx:if="{{firstCard.subtitle}}">{{firstCard.subtitle}}</view>
+      </view>
+      <view class="feature-left-btn">去体验</view>
+    </view>
+    <view
+      class="feature-right"
+      wx:for="{{rightCards}}"
+      wx:key="id"
+      style="{{item.bgStyle}}"
+      data-key="{{item.cardKey}}"
+      bindtap="onCardTap"
+    >
+      <view class="feature-right-title">
+        <text>{{item.title}}</text>
+        <view class="feature-dot" wx:if="{{item.cardKey === 'notice_board'}}"></view>
+      </view>
+      <view class="feature-right-sub" wx:if="{{item.subtitle}}">{{item.subtitle}}</view>
+    </view>
+  </view>
+
+  <view class="my-classes">
+    <view class="section-title">我的班级</view>
+    <view wx:if="{{classesLoaded && classes.length === 0}}" class="empty-tip">暂无班级</view>
+    <view class="class-card" wx:for="{{classes}}" wx:key="id" data-id="{{item.id}}" bindtap="onClassTap">
+      <view class="class-header">
+        <view class="class-name-group">
+          <text class="class-name">{{item.name}}</text>
+          <text class="class-tag" wx:if="{{item.type}}">{{item.type}}</text>
+        </view>
+        <view class="arrow-icon">›</view>
+      </view>
+      <view class="class-stats">
+        <view class="stat-item">
+          <view class="stat-value">{{item.studentCount}}<text class="stat-unit">人</text></view>
+          <view class="stat-label">学生人数</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-value">{{item.teach.value}}<text class="stat-unit" wx:if="{{item.teach.unit}}">{{item.teach.unit}}</text></view>
+          <view class="stat-label">今日出勤</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-value">{{item.exer.value}}<text class="stat-unit" wx:if="{{item.exer.unit}}">{{item.exer.unit}}</text></view>
+          <view class="stat-label">今日出操</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-value">{{item.leaveTotal}}<text class="stat-unit">人</text></view>
+          <view class="stat-label">今日请假</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+</view>

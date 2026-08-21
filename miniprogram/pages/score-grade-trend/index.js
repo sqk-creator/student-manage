@@ -1,0 +1,422 @@
+const { get } = require('../../utils/request');
+const charts = require('../../utils/charts');
+
+Page({
+  data: {
+    statusBarHeight: 20,
+    capsuleSpace: 92,
+    gradeOptions: [],
+    gradeIndex: 0,
+    gradeName: '',
+    showTypeSwitch: false,
+    types: [],
+    activeType: '',
+    subjBtns: [{ key: 'total', label: '总分' }],
+    activeSubj: 'total',
+    summary: {
+      scoreRate: 0,
+      totalExams: 0,
+      totalAvg: 0,
+      maxAvg: 0,
+      minAvg: 0,
+      excRate: 0,
+      goodRate: 0,
+      passRate: 0
+    },
+    rateDistData: { xAxis: [], series: [] },
+    passDistData: { xAxis: [], series: [] },
+    classList: [],
+    lineItems: [],
+    groups: [],
+    loading: false,
+    emptyMsg: '',
+    hasData: false
+  },
+
+  onLoad(options) {
+    this.initLayout();
+    this.loadGrades(options.grade_id || '');
+  },
+
+  initLayout() {
+    try {
+      const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+      const menu = wx.getMenuButtonBoundingClientRect();
+      this.setData({
+        statusBarHeight: win.statusBarHeight,
+        capsuleSpace: win.windowWidth - menu.left + 8
+      });
+    } catch (e) {}
+  },
+
+  onBack() {
+    const pages = getCurrentPages();
+    if (pages.length > 1) {
+      wx.navigateBack();
+    } else {
+      wx.switchTab({ url: '/pages/index/index' });
+    }
+  },
+
+  onMainTab(e) {
+    const tab = e.currentTarget.dataset.tab;
+    if (tab === 'grade') return;
+    if (tab === 'exam') {
+      wx.navigateTo({ url: '/pages/score-exam-list/index' });
+      return;
+    }
+    wx.showToast({ title: '功能开发中', icon: 'none' });
+  },
+
+  examTypeShort(t) {
+    if (t === 'comprehensive') return '理科';
+    if (t === 'liberal_arts') return '文科';
+    if (t === 'general') return '综合';
+    return t || '';
+  },
+
+  loadGrades(preGid) {
+    get('/api/public/grades')
+      .then((grades) => {
+        const list = (grades || []).map((g) => ({
+          id: String(g.id),
+          name: g.grade_name
+        }));
+        let idx = 0;
+        if (preGid) {
+          const found = list.findIndex((g) => g.id === String(preGid));
+          if (found >= 0) idx = found;
+        }
+        this.setData({ gradeOptions: list, gradeIndex: idx });
+        this.loadTrend();
+      })
+      .catch(() => {
+        this.setData({ hasData: false, emptyMsg: '年级数据加载失败' });
+      });
+  },
+
+  onGradeChange(e) {
+    const idx = Number(e.detail.value);
+    this.setData({
+      gradeIndex: idx,
+      activeType: '',
+      activeSubj: 'total'
+    });
+    this.loadTrend();
+  },
+
+  onTypeTap(e) {
+    const type = e.currentTarget.dataset.type;
+    if (type === this.data.activeType) return;
+    this.setData({ activeType: type });
+    this.loadTrend(type);
+  },
+
+  onSubjTap(e) {
+    const subj = e.currentTarget.dataset.subj;
+    if (subj === this.data.activeSubj) return;
+    this.setData({ activeSubj: subj });
+    this.drawLineChart();
+  },
+
+  onTrendTouchStart(e) {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    const idx = this.trendIdxFromXY(t.x, t.y);
+    if (idx >= 0) this.renderTrendSelection(idx);
+  },
+
+  onTrendTouchMove(e) {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    const idx = this.trendIdxFromXY(t.x, t.y);
+    if (idx >= 0) this.renderTrendSelection(idx);
+  },
+
+  onTrendTouchEnd() {
+    this.renderTrendSelection(-1);
+  },
+
+  trendIdxFromXY(x, y) {
+    const g = this.trendGeom;
+    if (!g || !g.xs || !g.xs.length) return -1;
+    if (x < g.padL - 30 || x > g.w - g.padR + 30) return -1;
+    let best = 0;
+    let bd = Infinity;
+    g.xs.forEach((v, i) => {
+      const d = Math.abs(v - x);
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    });
+    return best;
+  },
+
+  renderTrendSelection(idx) {
+    charts.getCanvas(this, 'trendCanvas').then((res) => {
+      if (!res) return;
+      if (idx >= 0 && this.trendGeom) {
+        charts.drawTrendSelected(res.ctx, res.w, res.h, this.trendGeom, idx);
+      } else if (this.currentLineItems) {
+        this.trendGeom = charts.drawLineTrend(
+          res.ctx,
+          res.w,
+          res.h,
+          this.currentLineItems
+        );
+      }
+    });
+  },
+
+  getGradeId() {
+    const opt = this.data.gradeOptions[this.data.gradeIndex];
+    return opt ? opt.id : '';
+  },
+
+  loadTrend(etype) {
+    const gid = this.getGradeId();
+    if (!gid) {
+      this.setData({ hasData: false, emptyMsg: '请选择年级后查看趋势数据' });
+      return;
+    }
+    this.setData({ loading: true });
+    const params = { grade_id: gid };
+    if (etype) params.exam_type = etype;
+    get('/api/public/grade-trend', params)
+      .then((d) => {
+        if (!d || !d.groups || !d.groups.length) {
+          this.setData({
+            hasData: false,
+            loading: false,
+            emptyMsg: '暂无' + this.examTypeShort(d ? d.exam_type : etype) + '统考数据'
+          });
+          return;
+        }
+        this.renderTrend(d);
+      })
+      .catch(() => {
+        this.setData({ hasData: false, loading: false, emptyMsg: '数据加载失败' });
+      });
+  },
+
+  renderTrend(d) {
+    const s = d.summary || {};
+    const groups = d.groups || [];
+    const classes = d.classes || [];
+    const totals = groups.map((g) => g.avg_total || 0);
+    const totalAvg = totals.length
+      ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length)
+      : 0;
+    const maxAvg = totals.length ? Math.max.apply(null, totals) : 0;
+    const minAvg = totals.length ? Math.min.apply(null, totals) : 0;
+
+    const subjSet = {};
+    groups.forEach((g) => {
+      (g.subjects || []).forEach((sub) => {
+        subjSet[sub.subject] = true;
+      });
+    });
+    const subjBtns = [{ key: 'total', label: '总分' }].concat(
+      Object.keys(subjSet).map((k) => ({ key: k, label: k }))
+    );
+
+    const distNames = [];
+    const distGoods = [];
+    const distExcs = [];
+    classes.forEach((cls) => {
+      let gc = 0;
+      let ec = 0;
+      let gcN = 0;
+      let ecN = 0;
+      (cls.trends || []).forEach((t) => {
+        if (t.good_count != null) {
+          gc += t.good_count;
+          gcN++;
+        }
+        if (t.excellent_count != null) {
+          ec += t.excellent_count;
+          ecN++;
+        }
+      });
+      distNames.push(cls.class_name);
+      distGoods.push(gcN ? Math.round(gc / gcN) : 0);
+      distExcs.push(ecN ? Math.round(ec / ecN) : 0);
+    });
+    const rateDistData = {
+      xAxis: distNames,
+      series: [
+        { name: '良好', data: distGoods, color: '#2979FF' },
+        { name: '优秀', data: distExcs, color: '#14A89A' }
+      ]
+    };
+
+    const passAvg =
+      (s.avg_excellent_rate || 0) + (s.avg_good_rate || 0) + (s.avg_pass_rate || 0);
+    const passNames = [];
+    const passData = [];
+    classes.forEach((cls) => {
+      let pc = 0;
+      let cn = 0;
+      (cls.trends || []).forEach((t) => {
+        if (t.pass_count != null) {
+          pc += t.pass_count + (t.good_count || 0) + (t.excellent_count || 0);
+          cn++;
+        }
+      });
+      passNames.push(cls.class_name);
+      passData.push(cn ? Math.round(pc / cn) : 0);
+    });
+    const passDistData = {
+      xAxis: passNames,
+      series: [{ name: '及格人数', data: passData, color: '#2979FF' }]
+    };
+
+    const sortedClasses = classes
+      .slice()
+      .sort((a, b) => (b.avg_total || 0) - (a.avg_total || 0));
+    const classList = sortedClasses.map((cls, i) => {
+      const rank = i + 1;
+      const change = cls.recent_change || 0;
+      const cc = change > 0 ? 'up' : change < 0 ? 'down' : 'zero';
+      const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '';
+      const sign = change >= 0 ? '+' : '';
+      return {
+        rank: rank < 10 ? '0' + rank : String(rank),
+        class_id: cls.class_id,
+        name: cls.class_name,
+        avg: cls.avg_total,
+        changeText: sign + change,
+        changeClass: cc,
+        arrow,
+        trend: (cls.trends || []).map((t) => t.avg_total || 0)
+      };
+    });
+
+    const lineItems = groups.map((g) => ({
+      name: g.group_name,
+      value: g.avg_total || 0
+    }));
+
+    const types = (d.available_types || []).map((t) => ({
+      key: t,
+      label: this.examTypeShort(t)
+    }));
+    const type = d.exam_type || (types.length ? types[0].key : '');
+    const activeSubj = this.data.activeSubj;
+
+    this.setData(
+      {
+        hasData: true,
+        loading: false,
+        emptyMsg: '',
+        gradeName: d.grade_name || '',
+        showTypeSwitch: types.length > 1,
+        types,
+        activeType: type,
+        subjBtns,
+        activeSubj: activeSubj === 'total' ? 'total' : activeSubj,
+        groups: d.groups || [],
+        summary: {
+          scoreRate: s.avg_score_rate || 0,
+          totalExams: s.total_exams || 0,
+          totalAvg,
+          maxAvg,
+          minAvg,
+          excRate: s.avg_excellent_rate || 0,
+          goodRate: s.avg_good_rate || 0,
+          passRate: passAvg
+        },
+        rateDistData,
+        passDistData,
+        classList,
+        lineItems
+      },
+      () => {
+        setTimeout(() => this.drawCharts(), 120);
+      }
+    );
+  },
+
+  drawCharts() {
+    const { lineItems, rateDistData, passDistData, classList, summary } = this.data;
+    const gaugeRate = summary.scoreRate || 0;
+
+    charts.getCanvas(this, 'gaugeCanvas').then((res) => {
+      if (!res) return;
+      charts.animateGauge({
+        ctx: res.ctx,
+        node: res.node,
+        w: res.w,
+        h: res.h,
+        targetRate: gaugeRate,
+        onFrame: (val) => {
+          this.setData({ 'summary.scoreRate': val });
+        }
+      });
+    });
+
+    charts.getCanvas(this, 'trendCanvas').then((res) => {
+      if (!res) return;
+      this.currentLineItems = lineItems;
+      this.trendGeom = charts.drawLineTrend(res.ctx, res.w, res.h, lineItems);
+    });
+
+    charts.getCanvas(this, 'rateDistCanvas').then((res) => {
+      if (!res) return;
+      charts.drawHistogram(res.ctx, res.w, res.h, rateDistData, { stack: true });
+    });
+
+    charts.getCanvas(this, 'passDistCanvas').then((res) => {
+      if (!res) return;
+      charts.drawHistogram(res.ctx, res.w, res.h, passDistData, { stack: false });
+    });
+
+    classList.forEach((cls, i) => {
+      charts.getCanvas(this, 'spark' + i).then((res) => {
+        if (!res) return;
+        charts.drawSparkline(res.ctx, res.w, res.h, cls.trend);
+      });
+    });
+  },
+
+  drawLineChart() {
+    const groups = this.buildLineItems();
+    this.currentLineItems = groups;
+    charts.getCanvas(this, 'trendCanvas').then((res) => {
+      if (!res) return;
+      this.trendGeom = charts.drawLineTrend(res.ctx, res.w, res.h, groups);
+    });
+  },
+
+  buildLineItems() {
+    const subj = this.data.activeSubj;
+    if (subj === 'total') return this.data.lineItems;
+    const items = [];
+    this.data.groups.forEach((g) => {
+      const sj = (g.subjects || []).find((s) => s.subject === subj);
+      if (sj) {
+        items.push({
+          name: g.group_name,
+          value: sj.avg_score || 0,
+          max: sj.max_score || 0
+        });
+      }
+    });
+    return items;
+  },
+
+  onClassTap(e) {
+    const item = this.data.classList[e.currentTarget.dataset.index];
+    if (!item || !item.class_id) return;
+    wx.navigateTo({
+      url:
+        '/pages/score-class-trend/index?grade_id=' +
+        this.getGradeId() +
+        '&class_id=' +
+        item.class_id +
+        '&class_name=' +
+        encodeURIComponent(item.name)
+    });
+  }
+});

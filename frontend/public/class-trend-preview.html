@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>成绩档案 · 看班级</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #2B2F36;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 20px;
+    font-size: 14px; color: #333333;
+  }
+  .shell {
+    width: 430px; height: min(860px, calc(100vh - 40px));
+    background: #F0F8F6; border-radius: 28px; overflow: hidden;
+    position: relative; display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  }
+  .status-bar {
+    height: 44px; background: #F0F8F6; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; color: #1A1A1A; font-size: 15px; font-weight: 600;
+  }
+  .content { flex: 1; overflow-y: auto; position: relative; }
+  .page { min-height: 100%; }
+
+  .page-header {
+    position: sticky; top: 0; z-index: 100;
+    background: #FFFFFF;
+    padding: 0 16px;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; position: relative; }
+  .back-btn { width: 31px; height: 31px; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; cursor: pointer; margin-left: -5px; }
+  .back-arrow { font-size: 19px; color: #1A1A1A; line-height: 1; }
+  .capsule {
+    width: 70px; height: 28px; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px;
+    background: #FFFFFF; display: flex; align-items: center; flex-shrink: 0; opacity: 0.55;
+  }
+  .capsule-dot { width: 8px; height: 8px; border-radius: 50%; background: #C9CDD4; margin-left: 12px; }
+  .capsule-line { width: 1px; height: 14px; background: #E5E6EB; margin: 0 10px; }
+  .capsule-circle { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #C9CDD4; margin-right: 8px; }
+  .header-title-row { display: flex; align-items: center; justify-content: space-between; padding: 0 0 12px; }
+  .page-title { font-size: 20px; font-weight: 600; color: #1A1A1A; line-height: 1.2; }
+  .grade-select { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; background: #F0F8F6; cursor: pointer; border: none; font-size: 13px; color: #909399; }
+  .main-tabs { display: flex; }
+  .main-tab { flex: 1; padding: 10px 5px; text-align: center; font-size: 14px; font-weight: 400; color: #909399; position: relative; background: none; border: none; cursor: pointer; }
+  .main-tab.active { color: #1A1A1A; font-weight: 600; }
+  .main-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 3px; border-radius: 2px; background: #14A89A; }
+
+  .type-switch { display: flex; background: #F0F8F6; border-radius: 8px; padding: 2px; margin: 12px 16px 0; }
+  .type-btn { flex: 1; padding: 7px 9px; text-align: center; font-size: 13px; font-weight: 500; border-radius: 6px; color: #909399; background: transparent; border: none; cursor: pointer; }
+  .type-btn.active { background: #14A89A; color: #FFFFFF; font-weight: 600; }
+
+  .tab-content { padding: 16px; }
+  .loading { text-align: center; padding: 35px; color: #909399; font-size: 12px; }
+  .empty-state { text-align: center; padding: 52px 17px; color: #909399; font-size: 12px; }
+  .empty-icon { font-size: 35px; margin-bottom: 10px; opacity: 0.4; }
+
+  .card-large {
+    background: #FFFFFF; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(20, 168, 154, 0.08);
+    padding: 16px; margin-bottom: 20px;
+  }
+  .card-normal {
+    background: #FFFFFF; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(20, 168, 154, 0.08);
+    padding: 16px; margin-bottom: 16px;
+  }
+
+  .class-info { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+  .class-info-left { display: flex; flex-direction: column; gap: 5px; }
+  .class-info-name { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; color: #1A1A1A; }
+  .class-info-tag { font-size: 11px; color: #14A89A; background: #E6F7F5; border-radius: 6px; padding: 2px 7px; font-weight: 500; }
+  .class-info-count { font-size: 12px; color: #909399; }
+  .class-info-right { display: flex; align-items: center; gap: 6px; }
+  .ci-avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #BEEFDA, #35B9AA); display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 700; font-size: 14px; }
+  .ci-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ci-arrow { font-size: 12px; color: #909399; }
+
+  .class-stats-card { padding-top: 10px; }
+  .cs-rate { text-align: left; }
+  .cs-rate-label { font-size: 13px; color: #333333; font-weight: 500; }
+  .cs-rate-value { font-size: 44px; font-weight: 800; color: #14A89A; line-height: 1; margin-top: 4px; }
+  .cs-rate-unit { font-size: 18px; font-weight: 600; color: #333333; }
+  .cs-rate-value.grade-c { color: #14A89A; }
+
+  .gauge-stats { display: flex; gap: 12px; margin: 16px 0 12px; }
+  .gauge-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; background: #F0F8F6; border-radius: 8px; padding: 10px 6px; }
+  .gauge-stat-label { font-size: 12px; color: #909399; font-weight: 500; }
+  .gauge-stat-value { font-size: 20px; font-weight: 800; color: #1A1A1A; line-height: 1.1; }
+
+  .subject-toggle { display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+  .subject-toggle::-webkit-scrollbar { display: none; }
+  .subj-btn { font-size: 12px; padding: 4px 12px; border-radius: 12px; border: 1px solid #E6F7F5; background: #F7F9F9; color: #666666; flex-shrink: 0; white-space: nowrap; cursor: pointer; }
+  .subj-btn.active { background: #14A89A; color: #FFFFFF; border-color: #14A89A; font-weight: 600; }
+  .trend-canvas { width: 100%; height: 200px; margin-top: 10px; display: block; }
+
+  .dist-card { padding-top: 14px; }
+  .dist-title { font-size: 17px; font-weight: 600; color: #1A1A1A; margin-bottom: 12px; }
+  .dist-rate { margin-bottom: 4px; }
+  .dist-rate-grid { display: flex; flex-wrap: wrap; gap: 8px 6px; margin: 12px 0 4px; }
+  .dist-rate-grid .gauge-stat { width: calc(50% - 3px); flex: none; align-items: flex-start; text-align: left; gap: 3px; padding: 9px 12px; }
+  .dist-stat { display: flex; align-items: baseline; gap: 1px; font-size: 22px; }
+  .dist-rate-grid .gauge-stat.fail .dist-stat text:first-child { color: #F75F5C; }
+  .dist-rate-unit { font-size: 12px; font-weight: 600; color: #909399; }
+  .hist-canvas { width: 100%; height: 260px; margin-top: 4px; display: block; }
+  .dist-eval { position: relative; display: flex; flex-direction: column; align-items: flex-start; margin-top: 14px; padding: 12px 14px; background: linear-gradient(90deg, #F0FAF8, #FFFFFF); border: 1px solid #E3F2EF; border-radius: 10px; overflow: hidden; }
+  .eval-badge { display: inline-block; padding: 3px 10px; background: #14A89A; color: #FFFFFF; font-size: 12px; font-weight: 700; letter-spacing: 2px; border-radius: 12px 0 12px 0; }
+  .dist-eval-text { padding: 6px 0 0; font-size: 15px; line-height: 1.6; text-align: left; font-weight: 700; }
+  .dist-eval-note { color: #909399; font-size: 12px; margin-top: 4px; }
+
+  .radar-card { padding-top: 14px; }
+  .radar-card-title { font-size: 17px; font-weight: 600; color: #1A1A1A; margin-bottom: 12px; }
+  .radar-top { display: flex; justify-content: flex-start; margin-bottom: 10px; }
+  .radar-eval-badge { font-size: 12px; font-weight: 600; color: #FFFFFF; background: linear-gradient(135deg, #14A89A, #35B9AA); border-radius: 8px; padding: 4px 12px; letter-spacing: 1px; }
+  .radar-stats { display: flex; gap: 12px; margin-bottom: 6px; }
+  .radar-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .radar-stat-label { font-size: 12px; color: #909399; font-weight: 500; }
+  .radar-stat-value { font-size: 18px; font-weight: 700; color: #1A1A1A; line-height: 1.1; }
+  .radar-canvas { width: 100%; height: 300px; display: block; }
+
+  .class-leaderboard-title { font-size: 17px; font-weight: 600; color: #1A1A1A; margin-bottom: 12px; }
+  .cb-card { display: flex; align-items: stretch; background: #F7FCFB; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; }
+  .cb-card:active { opacity: 0.8; }
+  .cb-rank { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 36px; margin-right: 18px; }
+  .cb-rank-num { font-size: 32px; font-weight: 700; font-style: italic; opacity: 0.2; color: #14A89A; line-height: 1; }
+  .cb-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+  .cb-name-line { display: flex; align-items: center; min-width: 0; }
+  .cb-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; flex-shrink: 0; margin-right: 8px; background: linear-gradient(135deg, #BEEFDA, #35B9AA); display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 700; font-size: 13px; }
+  .cb-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cb-name { font-size: 15px; font-weight: 600; color: #1A1A1A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cb-scores { display: flex; align-items: flex-end; gap: 10px; margin-top: 6px; }
+  .cb-avg { font-size: 24px; font-weight: 600; color: #1A1A1A; line-height: 1; }
+  .cr-change { display: flex; align-items: center; gap: 4px; }
+  .change-val { font-size: 14px; font-weight: 700; }
+  .change-val.up { color: #14A89A; }
+  .change-val.down { color: #F75F5C; }
+  .change-val.zero { color: #909399; }
+  .change-arrow { font-size: 12px; line-height: 1; }
+  .change-arrow.up { color: #14A89A; }
+  .change-arrow.down { color: #F75F5C; }
+  .cb-side { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; margin-left: 12px; }
+  .cb-spark { width: 110px; height: 40px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="status-bar">
+    <span style="font-size:15px;font-weight:600">9:41</span>
+    <div style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:500">成绩档案</div>
+  </div>
+  <div class="content">
+  <div class="page">
+  <div class="page-header">
+    <div class="header-top">
+      <div class="back-btn" onclick="history.length>1?history.back():location.href='miniprogram-preview.html'"><span class="back-arrow">‹</span></div>
+      <div class="capsule"><div class="capsule-dot"></div><div class="capsule-line"></div><div class="capsule-circle"></div></div>
+    </div>
+    <div class="header-title-row">
+      <span class="page-title">成绩档案</span>
+      <select class="grade-select" id="classSelect" onchange="onClassChange()"></select>
+    </div>
+    <div class="main-tabs">
+      <button class="main-tab" onclick="location.href='score-exam-preview.html'">看考试</button>
+      <button class="main-tab" onclick="location.href='grade-trend-preview.html'">看年级</button>
+      <button class="main-tab active">看班级</button>
+      <button class="main-tab" onclick="toast('小程序中对应「看个人」页，功能开发中')">看个人</button>
+    </div>
+  </div>
+  <div class="type-switch" id="typeSwitch" style="display:none"></div>
+  <div class="tab-content" id="classTrendContent"></div>
+  </div>
+  </div>
+</div>
+
+<script>
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g,function(m){
+    return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+  });
+}
+function getParam(name){
+  var m=location.search.match(new RegExp('[?&]'+name+'=([^&]*)'));
+  return m?decodeURIComponent(m[1]):'';
+}
+function toast(msg){
+  var t=document.createElement('div');
+  t.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.7);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){t.remove();},1800);
+}
+
+var SUBJECT_ORDER=['语文','数学','英语','政治','历史','地理'];
+var grades=[],classesList=[],trendData=null;
+var activeType='',activeSubj='total';
+var currentLineItems=[],trendGeom=null,radarGeomX=null,radarItems=[];
+var savedDistCounts=[0,0,0,0,0];
+
+var preGradeId=getParam('grade_id'),preClassId=getParam('class_id');
+
+function examTypeShort(t){
+  if(t==='comprehensive')return '理科';
+  if(t==='liberal_arts')return '文科';
+  if(t==='general')return '综合';
+  return t||'';
+}
+
+async function loadAll(){
+  try{
+    var r=await fetch('/api/public/grades');
+    grades=await r.json();
+    var gSel=document.createElement('select');
+    gSel.className='grade-select';
+    gSel.innerHTML=grades.map(function(g,i){
+      return'<option value="'+g.id+'">'+escapeHtml(g.grade_name)+'</option>';
+    }).join('');
+    var hr=document.querySelector('.header-title-row');
+    hr.appendChild(gSel);
+    gSel.onchange=function(){
+      activeType='';activeSubj='total';
+      loadClasses();
+    };
+    if(preGradeId){
+      var preIdx=grades.findIndex(function(g){return String(g.id)===String(preGradeId);});
+      if(preIdx>=0)gSel.selectedIndex=preIdx;
+    }
+    await loadClasses();
+  }catch(e){
+    document.getElementById('classTrendContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>数据加载失败</div>';
+  }
+}
+
+async function loadClasses(){
+  var r=await fetch('/api/public/classes');
+  var all=await r.json();
+  var gid=getGradeId();
+  classesList=(all||[]).filter(function(c){return String(c.grade_id)===String(gid);});
+  var cSel=document.getElementById('classSelect');
+  cSel.innerHTML=classesList.map(function(c){
+    return'<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>';
+  }).join('');
+  if(preClassId){
+    var preIdx=classesList.findIndex(function(c){return String(c.id)===String(preClassId);});
+    if(preIdx>=0)cSel.selectedIndex=preIdx;
+  }
+  if(!classesList.length){
+    document.getElementById('classTrendContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>该年级暂无班级</div>';
+    return;
+  }
+  loadTrend();
+}
+
+function getGradeId(){
+  var sels=document.querySelectorAll('.header-title-row .grade-select');
+  for(var i=0;i<sels.length;i++){
+    if(sels[i].id!=='classSelect')return sels[i].value;
+  }
+  return grades.length?grades[0].id:'';
+}
+
+function onClassChange(){
+  activeType='';activeSubj='total';
+  loadTrend();
+}
+
+async function loadTrend(etype){
+  var cid=document.getElementById('classSelect').value;
+  if(!cid){
+    document.getElementById('classTrendContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>请选择班级</div>';
+    return;
+  }
+  document.getElementById('classTrendContent').innerHTML='<div class="loading">加载中...</div>';
+  try{
+    var r=await fetch('/api/public/class-trend?class_id='+encodeURIComponent(cid));
+    var d=await r.json();
+    if(!d||!d.groups||!d.groups.length){
+      document.getElementById('classTrendContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>暂无统考数据</div>';
+      return;
+    }
+    trendData=d;
+    renderClassTrend(d,etype);
+  }catch(e){
+    document.getElementById('classTrendContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>数据加载失败</div>';
+  }
+}
+
+function renderClassTrend(d,etype){
+  var s=d.summary||{};
+  var allTypes=[];
+  d.groups.forEach(function(g){if(allTypes.indexOf(g.exam_type)===-1)allTypes.push(g.exam_type);});
+  var type=etype||activeType||allTypes[0]||'';
+  var groups=d.groups.filter(function(g){return g.exam_type===type;});
+  if(!groups.length)groups=d.groups;
+  activeType=type||groups[0].exam_type||'';
+
+  var ts=document.getElementById('typeSwitch');
+  if(allTypes.length>1){
+    ts.style.display='flex';
+    ts.innerHTML=allTypes.map(function(t){
+      return'<button class="type-btn'+(t===activeType?' active':'')+'" onclick="onTypeTap(\''+t+'\')">'+examTypeShort(t)+'</button>';
+    }).join('');
+  }else{ts.style.display='none';ts.innerHTML='';}
+
+  var srList=groups.map(function(g){
+    return g.total_score>0?Math.round(g.avg_total/g.total_score*100):0;
+  });
+  var scoreRate=srList.length?Math.round(srList.reduce(function(a,b){return a+b;},0)/srList.length):0;
+  var avgs=groups.map(function(g){return g.avg_total||0;});
+  var totalAvg=s.avg_total||0;
+  var maxAvg=avgs.length?Math.max.apply(null,avgs):0;
+  var minAvg=avgs.length?Math.min.apply(null,avgs):0;
+
+  var subjSet={};
+  groups.forEach(function(g){(g.subjects||[]).forEach(function(sub){subjSet[sub.subject]=true;});});
+  var subjs=['total'].concat(Object.keys(subjSet));
+
+  var lineItems=groups.map(function(g){
+    return{name:g.group_name,value:g.avg_total||0,max:g.total_score||0};
+  });
+
+  var distBkts=[{range:'<60',min:0,max:60},{range:'60-70',min:60,max:70},{range:'70-80',min:70,max:80},{range:'80-90',min:80,max:90},{range:'90-100',min:90,max:101}];
+  var lastGrp=groups[groups.length-1];
+  var distTotalScore=(lastGrp&&lastGrp.total_score)||0;
+  var distCounts=[0,0,0,0,0];
+  (d.students||[]).forEach(function(st){
+    var m=distTotalScore>0?(st.avg_total||0)/distTotalScore*100:0;
+    for(var b=0;b<distBkts.length;b++){
+      if(m>=distBkts[b].min&&m<distBkts[b].max){distCounts[b]++;break;}
+    }
+  });
+
+  var rateAvg={};
+  ['excellent_rate','good_rate','pass_rate','fail_rate'].forEach(function(k){
+    var list=groups.map(function(g){return g[k]||0;}).filter(function(v){return !isNaN(v);});
+    rateAvg[k]=list.length?Math.round(list.reduce(function(a,b){return a+b;},0)/list.length):0;
+  });
+  var passAllList=groups.map(function(g){return(g.excellent_rate||0)+(g.good_rate||0)+(g.pass_rate||0);}).filter(function(v){return !isNaN(v);});
+  var avgPassAll=passAllList.length?Math.round(passAllList.reduce(function(a,b){return a+b;},0)/passAllList.length):0;
+
+  var evalObj=evalDistText(distCounts);
+  var evalTotal=distCounts.reduce(function(a,b){return a+b;},0);
+  var evalNote=evalTotal<15?'样本数量较少，分布仅供参考。':'';
+  var evalText=evalObj.text,evalColor=evalObj.color;
+
+  var radarItems2=[],radarTag='',radarStats={max:0,min:0,range:0,avg:0};
+  if(lastGrp&&lastGrp.subjects){
+    var items=SUBJECT_ORDER.map(function(name){
+      var sj=(lastGrp.subjects||[]).find(function(s){return s.subject===name;});
+      return{name:name,value:sj?sj.avg_score:0,max:sj?sj.max_score:0};
+    });
+    if(items.some(function(it){return it.max>0;})){
+      var standards=items.map(function(it){return it.max>0?Math.round(it.value/it.max*100*10)/10:0;});
+      var ana=radarAnalyze(standards);
+      radarItems2=items;
+      radarTag=ana.tags[0]||'';
+      radarStats={max:ana.max,min:ana.min,range:ana.range,avg:ana.avg};
+    }
+  }
+  radarItems=radarItems2;
+  savedDistCounts=distCounts;
+
+  var students=d.students||[];
+  var sortedStudents=students.slice().sort(function(a,b){return(b.avg_total||0)-(a.avg_total||0);});
+  var leaderHtml=sortedStudents.map(function(st,i){
+    var rank=i+1;
+    var change=st.recent_change||0;
+    var cc=change>0?'up':(change<0?'down':'zero');
+    var arrow=change>0?'↑':(change<0?'↓':'');
+    var sign=change>=0?'+':'';
+    var trendJson=escapeHtml(JSON.stringify((st.trends||[]).map(function(t){return t.total||0;})));
+    var avatar=st.photo?'<img src="'+escapeHtml(st.photo)+'">':escapeHtml((st.student_name||'').slice(0,1));
+    return'<div class="cb-card" onclick="toast(\'小程序中对应「看个人」页，功能开发中\')">'
+      +'<div class="cb-rank"><div class="cb-rank-num">'+(rank<10?'0'+rank:rank)+'</div></div>'
+      +'<div class="cb-main"><div class="cb-name-line"><div class="cb-avatar">'+avatar+'</div><div class="cb-name">'+escapeHtml(st.student_name)+'</div></div>'
+      +'<div class="cb-scores"><div class="cb-avg">'+st.avg_total+'</div>'
+      +'<div class="cr-change"><span class="change-val '+cc+'">'+sign+change+'</span>'+(arrow?'<span class="change-arrow '+cc+'">'+arrow+'</span>':'')+'</div></div></div>'
+      +'<div class="cb-side"><canvas class="cb-spark" data-trend="'+trendJson+'"></canvas></div>'
+      +'</div>';
+  }).join('');
+
+  var classInfoName=d.class_name||'';
+  var classType=d.class_type||'';
+  var avatarsHtml=(students.slice(0,3).map(function(st){
+    if(st.photo)return'<div class="ci-avatar"><img src="'+escapeHtml(st.photo)+'"></div>';
+    return'<div class="ci-avatar">'+escapeHtml((st.student_name||'').slice(0,1))+'</div>';
+  }).join(''));
+
+  var html=''
+    +'<div class="card-normal class-info">'
+    +'<div class="class-info-left"><div class="class-info-name">'+escapeHtml(classInfoName)+(classType?'<span class="class-info-tag">'+escapeHtml(classType)+'</span>':'')+'</div>'
+    +'<div class="class-info-count">'+students.length+'人</div></div>'
+    +'<div class="class-info-right">'+avatarsHtml+'<span class="ci-arrow">▾</span></div>'
+    +'</div>'
+    +'<div class="card-large class-stats-card">'
+    +'<div class="cs-rate"><div class="cs-rate-label">平均得分率</div><div class="cs-rate-value">'+scoreRate+'<span class="cs-rate-unit">%</span></div></div>'
+    +'<div class="gauge-stats">'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">总平均分</div><div class="gauge-stat-value">'+totalAvg+'</div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">最高均分</div><div class="gauge-stat-value">'+maxAvg+'</div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">最低均分</div><div class="gauge-stat-value">'+minAvg+'</div></div>'
+    +'</div>'
+    +'<div class="subject-toggle" id="subjBtns">'+subjs.map(function(x){
+      var label=x==='total'?'总分':x;
+      return'<button class="subj-btn'+(x===activeSubj?' active':'')+'" data-subj="'+x+'" onclick="onSubjTap(this)">'+escapeHtml(label)+'</button>';
+    }).join('')+'</div>'
+    +'<canvas class="trend-canvas" id="trendCanvas"></canvas>'
+    +'</div>'
+    +'<div class="card-normal dist-card">'
+    +'<div class="dist-title">优劣分布分析</div>'
+    +'<div class="dist-rate"><div class="cs-rate"><div class="cs-rate-label">平均及格率</div><div class="cs-rate-value grade-c">'+avgPassAll+'<span class="cs-rate-unit">%</span></div></div></div>'
+    +'<div class="dist-rate-grid">'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">优秀率-平均</div><div class="gauge-stat-value dist-stat"><span>'+rateAvg.excellent_rate+'</span><span class="dist-rate-unit">%</span></div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">良好率-平均</div><div class="gauge-stat-value dist-stat"><span>'+rateAvg.good_rate+'</span><span class="dist-rate-unit">%</span></div></div>'
+    +'<div class="gauge-stat"><div class="gauge-stat-label">一般率-平均</div><div class="gauge-stat-value dist-stat"><span>'+rateAvg.pass_rate+'</span><span class="dist-rate-unit">%</span></div></div>'
+    +'<div class="gauge-stat fail"><div class="gauge-stat-label">不及格率-平均</div><div class="gauge-stat-value dist-stat"><span>'+rateAvg.fail_rate+'</span><span class="dist-rate-unit">%</span></div></div>'
+    +'</div>'
+    +'<canvas class="hist-canvas" id="distCanvas"></canvas>'
+    +'<div class="dist-eval"><div class="eval-badge">学情评价</div>'
+    +'<div class="dist-eval-text" style="color:'+evalColor+'">'+escapeHtml(evalText)+'</div>'
+    +(evalNote?'<div class="dist-eval-note">'+escapeHtml(evalNote)+'</div>':'')
+    +'</div>'
+    +'</div>'
+    +'<div class="card-large radar-card">'
+    +'<div class="radar-card-title">科目均衡分析</div>'
+    +'<div class="radar-top"><div class="radar-eval-badge">'+escapeHtml(radarTag)+'</div></div>'
+    +'<div class="radar-stats">'
+    +'<div class="radar-stat"><div class="radar-stat-label">最高分</div><div class="radar-stat-value">'+radarStats.max+'</div></div>'
+    +'<div class="radar-stat"><div class="radar-stat-label">最低分</div><div class="radar-stat-value">'+radarStats.min+'</div></div>'
+    +'<div class="radar-stat"><div class="radar-stat-label">极差</div><div class="radar-stat-value">'+radarStats.range+'</div></div>'
+    +'<div class="radar-stat"><div class="radar-stat-label">平均分</div><div class="radar-stat-value">'+radarStats.avg+'</div></div>'
+    +'</div>'
+    +'<canvas class="radar-canvas" id="radarCanvas"></canvas>'
+    +'</div>';
+  if(sortedStudents.length){
+    html+='<div class="card-normal class-leaderboard"><div class="class-leaderboard-title">学生排名</div>'+leaderHtml+'</div>';
+  }
+  document.getElementById('classTrendContent').innerHTML=html;
+  currentLineItems=lineItems;
+  setTimeout(function(){drawAllClass();},100);
+}
+
+function onTypeTap(t){activeType=t;loadTrend(t);}
+function onSubjTap(btn){
+  activeSubj=btn.dataset.subj;
+  document.querySelectorAll('#subjBtns .subj-btn').forEach(function(b){b.className='subj-btn'+(b.dataset.subj===activeSubj?' active':'');});
+  drawTrendChart();
+}
+
+function evalDistText(c){
+  var total=c.reduce(function(a,b){return a+b;},0);
+  if(!total)return{text:'暂无分布数据',color:'#909399'};
+  var maxV=Math.max.apply(null,c);
+  var peaks=[];
+  c.forEach(function(v,i){if(v===maxV)peaks.push(i);});
+  var first=peaks[0],last=peaks[peaks.length-1];
+  var hasGap=false;
+  for(var i=1;i<c.length-1;i++){if(c[i]<=0)hasGap=true;}
+  var maxDrop=0;
+  for(var j=1;j<c.length;j++){var dd=c[j]-c[j-1];if(dd>maxDrop)maxDrop=dd;}
+  if(hasGap&&maxDrop>=Math.max(3,Math.round(maxV*0.5)))return{text:'区间断层，稍显分化',color:'#e4814c'};
+  if(peaks.indexOf(0)>=0&&peaks.indexOf(c.length-1)>=0&&c.length>=3){
+    var midMin=Math.min.apply(null,c.slice(1,c.length-1));
+    if(midMin<maxV*0.5)return{text:'两极分化，分层明显',color:'#eb7555'};
+  }
+  var minVal=Math.min.apply(null,c);
+  var span=maxV-minVal;
+  if(span<=Math.max(2,Math.round(maxV*0.25)))return{text:'分布均匀，水平分散',color:'#8097b2'};
+  if(first===0)return{text:'低分居多，基础偏弱',color:'#f2994a'};
+  if(last===c.length-1)return{text:'高分居多，学情向好',color:'#27ae60'};
+  if(first>0&&last<c.length-1)return{text:'中等居多，梯队均衡',color:'#14A89A'};
+  if(first<=1)return{text:'低分居多，基础偏弱',color:'#f2994a'};
+  if(last>=c.length-2)return{text:'高分居多，学情向好',color:'#27ae60'};
+  return{text:'中等居多，梯队均衡',color:'#14A89A'};
+}
+
+function radarAnalyze(standards){
+  var valid=standards.filter(function(v){return v!=null&&!isNaN(v);});
+  var max=valid.length?Math.max.apply(null,valid):0;
+  var min=valid.length?Math.min.apply(null,valid):0;
+  var range=Math.round((max-min)*10)/10;
+  var avg=valid.length?Math.round(valid.reduce(function(a,b){return a+b;},0)/valid.length*10)/10:0;
+  var tags=[];
+  if(range>=22){tags.push('偏科');}
+  else{
+    tags.push('全科均衡');
+    if(avg>=78&&valid.every(function(v){return v>=65;}))tags.push('文科优势');
+    if(avg<62)tags.push('文科短板');
+  }
+  return{max:max,min:min,range:range,avg:avg,tags:tags};
+}
+
+/* ===== canvas 2d 绘制（与小程序 charts.js 一致） ===== */
+function getCtx(id){
+  var cvs=document.getElementById(id);
+  if(!cvs)return null;
+  var dpr=window.devicePixelRatio||1;
+  var rect=cvs.getBoundingClientRect();
+  cvs.width=rect.width*dpr;cvs.height=rect.height*dpr;
+  var ctx=cvs.getContext('2d');ctx.scale(dpr,dpr);
+  return {ctx:ctx,w:rect.width,h:rect.height};
+}
+function roundRectPath(ctx,x,y,w,h,r){
+  var rr=Math.min(r,w/2,h);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rr);
+  ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr);
+  ctx.arcTo(x,y,x+w,y,rr);
+  ctx.closePath();
+}
+function niceMax(v){
+  if(v<=0)return 10;
+  var pow=Math.pow(10,Math.floor(Math.log10(v)));
+  var unit=v/pow;
+  var n=unit<=1?1:unit<=2?2:unit<=5?5:10;
+  return n*pow;
+}
+function lineItemsFor(subj){
+  var groups=trendData.groups;
+  if(subj==='total')return groups.map(function(g){return{name:g.group_name,value:g.avg_total||0,max:g.total_score||0};});
+  var items=[];
+  groups.forEach(function(g){
+    var sj=(g.subjects||[]).find(function(s){return s.subject===subj;});
+    if(sj)items.push({name:g.group_name,value:sj.avg_score||0,max:sj.max_score||0});
+  });
+  return items;
+}
+function lineTrendGeom(w,h,items){
+  var padL=30,padR=10,padT=18,padB=18;
+  var values=(items||[]).map(function(it){return Math.round((it.value||0)*10)/10;});
+  if(!values.length)return null;
+  var yMinOrig=Math.min.apply(null,values),yMaxOrig=Math.max.apply(null,values);
+  var span=yMaxOrig-yMinOrig;
+  var yIsFlat=span===0,yMin,yMax;
+  if(span===0){yMin=Math.max(0,yMinOrig-5);yMax=yMinOrig+5;}
+  else{
+    var buffer=Math.ceil(span*0.3);
+    yMin=Math.max(0,Math.floor(yMinOrig-buffer));
+    yMax=Math.ceil(yMaxOrig+buffer);
+  }
+  var step,ySpan=yMax-yMin;
+  if(ySpan<10)step=1;else if(ySpan<30)step=2;else if(ySpan<60)step=5;else step=10;
+  yMin=Math.floor(yMin/step)*step;yMax=Math.ceil(yMax/step)*step;
+  var chartW=w-padL-padR,chartH=h-padT-padB;
+  var xs=values.map(function(_,i){return values.length>1?padL+i*(chartW/(values.length-1)):padL+chartW/2;});
+  var ys=values.map(function(v){return padT+(yMax-v)/(yMax-yMin)*chartH;});
+  return {
+    w:w,h:h,padL:padL,padR:padR,padT:padT,padB:padB,
+    chartW:chartW,chartH:chartH,values:values,
+    names:(items||[]).map(function(it){return it.name||'';}),
+    maxs:(items||[]).map(function(it){return it.max||0;}),
+    yMin:yMin,yMax:yMax,step:step,yIsFlat:yIsFlat,xs:xs,ys:ys
+  };
+}
+function drawTrendBase(ctx,w,h,g){
+  ctx.clearRect(0,0,w,h);
+  if(!g||!g.xs||!g.xs.length)return;
+  var i,gy,gv;
+  ctx.font='11px sans-serif';
+  ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
+  ctx.fillStyle='#909399';ctx.textAlign='right';ctx.textBaseline='middle';
+  for(i=0;i<=3;i++){
+    gy=g.padT+i*(g.chartH/3);
+    gv=g.yMax-i*((g.yMax-g.yMin)/3);
+    ctx.beginPath();ctx.moveTo(g.padL,gy);ctx.lineTo(w-g.padR,gy);ctx.stroke();
+    ctx.fillText(Math.round(gv),g.padL-6,gy);
+  }
+  var grad=ctx.createLinearGradient(0,g.padT,0,g.padT+g.chartH);
+  grad.addColorStop(0,'rgba(20,168,154,0.40)');grad.addColorStop(1,'rgba(20,168,154,0)');
+  ctx.beginPath();ctx.moveTo(g.xs[0],g.padT+g.chartH);
+  g.xs.forEach(function(x,i){ctx.lineTo(x,g.ys[i]);});
+  ctx.lineTo(g.xs[g.xs.length-1],g.padT+g.chartH);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();
+  g.xs.forEach(function(x,i){i===0?ctx.moveTo(x,g.ys[i]):ctx.lineTo(x,g.ys[i]);});
+  ctx.strokeStyle='#14A89A';ctx.lineWidth=4;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+  g.xs.forEach(function(x,i){
+    ctx.beginPath();ctx.arc(x,g.ys[i],6,0,Math.PI*2);
+    ctx.fillStyle='#fff';ctx.fill();
+    ctx.lineWidth=2;ctx.strokeStyle='#14A89A';ctx.stroke();
+  });
+}
+function drawLineTrend(ctx,w,h,items){
+  var g=lineTrendGeom(w,h,items);
+  drawTrendBase(ctx,w,h,g);
+  return g;
+}
+function drawTrendSelected(ctx,w,h,g,idx){
+  drawTrendBase(ctx,w,h,g);
+  if(!g||idx==null||idx<0||idx>=g.xs.length)return;
+  var x=g.xs[idx],y=g.ys[idx];
+  var colW=g.xs.length>1?g.chartW/(g.xs.length-1):g.chartW;
+  var maskW=colW*0.5;
+  ctx.fillStyle='rgba(20,168,154,0.1)';
+  ctx.fillRect(x-maskW/2,g.padT,maskW,g.chartH);
+  ctx.setLineDash([6,4]);
+  ctx.strokeStyle='#14A89A';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(x,g.padT);ctx.lineTo(x,g.padT+g.chartH);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);
+  ctx.fillStyle='rgba(20,168,154,0.25)';ctx.fill();
+  ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);
+  ctx.fillStyle='#fff';ctx.fill();
+  ctx.lineWidth=4;ctx.strokeStyle='#14A89A';ctx.stroke();
+  drawTrendTooltip(ctx,w,h,g,idx);
+}
+function textWidth(ctx,str,fb){try{return ctx.measureText(str).width;}catch(e){return fb||0;}}
+function drawTrendTooltip(ctx,w,h,g,idx){
+  var name=g.names[idx]||'',val=g.values[idx],maxV=g.maxs[idx]||0;
+  var rate=maxV>0?Math.round(val/maxV*100):0;
+  var x=g.xs[idx];
+  var y=g.ys[idx];
+  ctx.font='bold 18px sans-serif';
+  var valW=textWidth(ctx,val.toFixed(1),40);
+  var rateW=textWidth(ctx,String(rate),30);
+  ctx.font='14px sans-serif';
+  var slashW=textWidth(ctx,'/',8);
+  var maxW=maxV>0?textWidth(ctx,String(maxV),20):0;
+  var percentW=textWidth(ctx,'%',10);
+  ctx.font='bold 13px sans-serif';
+  var nameW=textWidth(ctx,name,name.length*13);
+  var gap=4;
+  var valueLineW=valW+gap+slashW+gap+maxW+10+rateW+gap+percentW+10;
+  var boxW=Math.max(nameW+4,valueLineW)+36;
+  var contentH=26+(g.yIsFlat?22:0);
+  var boxH=contentH+28;
+  var bx=x+18;
+  if(bx+boxW>w-10)bx=Math.max(10,x-18-boxW);
+  var by=Math.max(10,Math.min(y-10,h-boxH-10));
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=20;ctx.shadowOffsetY=4;
+  ctx.fillStyle='#fff';
+  roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle='rgba(0,0,0,0.05)';ctx.lineWidth=1;
+  roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.stroke();
+  ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='#1A1A1A';ctx.font='bold 13px sans-serif';
+  ctx.fillText(name,bx+18,by+14);
+  var lineY=by+14+20;
+  var curX=bx+18;
+  ctx.font='bold 18px sans-serif';ctx.fillStyle='#1A1A1A';
+  ctx.fillText(val.toFixed(1),curX,lineY);
+  curX+=valW+gap;
+  ctx.font='14px sans-serif';ctx.fillStyle='#909399';
+  ctx.fillText('/',curX,lineY+2);
+  curX+=slashW+gap;
+  if(maxV>0){ctx.fillText(String(maxV),curX,lineY+2);curX+=maxW+10;}
+  ctx.font='bold 18px sans-serif';ctx.fillStyle='#14A89A';
+  ctx.fillText(String(rate),curX,lineY);
+  curX+=rateW+gap;
+  ctx.font='14px sans-serif';ctx.fillStyle='#909399';
+  ctx.fillText('%',curX,lineY+2);
+  if(g.yIsFlat){
+    var hy=by+boxH-16;
+    ctx.setLineDash([1,0]);ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(bx+18,hy-4);ctx.lineTo(bx+boxW-18,hy-4);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#FA8C16';ctx.font='11px sans-serif';
+    ctx.fillText('各次考试平均分无明显差距',bx+18,hy+1);
+  }
+}
+function drawHistogram(ctx,w,h,data,stack){
+  ctx.clearRect(0,0,w,h);
+  var xAxis=data.xAxis||[],series=data.series||[];
+  if(!xAxis.length||!series.length)return;
+  var padL=34,padR=14,padT=26,padB=30;
+  var chartW=w-padL-padR,chartH=h-padT-padB;
+  var maxV=0;
+  xAxis.forEach(function(_,i){
+    var sum=0;
+    series.forEach(function(s){
+      var v=s.data[i]||0;
+      if(stack)sum+=v;else if(v>maxV)maxV=v;
+    });
+    if(sum>maxV)maxV=sum;
+  });
+  var yMax=niceMax(maxV);
+  ctx.font='11px sans-serif';ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
+  ctx.fillStyle='#909399';ctx.textAlign='right';ctx.textBaseline='middle';
+  for(var i=0;i<=3;i++){
+    var gy=padT+i*(chartH/3);
+    var gv=yMax-i*(yMax/3);
+    ctx.beginPath();ctx.moveTo(padL,gy);ctx.lineTo(w-padR,gy);ctx.stroke();
+    ctx.fillText(Math.round(gv),padL-6,gy);
+  }
+  var slotW=chartW/xAxis.length;
+  var barW=Math.max(6,Math.min(slotW*0.55,stack?slotW*0.5:slotW*0.4));
+  xAxis.forEach(function(_,i){
+    var cx=padL+slotW*i+slotW/2;
+    if(stack){
+      var accY=padT+chartH;
+      series.forEach(function(s){
+        var v=s.data[i]||0;
+        var bh=v/yMax*chartH;
+        var by=accY-bh;
+        ctx.fillStyle=s.color||'#14A89A';
+        roundRectPath(ctx,cx-barW/2,by,barW,bh,3);ctx.fill();
+        if(v>0){
+          ctx.fillStyle='#909399';ctx.font='10px sans-serif';
+          ctx.textAlign='center';ctx.textBaseline='bottom';
+          ctx.fillText(String(v),cx,by-2);
+          ctx.font='11px sans-serif';
+        }
+        accY=by;
+      });
+    }else{
+      var v=series[0].data[i]||0;
+      var bh=v/yMax*chartH;
+      var by=padT+chartH-bh;
+      ctx.fillStyle=series[0].color||'#14A89A';
+      roundRectPath(ctx,cx-barW/2,by,barW,bh,3);ctx.fill();
+      ctx.fillStyle='#909399';ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillText(String(v),cx,by-2);
+    }
+    ctx.fillStyle='#909399';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.font='10px sans-serif';
+    var label=xAxis[i]||'';
+    if(label.length>5)label=label.slice(0,5);
+    ctx.fillText(label,cx,h-padB+6);
+  });
+}
+function drawSparkline(ctx,w,h,trend){
+  ctx.clearRect(0,0,w,h);
+  var data=trend||[];
+  if(!data.length)return;
+  var min=Math.min.apply(null,data),max=Math.max.apply(null,data),span=max-min||1;
+  var padX=4,padTop=4,padBottom=14;
+  var xs=data.map(function(_,i){return data.length>1?padX+i*(w-2*padX)/(data.length-1):w/2;});
+  var ys=data.map(function(v){return padTop+(max-v)/span*(h-padTop-padBottom);});
+  var grad=ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(20,168,154,0.45)');grad.addColorStop(1,'rgba(20,168,154,0)');
+  ctx.beginPath();ctx.moveTo(xs[0],h);
+  xs.forEach(function(x,i){ctx.lineTo(x,ys[i]);});
+  ctx.lineTo(xs[xs.length-1],h);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();
+  xs.forEach(function(x,i){i===0?ctx.moveTo(x,ys[i]):ctx.lineTo(x,ys[i]);});
+  ctx.strokeStyle='#14A89A';ctx.lineWidth=2;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+}
+
+/* ===== 雷达图（与小程序 charts.js drawRadar 一致） ===== */
+function radarGeom(w,h,items){
+  var list=(items||[]).filter(function(it){return it.max>0;});
+  if(!list.length)return null;
+  var cx=w/2;
+  var cy=h/2;
+  var r=Math.min(w,h)/2-36;
+  var count=list.length;
+  var standards=list.map(function(it){
+    return it.max>0&&it.value!=null?Math.round(it.value/it.max*100*10)/10:0;
+  });
+  var step=(2*Math.PI)/count;
+  var angs=list.map(function(_,i){return -Math.PI/2+i*step;});
+  var axes=list.map(function(_,i){
+    return{ang:angs[i],x:cx+Math.cos(angs[i])*r,y:cy-Math.sin(angs[i])*r};
+  });
+  var namePts=list.map(function(_,i){
+    return{x:cx+Math.cos(angs[i])*(r+28),y:cy-Math.sin(angs[i])*(r+28)};
+  });
+  var dataPts=standards.map(function(s,i){
+    return{x:cx+Math.cos(angs[i])*r*s/100,y:cy-Math.sin(angs[i])*r*s/100};
+  });
+  return{cx:cx,cy:cy,r:r,count:count,standards:standards,list:list,angs:angs,axes:axes,namePts:namePts,dataPts:dataPts};
+}
+function drawRadarBase(ctx,w,h,g){
+  ctx.clearRect(0,0,w,h);
+  if(!g)return;
+  var cx=g.cx,cy=g.cy,r=g.r,count=g.count,angs=g.angs,axes=g.axes,standards=g.standards,list=g.list,namePts=g.namePts,dataPts=g.dataPts;
+  var split=5;
+  for(var k=split;k>=1;k--){
+    var rr=r*k/split;
+    ctx.beginPath();
+    for(var i=0;i<count;i++){
+      var x=cx+Math.cos(angs[i])*rr;
+      var y=cy-Math.sin(angs[i])*rr;
+      if(i===0)ctx.moveTo(x,y);
+      else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.fillStyle=k%2===1?'#ffffff':'#F7F8FA';
+    ctx.fill();
+    ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
+    ctx.stroke();
+  }
+  ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
+  axes.forEach(function(a){
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(a.x,a.y);ctx.stroke();
+  });
+  var grad=ctx.createLinearGradient(0,cy-r,0,cy+r);
+  grad.addColorStop(0,'rgba(20,168,154,0.40)');
+  grad.addColorStop(1,'rgba(20,168,154,0.05)');
+  ctx.beginPath();
+  dataPts.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});
+  ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();
+  dataPts.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});
+  ctx.closePath();
+  ctx.strokeStyle='#14A89A';ctx.lineWidth=2;ctx.lineJoin='round';
+  ctx.stroke();
+  dataPts.forEach(function(p){
+    ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);
+    ctx.fillStyle='#ffffff';ctx.fill();
+    ctx.lineWidth=2;ctx.strokeStyle='#14A89A';ctx.stroke();
+  });
+  ctx.font='14px sans-serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#1A1A1A';
+  namePts.forEach(function(p,i){ctx.fillText(list[i].name,p.x,p.y);});
+}
+function drawRadar(ctx,w,h,items){
+  var g=radarGeom(w,h,items);
+  drawRadarBase(ctx,w,h,g);
+  return g;
+}
+function drawRadarSelected(ctx,w,h,g,idx){
+  drawRadarBase(ctx,w,h,g);
+  if(!g||idx==null||idx<0||idx>=g.count)return;
+  var a=g.axes[idx];
+  var np=g.namePts[idx];
+  ctx.setLineDash([6,4]);
+  ctx.strokeStyle='#14A89A';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(g.cx,g.cy);ctx.lineTo(a.x,a.y);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.save();
+  ctx.shadowColor='rgba(20,168,154,0.55)';
+  ctx.shadowBlur=10;
+  ctx.fillStyle='#14A89A';
+  ctx.font='bold 18px sans-serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(g.list[idx].name,np.x,np.y);
+  ctx.restore();
+  var it=g.list[idx];
+  var std=g.standards[idx];
+  var orig=Math.round((it.value||0)*10)/10;
+  ctx.font='bold 13px sans-serif';
+  var nameW=textWidth(ctx,it.name,it.name.length*13);
+  ctx.font='13px sans-serif';
+  var w1=textWidth(ctx,'原始分数 000.0分',92);
+  var w2=textWidth(ctx,'标准分 000.0',74);
+  var rowW=Math.max(w1,w2);
+  var boxW=Math.max(nameW+4,rowW)+36;
+  var boxH=76;
+  var bx=a.x+14;
+  if(bx+boxW>w-8)bx=Math.max(8,a.x-14-boxW);
+  var by=a.y+14;
+  if(by+boxH>h-8)by=Math.max(8,a.y-boxH-14);
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.15)';
+  ctx.shadowBlur=16;
+  ctx.shadowOffsetY=3;
+  ctx.fillStyle='#ffffff';
+  roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;
+  roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.stroke();
+  ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='#1A1A1A';ctx.font='bold 13px sans-serif';
+  ctx.fillText(it.name,bx+18,by+14);
+  ctx.font='13px sans-serif';
+  ctx.fillStyle='#909399';
+  ctx.fillText('原始分数',bx+18,by+44);
+  ctx.fillText('标准分',bx+18,by+64);
+  ctx.textAlign='right';
+  ctx.fillStyle='#1A1A1A';
+  ctx.fillText(orig+'分',bx+boxW-18,by+44);
+  ctx.fillStyle='#14A89A';
+  ctx.fillText(String(std),bx+boxW-18,by+64);
+  ctx.textAlign='left';
+}
+function radarIdxFromXY(g,x,y){
+  if(!g)return -1;
+  var dx=x-g.cx,dy=y-g.cy;
+  if(Math.sqrt(dx*dx+dy*dy)>g.r+44)return -1;
+  var step=360/g.count;
+  var deg=((Math.atan2(dy,dx)*180/Math.PI)+90+360)%360;
+  return Math.round(deg/step)%g.count;
+}
+
+/* ===== 交互绑定 ===== */
+function drawTrendChart(){
+  var g=getCtx('trendCanvas');
+  if(!g)return;
+  currentLineItems=lineItemsFor(activeSubj);
+  trendGeom=drawLineTrend(g.ctx,g.w,g.h,currentLineItems);
+  bindTrendEvents();
+}
+function bindTrendEvents(){
+  var cvs=document.getElementById('trendCanvas');
+  if(!cvs||cvs.dataset.bound)return;
+  cvs.dataset.bound='1';
+  function toIdx(e){
+    var rect=cvs.getBoundingClientRect();
+    var t=e.touches?e.touches[0]:e;
+    return trendIdxFromXY(t.clientX-rect.left,t.clientY-rect.top);
+  }
+  cvs.addEventListener('mousemove',function(e){renderTrendSelection(toIdx(e));});
+  cvs.addEventListener('mouseleave',function(){renderTrendSelection(-1);});
+  cvs.addEventListener('touchstart',function(e){if(e.touches[0])renderTrendSelection(toIdx(e));});
+  cvs.addEventListener('touchmove',function(e){if(e.touches[0])renderTrendSelection(toIdx(e));});
+  cvs.addEventListener('touchend',function(){renderTrendSelection(-1);});
+  cvs.addEventListener('touchcancel',function(){renderTrendSelection(-1);});
+}
+function trendIdxFromXY(x,y){
+  if(!trendGeom||!trendGeom.xs||!trendGeom.xs.length)return -1;
+  if(x<trendGeom.padL-30||x>trendGeom.w-trendGeom.padR+30)return -1;
+  var best=0,bd=Infinity;
+  trendGeom.xs.forEach(function(v,i){var d=Math.abs(v-x);if(d<bd){bd=d;best=i;}});
+  return best;
+}
+function renderTrendSelection(idx){
+  var g=getCtx('trendCanvas');
+  if(!g)return;
+  if(idx>=0&&trendGeom)drawTrendSelected(g.ctx,g.w,g.h,trendGeom,idx);
+  else trendGeom=drawLineTrend(g.ctx,g.w,g.h,currentLineItems);
+}
+
+function drawRadarChart(){
+  var g=getCtx('radarCanvas');
+  if(!g)return;
+  radarGeomX=drawRadar(g.ctx,g.w,g.h,radarItems);
+  bindRadarEvents();
+}
+function bindRadarEvents(){
+  var cvs=document.getElementById('radarCanvas');
+  if(!cvs||cvs.dataset.bound)return;
+  cvs.dataset.bound='1';
+  function toIdx(e){
+    var rect=cvs.getBoundingClientRect();
+    var t=e.touches?e.touches[0]:e;
+    return radarIdxFromXY(radarGeomX,t.clientX-rect.left,t.clientY-rect.top);
+  }
+  cvs.addEventListener('mousemove',function(e){renderRadarSelection(toIdx(e));});
+  cvs.addEventListener('mouseleave',function(){renderRadarSelection(-1);});
+  cvs.addEventListener('touchstart',function(e){if(e.touches[0])renderRadarSelection(toIdx(e));});
+  cvs.addEventListener('touchmove',function(e){if(e.touches[0])renderRadarSelection(toIdx(e));});
+  cvs.addEventListener('touchend',function(){renderRadarSelection(-1);});
+  cvs.addEventListener('touchcancel',function(){renderRadarSelection(-1);});
+}
+function renderRadarSelection(idx){
+  var g=getCtx('radarCanvas');
+  if(!g)return;
+  if(idx>=0&&radarGeomX)radarGeomX=drawRadarSelected(g.ctx,g.w,g.h,radarGeomX,idx);
+  else radarGeomX=drawRadar(g.ctx,g.w,g.h,radarItems);
+}
+
+function drawAllClass(){
+  drawTrendChart();
+  var g=getCtx('distCanvas');
+  if(g){
+    var distData={xAxis:['<60','60-70','70-80','80-90','90-100'],series:[{name:'学生人数',data:savedDistCounts.slice(),color:'#14A89A'}]};
+    drawHistogram(g.ctx,g.w,g.h,distData,false);
+  }
+  drawRadarChart();
+  document.querySelectorAll('.cb-spark').forEach(function(cv){
+    var trend=JSON.parse(cv.dataset.trend);
+    var rect=cv.getBoundingClientRect();
+    var dpr=window.devicePixelRatio||1;
+    cv.width=rect.width*dpr;cv.height=rect.height*dpr;
+    var ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
+    drawSparkline(ctx,rect.width,rect.height,trend);
+  });
+}
+
+loadAll();
+</script>
+</body>
+</html>

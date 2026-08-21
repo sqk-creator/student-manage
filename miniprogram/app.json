@@ -1,0 +1,45 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/workbench/workbench",
+    "pages/profile/profile",
+    "pages/score-exam-list/index",
+    "pages/score-grade-trend/index",
+    "pages/score-class-trend/index"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#F1F8F7",
+    "navigationBarTitleText": "班级组织",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F1F8F7"
+  },
+  "tabBar": {
+    "color": "#86909C",
+    "selectedColor": "#14A89A",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "班级组织",
+        "iconPath": "assets/tabbar/org.png",
+        "selectedIconPath": "assets/tabbar/org-active.png"
+      },
+      {
+        "pagePath": "pages/workbench/workbench",
+        "text": "工作台",
+        "iconPath": "assets/tabbar/workbench.png",
+        "selectedIconPath": "assets/tabbar/workbench-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "assets/tabbar/profile.png",
+        "selectedIconPath": "assets/tabbar/profile-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

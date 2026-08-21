@@ -1,0 +1,207 @@
+<view class="page">
+
+  <view class="page-header" style="padding-top: {{statusBarHeight}}px;">
+    <view class="header-top">
+      <view class="back-btn" bindtap="onBack"><text class="back-arrow">‹</text></view>
+      <view class="capsule-space" style="width: {{capsuleSpace}}px;"></view>
+    </view>
+    <view class="header-title-row">
+      <text class="page-title">成绩档案</text>
+      <picker
+        mode="selector"
+        range="{{classOptions}}"
+        range-key="name"
+        value="{{classIndex}}"
+        bindchange="onClassChange"
+      >
+        <view class="grade-select">
+          <text class="grade-select-text">{{classOptions[classIndex].name}}</text>
+          <text class="grade-select-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+    <view class="main-tabs">
+      <view class="main-tab" data-tab="exam" bindtap="onMainTab">看考试</view>
+      <view class="main-tab" data-tab="grade" bindtap="onMainTab">看年级</view>
+      <view class="main-tab active">看班级</view>
+      <view class="main-tab" data-tab="student" bindtap="onMainTab">看个人</view>
+    </view>
+  </view>
+
+  <view class="type-switch" wx:if="{{showTypeSwitch}}">
+    <view
+      class="type-btn {{activeType === item.key ? 'active' : ''}}"
+      wx:for="{{types}}"
+      wx:key="key"
+      data-type="{{item.key}}"
+      bindtap="onTypeTap"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="tab-content">
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+
+    <view class="empty-state" wx:elif="{{!hasData}}">
+      <view class="empty-icon">--</view>
+      <view>{{emptyMsg}}</view>
+    </view>
+
+    <block wx:else>
+
+      <view class="card-normal class-info">
+        <view class="class-info-left">
+          <view class="class-info-name">
+            {{classInfo.name}}
+            <text class="class-info-tag" wx:if="{{classInfo.type}}">{{classInfo.type}}</text>
+          </view>
+          <view class="class-info-count">{{classInfo.studentCount}}人</view>
+        </view>
+        <view class="class-info-right">
+          <view class="ci-avatar" wx:for="{{classInfo.avatars}}" wx:key="index" wx:for-item="av">
+            <image wx:if="{{av.src}}" class="ci-avatar-img" src="{{av.src}}" mode="aspectFill"></image>
+            <text wx:else>{{av.letter}}</text>
+          </view>
+          <view class="ci-arrow">▾</view>
+        </view>
+      </view>
+
+      <view class="card-large class-stats-card">
+        <view class="cs-rate">
+          <view class="cs-rate-label">平均得分率</view>
+          <view class="cs-rate-value">{{summary.scoreRate}}<text class="cs-rate-unit">%</text></view>
+        </view>
+        <view class="gauge-stats">
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">总平均分</view>
+            <view class="gauge-stat-value">{{summary.totalAvg}}</view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">最高均分</view>
+            <view class="gauge-stat-value">{{summary.maxAvg}}</view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">最低均分</view>
+            <view class="gauge-stat-value">{{summary.minAvg}}</view>
+          </view>
+        </view>
+
+        <scroll-view class="subject-toggle" scroll-x enable-flex>
+          <view
+            class="subj-btn {{activeSubj === item.key ? 'active' : ''}}"
+            wx:for="{{subjBtns}}"
+            wx:key="key"
+            data-subj="{{item.key}}"
+            bindtap="onSubjTap"
+          >{{item.label}}</view>
+        </scroll-view>
+        <canvas
+          type="2d"
+          id="trendCanvas"
+          class="trend-canvas"
+          bindtouchstart="onTrendTouchStart"
+          bindtouchmove="onTrendTouchMove"
+          bindtouchend="onTrendTouchEnd"
+          bindtouchcancel="onTrendTouchEnd"
+        ></canvas>
+      </view>
+
+      <view class="card-normal dist-card">
+        <view class="dist-title">优劣分布分析</view>
+        <view class="dist-rate">
+          <view class="cs-rate">
+            <view class="cs-rate-label">平均及格率</view>
+            <view class="cs-rate-value grade-c">{{summary.avgPassAll}}<text class="cs-rate-unit">%</text></view>
+          </view>
+        </view>
+        <view class="dist-rate-grid">
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">优秀率-平均</view>
+            <view class="gauge-stat-value dist-stat"><text>{{summary.excRate}}</text><text class="dist-rate-unit">%</text></view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">良好率-平均</view>
+            <view class="gauge-stat-value dist-stat"><text>{{summary.goodRate}}</text><text class="dist-rate-unit">%</text></view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">一般率-平均</view>
+            <view class="gauge-stat-value dist-stat"><text>{{summary.passRate}}</text><text class="dist-rate-unit">%</text></view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">不及格率-平均</view>
+            <view class="gauge-stat-value dist-stat fail"><text>{{summary.failRate}}</text><text class="dist-rate-unit">%</text></view>
+          </view>
+        </view>
+        <canvas type="2d" id="distCanvas" class="hist-canvas"></canvas>
+        <view class="dist-eval">
+          <view class="eval-badge">学情评价</view>
+          <view class="dist-eval-text" style="color: {{evalColor}}">{{evalText}}</view>
+          <view class="dist-eval-note" wx:if="{{evalNote}}">{{evalNote}}</view>
+        </view>
+      </view>
+
+      <view class="card-large radar-card">
+        <view class="radar-card-title">科目均衡分析</view>
+        <view class="radar-top">
+          <view class="radar-eval-badge">{{radarTag}}</view>
+        </view>
+        <view class="radar-stats">
+          <view class="radar-stat">
+            <view class="radar-stat-label">最高分</view>
+            <view class="radar-stat-value">{{radarStats.max}}</view>
+          </view>
+          <view class="radar-stat">
+            <view class="radar-stat-label">最低分</view>
+            <view class="radar-stat-value">{{radarStats.min}}</view>
+          </view>
+          <view class="radar-stat">
+            <view class="radar-stat-label">极差</view>
+            <view class="radar-stat-value">{{radarStats.range}}</view>
+          </view>
+          <view class="radar-stat">
+            <view class="radar-stat-label">平均分</view>
+            <view class="radar-stat-value">{{radarStats.avg}}</view>
+          </view>
+        </view>
+        <canvas
+          type="2d"
+          id="radarCanvas"
+          class="radar-canvas"
+          bindtouchstart="onRadarTouchStart"
+          bindtouchmove="onRadarTouchMove"
+          bindtouchend="onRadarTouchEnd"
+          bindtouchcancel="onRadarTouchEnd"
+        ></canvas>
+      </view>
+
+      <view class="card-normal class-leaderboard" wx:if="{{studentList.length}}">
+        <view class="class-leaderboard-title">学生排名</view>
+        <view class="cb-card" wx:for="{{studentList}}" wx:key="rank" data-index="{{index}}" bindtap="onStudentTap">
+          <view class="cb-rank">
+            <view class="cb-rank-num">{{item.rank}}</view>
+          </view>
+          <view class="cb-main">
+            <view class="cb-name-line">
+              <view class="cb-avatar">
+                <image wx:if="{{item.hasPhoto}}" class="cb-avatar-img" src="{{item.avatar}}" mode="aspectFill"></image>
+                <text wx:else>{{item.avatar}}</text>
+              </view>
+              <view class="cb-name">{{item.name}}</view>
+            </view>
+            <view class="cb-scores">
+              <view class="cb-avg">{{item.avg}}</view>
+              <view class="cr-change">
+                <text class="change-val {{item.changeClass}}">{{item.changeText}}</text>
+                <text class="change-arrow {{item.changeClass}}" wx:if="{{item.arrow}}">{{item.arrow}}</text>
+              </view>
+            </view>
+          </view>
+          <view class="cb-side">
+            <canvas type="2d" id="spark{{index}}" class="cb-spark"></canvas>
+          </view>
+        </view>
+      </view>
+
+    </block>
+  </view>
+
+</view>
