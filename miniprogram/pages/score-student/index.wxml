@@ -1,0 +1,201 @@
+<view class="page">
+
+  <view class="page-header" style="padding-top: {{statusBarHeight}}px;">
+    <view class="header-top">
+      <view class="back-btn" bindtap="onBack"><text class="back-arrow">‹</text></view>
+      <view class="capsule-space" style="width: {{capsuleSpace}}px;"></view>
+    </view>
+    <view class="header-title-row">
+      <text class="page-title">成绩档案</text>
+    </view>
+    <view class="main-tabs">
+      <view class="main-tab" data-tab="exam" bindtap="onMainTab">看考试</view>
+      <view class="main-tab" data-tab="grade" bindtap="onMainTab">看年级</view>
+      <view class="main-tab" data-tab="class" bindtap="onMainTab">看班级</view>
+      <view class="main-tab active" data-tab="student">看个人</view>
+    </view>
+  </view>
+
+  <view class="type-switch" wx:if="{{showTypeSwitch}}">
+    <view
+      class="type-btn {{activeType === item.key ? 'active' : ''}}"
+      wx:for="{{types}}"
+      wx:key="key"
+      data-type="{{item.key}}"
+      bindtap="onTypeTap"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="tab-content">
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+
+    <view class="empty-state" wx:elif="{{!hasData}}">
+      <view class="empty-icon">--</view>
+      <view>{{emptyMsg}}</view>
+    </view>
+
+    <block wx:else>
+
+      <view class="student-picker-card" bindtap="openStudentPicker">
+        <view class="spc-left">
+          <view class="spc-avatar">
+            <image wx:if="{{studentInfo.hasPhoto}}" class="spc-avatar-img" src="{{studentInfo.photo}}" mode="aspectFill"></image>
+            <text wx:else>{{studentInfo.letter}}</text>
+          </view>
+          <view class="spc-info">
+            <view class="spc-name">{{studentInfo.name}}</view>
+            <view class="spc-meta">
+              <text wx:if="{{studentInfo.className}}">{{studentInfo.className}}</text>
+              <text wx:if="{{studentInfo.studentNo}}">学号 {{studentInfo.studentNo}}</text>
+              <text class="spc-role" wx:if="{{studentInfo.classRole}}">{{studentInfo.classRole}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="spc-right"><text class="spc-arrow">▾</text></view>
+      </view>
+
+      <view class="card-large class-stats-card">
+        <view class="cs-rate">
+          <view class="cs-rate-label">平均得分率</view>
+          <view class="cs-rate-value">{{summary.scoreRate}}<text class="cs-rate-unit">%</text></view>
+        </view>
+        <view class="gauge-stats">
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">历次均分</view>
+            <view class="gauge-stat-value">{{summary.avgTotal}}</view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">最高总分</view>
+            <view class="gauge-stat-value">{{summary.maxTotal}}</view>
+          </view>
+          <view class="gauge-stat">
+            <view class="gauge-stat-label">最低总分</view>
+            <view class="gauge-stat-value">{{summary.minTotal}}</view>
+          </view>
+        </view>
+
+        <scroll-view class="subject-toggle" scroll-x enable-flex>
+          <view
+            class="subj-btn {{activeSubj === item.key ? 'active' : ''}}"
+            wx:for="{{subjBtns}}"
+            wx:key="key"
+            data-subj="{{item.key}}"
+            bindtap="onSubjTap"
+          >{{item.label}}</view>
+        </scroll-view>
+        <canvas
+          type="2d"
+          id="trendCanvas"
+          class="trend-canvas"
+          bindtouchstart="onTrendTouchStart"
+          bindtouchmove="onTrendTouchMove"
+          bindtouchend="onTrendTouchEnd"
+          bindtouchcancel="onTrendTouchEnd"
+        ></canvas>
+      </view>
+
+      <view class="card-large radar-card" wx:if="{{hasRadar}}">
+        <view class="radar-card-bg-wrap">
+          <image class="radar-card-bg" src="/assets/imgs/bg/sub-balance-analyze-bg.png" mode="widthFix"></image>
+        </view>
+        <view class="radar-card-body">
+          <view class="radar-card-title">科目均衡分析</view>
+          <view class="radar-tags">
+            <image class="radar-eval-img" src="{{radarEvalImg}}" mode="aspectFit"></image>
+          </view>
+          <view class="radar-stats">
+            <view class="radar-stat">
+              <view class="radar-stat-label">最高分</view>
+              <view class="radar-stat-value">{{radarStats.max}}</view>
+            </view>
+            <view class="radar-stat">
+              <view class="radar-stat-label">最低分</view>
+              <view class="radar-stat-value">{{radarStats.min}}</view>
+            </view>
+            <view class="radar-stat">
+              <view class="radar-stat-label">极差</view>
+              <view class="radar-stat-value">{{radarStats.range}}</view>
+            </view>
+            <view class="radar-stat">
+              <view class="radar-stat-label">平均分</view>
+              <view class="radar-stat-value">{{radarStats.avg}}</view>
+            </view>
+          </view>
+          <canvas
+            type="2d"
+            id="radarCanvas"
+            class="radar-canvas"
+            bindtouchstart="onRadarTouchStart"
+            bindtouchmove="onRadarTouchMove"
+            bindtouchend="onRadarTouchEnd"
+            bindtouchcancel="onRadarTouchEnd"
+          ></canvas>
+        </view>
+      </view>
+
+      <view class="exam-list" wx:if="{{examCards.length}}">
+        <view class="module-title">历次统考</view>
+        <view class="exam-card" wx:for="{{examCards}}" wx:key="group_id" bindtap="onExamCardTap">
+          <view class="ec-header">
+            <text class="ec-title">{{item.name}}</text>
+            <text class="ec-type">{{item.date}}</text>
+          </view>
+          <view class="ec-row">
+            <view class="ec-item">
+              <text class="ec-label">总分</text>
+              <text class="ec-val green">{{item.total}}</text>
+            </view>
+            <view class="ec-item">
+              <text class="ec-label">班排</text>
+              <text class="ec-val">{{item.classRank}}/{{item.classTotal}}</text>
+            </view>
+            <view class="ec-item">
+              <text class="ec-label">级排</text>
+              <text class="ec-val">{{item.gradeRank}}/{{item.gradeTotal}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+    </block>
+  </view>
+
+  <view class="bs-popup" wx:if="{{pickerVisible}}">
+    <view class="bs-popup-mask" bindtap="closePicker"></view>
+    <view class="bs-popup-sheet">
+      <view class="bs-popup-handle"></view>
+      <view class="bs-popup-title">选择学生</view>
+      <scroll-view scroll-y class="bs-popup-body">
+        <view class="bs-popup-content">
+          <block wx:for="{{pickerGroups}}" wx:key="className" wx:for-item="group">
+            <view class="spc-group">
+              <text>{{group.className}}</text>
+              <text class="spc-group-n">{{group.count}}人</text>
+            </view>
+            <view
+              class="spc-row"
+              wx:for="{{group.students}}"
+              wx:for-item="st"
+              wx:key="id"
+              data-id="{{st.id}}"
+              bindtap="onPickerStudentTap"
+            >
+              <view class="spc-row-avatar">
+                <image wx:if="{{st.hasPhoto}}" class="spc-row-avatar-img" src="{{st.photo}}" mode="aspectFill"></image>
+                <text wx:else>{{st.letter}}</text>
+              </view>
+              <view class="spc-row-info">
+                <view class="spc-row-name">{{st.name}}</view>
+                <view class="spc-row-sub">
+                  <text>{{st.studentNo}}</text>
+                  <text class="spc-role" wx:if="{{st.classRole}}">{{st.classRole}}</text>
+                </view>
+              </view>
+            </view>
+          </block>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+</view>

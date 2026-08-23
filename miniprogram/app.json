@@ -5,7 +5,8 @@
     "pages/profile/profile",
     "pages/score-exam-list/index",
     "pages/score-grade-trend/index",
-    "pages/score-class-trend/index"
+    "pages/score-class-trend/index",
+    "pages/score-student/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#F1F8F7",

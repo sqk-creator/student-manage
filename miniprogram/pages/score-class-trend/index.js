@@ -582,7 +582,11 @@ Page({
     return items;
   },
 
-  onStudentTap() {
-    wx.showToast({ title: '看个人功能开发中', icon: 'none' });
+  onStudentTap(e) {
+    const item = this.data.studentList[e.currentTarget.dataset.index];
+    if (!item || !item.student_id) return;
+    wx.navigateTo({
+      url: '/pages/score-student/index?student_id=' + item.student_id
+    });
   }
 });
