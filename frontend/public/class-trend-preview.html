@@ -373,7 +373,7 @@ function renderClassTrend(d,etype){
     var sign=change>=0?'+':'';
     var trendJson=escapeHtml(JSON.stringify((st.trends||[]).map(function(t){return t.total||0;})));
     var avatar=st.photo?'<img src="'+escapeHtml(st.photo)+'">':escapeHtml((st.student_name||'').slice(0,1));
-    return'<div class="cb-card" onclick="toast(\'小程序中对应「看个人」页，功能开发中\')">'
+    return'<div class="cb-card" onclick="location.href=\'student-trend-preview.html?student_id='+st.student_id+'\'">'
       +'<div class="cb-rank"><div class="cb-rank-num">'+(rank<10?'0'+rank:rank)+'</div></div>'
       +'<div class="cb-main"><div class="cb-name-line"><div class="cb-avatar">'+avatar+'</div><div class="cb-name">'+escapeHtml(st.student_name)+'</div></div>'
       +'<div class="cb-scores"><div class="cb-avg">'+st.avg_total+'</div>'
