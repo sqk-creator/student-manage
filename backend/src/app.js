@@ -855,7 +855,13 @@ app.post('/api/import/students', authMiddleware, excelUpload.single('file'), (re
   if (!req.file) return res.status(400).json({ error: '请上传 Excel 文件' });
   try {
     const db = require('./db');
-    const classes = db.prepare('SELECT id, name FROM classes').all();
+    const teacherId = req.teacherId;
+    const teacherCheck = db.prepare('SELECT id FROM teachers WHERE id = ?').get(teacherId);
+    if (!teacherCheck) {
+      db.prepare('INSERT INTO teachers (id, openid, name) VALUES (?, ?, ?)').run(teacherId, 'wx_' + teacherId, '');
+    }
+    const classes = db.prepare('SELECT id, name FROM classes WHERE teacher_id = ?').all(teacherId);
+    const insertClassStmt = db.prepare('INSERT INTO classes (name, teacher_id) VALUES (?, ?)');
     const insertStmt = db.prepare('INSERT INTO students (name, student_no, gender, birth_date, hometown, phone, class_id, class_role) VALUES (?,?,?,?,?,?,?,?)');
     const checkStmt = db.prepare('SELECT id FROM students WHERE student_no = ?');
 
@@ -873,7 +879,7 @@ app.post('/api/import/students', authMiddleware, excelUpload.single('file'), (re
         if (data.class_name) {
           let cls = classes.find(c => c.name === data.class_name);
           if (!cls) {
-            const r = db.prepare('INSERT INTO classes (name) VALUES (?)').run(data.class_name);
+            const r = insertClassStmt.run(data.class_name, teacherId);
             cls = { id: r.lastInsertRowid, name: data.class_name };
             classes.push(cls);
           }
