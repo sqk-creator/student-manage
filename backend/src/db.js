@@ -21,7 +21,7 @@ db.exec(`
     name VARCHAR(100) NOT NULL,
     grade VARCHAR(50) NOT NULL DEFAULT '',
     type VARCHAR(50) NOT NULL DEFAULT '',
-    teacher_id INTEGER NOT NULL,
+    teacher_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
   );
@@ -200,6 +200,30 @@ try { db.exec('CREATE TABLE IF NOT EXISTS attendance_records (id INTEGER PRIMARY
 
 // 迁移：为 classes 表添加 grade_id
 try { db.exec('ALTER TABLE classes ADD COLUMN grade_id INTEGER REFERENCES grades(id) ON DELETE SET NULL'); } catch (_) {}
+
+// 迁移：放宽 classes.teacher_id 的 NOT NULL 约束（允许 NULL，兼容无权限校验的导入场景）
+try {
+  const hasNotNull = db.prepare("SELECT NOT nullable FROM pragma_table_info('classes') WHERE name='teacher_id'").get();
+  if (hasNotNull && hasNotNull.notnull === 1) {
+    db.exec('PRAGMA foreign_keys = OFF');
+    db.exec(`
+      CREATE TABLE classes_tmp (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) NOT NULL,
+        grade VARCHAR(50) NOT NULL DEFAULT '',
+        type VARCHAR(50) NOT NULL DEFAULT '',
+        teacher_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
+      );
+      INSERT INTO classes_tmp (id, name, grade, type, teacher_id, created_at)
+        SELECT id, name, grade, type, teacher_id, created_at FROM classes;
+      DROP TABLE classes;
+      ALTER TABLE classes_tmp RENAME TO classes;
+    `);
+    db.exec('PRAGMA foreign_keys = ON');
+  }
+} catch (_) {}
 
 // 迁移：为 exam_groups 表添加双范围字段
 try { db.exec('ALTER TABLE exam_groups ADD COLUMN scope_type VARCHAR(10) NOT NULL DEFAULT \'class\''); } catch (_) {}
