@@ -479,4 +479,5 @@
 .cb-spark {
   width: 220rpx;
   height: 80rpx;
+  pointer-events: none;
 }

@@ -134,8 +134,8 @@
               </view>
             </view>
           </view>
-          <view class="cb-side" data-index="{{index}}" bindtap="onClassTap">
-            <canvas type="2d" id="spark{{index}}" class="cb-spark" data-index="{{index}}" catchtap="onCanvasTap"></canvas>
+          <view class="cb-side">
+            <canvas type="2d" id="spark{{index}}" class="cb-spark"></canvas>
           </view>
         </view>
       </view>

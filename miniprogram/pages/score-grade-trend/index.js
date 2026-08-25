@@ -419,20 +419,5 @@ Page({
         '&class_name=' +
         encodeURIComponent(item.name)
     });
-  },
-
-  onCanvasTap(e) {
-    const idx = e.currentTarget.dataset.index;
-    const item = this.data.classList[idx];
-    if (!item || !item.class_id) return;
-    wx.navigateTo({
-      url:
-        '/pages/score-class-trend/index?grade_id=' +
-        this.getGradeId() +
-        '&class_id=' +
-        item.class_id +
-        '&class_name=' +
-        encodeURIComponent(item.name)
-    });
   }
 });
