@@ -968,24 +968,20 @@ app.get('/api/persistence/info', (req, res) => {
   res.json(persistence.getBackupInfo());
 });
 
-// 持久化：启动定时备份（每60秒检查一次，有变化则备份）
-let lastBackupTables = null;
+// 持久化：启动定时备份（每30秒检查一次，数据库文件或上传文件有变化则备份）
+// 采用文件修改时间 + 上传文件清单作为变更签名，能捕捉到更新已有行的内容变化
+//（如调整班级 grade_id/type），不再依赖行数比较
+let lastBackupSignature = persistence.getChangeSignature();
 setInterval(() => {
   try {
-    const currentTables = {};
-    ['classes', 'students', 'exams', 'banners', 'exam_groups', 'scores'].forEach(t => {
-      try {
-        currentTables[t] = db.prepare(`SELECT COUNT(*) as cnt FROM ${t}`).get().cnt;
-      } catch (_) { currentTables[t] = 0; }
-    });
-    
-    const changed = JSON.stringify(currentTables) !== JSON.stringify(lastBackupTables);
+    const current = persistence.getChangeSignature();
+    const changed = JSON.stringify(current) !== JSON.stringify(lastBackupSignature);
     if (changed) {
       persistence.saveBackup();
-      lastBackupTables = { ...currentTables };
+      lastBackupSignature = current;
     }
   } catch (_) {}
-}, 60000);
+}, 30000);
 
 // 持久化：进程关闭时保存备份
 process.on('SIGINT', () => {

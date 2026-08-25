@@ -4,6 +4,7 @@ const fs = require('fs');
 
 const dbPath = path.join(__dirname, '..', 'data.db');
 const backupDir = path.join(__dirname, '..', '..', '.monkeycode', 'db-backup');
+const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
 
 // 持久化：确保备份目录存在
 if (!fs.existsSync(backupDir)) {
@@ -12,7 +13,37 @@ if (!fs.existsSync(backupDir)) {
 const backupPath = path.join(backupDir, 'data.db.bak');
 const backupMetaPath = path.join(backupDir, 'backup-meta.json');
 
-// 持久化：检查并恢复数据
+// 持久化：目录同步（source -> target，增量复制、清理多余文件）
+function syncDirUp(sourceDir, targetDir) {
+  if (!fs.existsSync(sourceDir)) return;
+  fs.mkdirSync(targetDir, { recursive: true });
+  try {
+    const sourceFiles = fs.readdirSync(sourceDir).filter(f => {
+      try { return fs.statSync(path.join(sourceDir, f)).isFile(); } catch (_) { return false; }
+    });
+    const targetFiles = fs.existsSync(targetDir) ? fs.readdirSync(targetDir) : [];
+    // 删除目标中已不存在的文件
+    targetFiles.forEach(f => {
+      if (!sourceFiles.includes(f)) {
+        try { fs.unlinkSync(path.join(targetDir, f)); } catch (_) {}
+      }
+    });
+    // 复制源文件（存在且大小一致则跳过）
+    sourceFiles.forEach(f => {
+      const sp = path.join(sourceDir, f);
+      const tp = path.join(targetDir, f);
+      let needCopy = true;
+      try {
+        if (fs.existsSync(tp) && fs.statSync(sp).size === fs.statSync(tp).size) needCopy = false;
+      } catch (_) {}
+      if (needCopy) fs.copyFileSync(sp, tp);
+    });
+  } catch (err) {
+    console.error('[DB Persistence] 目录同步失败:', sourceDir, err.message);
+  }
+}
+
+// 持久化：检查并恢复数据（数据库 + 图片文件）
 if (fs.existsSync(backupPath)) {
   // 如果备份存在且当前数据库为空，则从备份恢复
   try {
@@ -20,7 +51,7 @@ if (fs.existsSync(backupPath)) {
     const classesCount = tempDb.prepare('SELECT COUNT(*) as cnt FROM classes').get().cnt;
     const studentsCount = tempDb.prepare('SELECT COUNT(*) as cnt FROM students').get().cnt;
     tempDb.close();
-    
+
     if (classesCount === 0 && studentsCount === 0) {
       console.log('[DB Persistence] 检测到空数据库，正在从备份恢复...');
       fs.copyFileSync(backupPath, dbPath);
@@ -32,6 +63,18 @@ if (fs.existsSync(backupPath)) {
     fs.copyFileSync(backupPath, dbPath);
     console.log('[DB Persistence] 数据恢复成功');
   }
+  // 恢复上传的图片文件
+  const uploadsBackup = path.join(backupDir, 'uploads');
+  if (fs.existsSync(uploadsBackup)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    syncDirUp(uploadsBackup, uploadsDir);
+    console.log('[DB Persistence] 图片文件恢复成功');
+  }
+}
+
+// 持久化：确保上传目录存在
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // 创建数据库连接
@@ -40,11 +83,28 @@ const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// 持久化：获取变更检测签名（数据库修改时间 + 上传文件清单），用于判断是否有必要备份
+function getChangeSignature() {
+  const sig = { dbMtime: 0, uploadFiles: [] };
+  try { sig.dbMtime = fs.statSync(dbPath).mtimeMs; } catch (_) {}
+  try {
+    sig.uploadFiles = fs.existsSync(uploadsDir)
+      ? fs.readdirSync(uploadsDir).map(f => {
+          try { return { f, m: fs.statSync(path.join(uploadsDir, f)).mtimeMs, s: fs.statSync(path.join(uploadsDir, f)).size }; }
+          catch (_) { return null; }
+        }).filter(Boolean)
+      : [];
+  } catch (_) { sig.uploadFiles = []; }
+  return sig;
+}
+
 // 持久化方法
 function saveBackup() {
   try {
     db.pragma('wal_checkpoint(TRUNCATE)');
     fs.copyFileSync(dbPath, backupPath);
+    // 同步上传的图片文件到备份目录
+    syncDirUp(uploadsDir, path.join(backupDir, 'uploads'));
     const meta = {
       savedAt: new Date().toISOString(),
       tables: {}
@@ -65,6 +125,7 @@ function saveBackup() {
 
 const persistence = {
   saveBackup,
+  getChangeSignature,
   getBackupInfo: () => {
     if (!fs.existsSync(backupMetaPath)) return null;
     return JSON.parse(fs.readFileSync(backupMetaPath, 'utf8'));
