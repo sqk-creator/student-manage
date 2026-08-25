@@ -4,7 +4,10 @@ const fs = require('fs');
 
 const dbPath = path.join(__dirname, '..', 'data.db');
 const backupDir = path.join(__dirname, '..', '..', '.monkeycode', 'db-backup');
-const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+const publicDir = path.join(__dirname, '..', 'public');
+// 需要持久化的图片目录（相对 public/）：通用上传 + 学生/教师头像
+const IMAGE_SUBDIRS = ['uploads', 'avatar/student', 'avatar/teacher'];
+const imageDirs = IMAGE_SUBDIRS.map(s => path.join(publicDir, s));
 
 // 持久化：确保备份目录存在
 if (!fs.existsSync(backupDir)) {
@@ -63,19 +66,22 @@ if (fs.existsSync(backupPath)) {
     fs.copyFileSync(backupPath, dbPath);
     console.log('[DB Persistence] 数据恢复成功');
   }
-  // 恢复上传的图片文件
-  const uploadsBackup = path.join(backupDir, 'uploads');
-  if (fs.existsSync(uploadsBackup)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-    syncDirUp(uploadsBackup, uploadsDir);
-    console.log('[DB Persistence] 图片文件恢复成功');
-  }
+  // 恢复所有图片文件（uploads + avatar）
+  imageDirs.forEach(dir => {
+    const rel = path.relative(publicDir, dir);
+    const backupDirRel = path.join(backupDir, rel);
+    if (fs.existsSync(backupDirRel)) {
+      fs.mkdirSync(dir, { recursive: true });
+      syncDirUp(backupDirRel, dir);
+      console.log('[DB Persistence] 图片文件恢复成功:', rel);
+    }
+  });
 }
 
-// 持久化：确保上传目录存在
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// 持久化：确保所有图片目录存在
+imageDirs.forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
 // 创建数据库连接
 const db = new Database(dbPath);
@@ -83,18 +89,19 @@ const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
-// 持久化：获取变更检测签名（数据库修改时间 + 上传文件清单），用于判断是否有必要备份
+// 持久化：获取变更检测签名（数据库修改时间 + 各图片目录文件清单），用于判断是否有必要备份
 function getChangeSignature() {
-  const sig = { dbMtime: 0, uploadFiles: [] };
+  const sig = { dbMtime: 0, imageFiles: [] };
   try { sig.dbMtime = fs.statSync(dbPath).mtimeMs; } catch (_) {}
-  try {
-    sig.uploadFiles = fs.existsSync(uploadsDir)
-      ? fs.readdirSync(uploadsDir).map(f => {
-          try { return { f, m: fs.statSync(path.join(uploadsDir, f)).mtimeMs, s: fs.statSync(path.join(uploadsDir, f)).size }; }
-          catch (_) { return null; }
-        }).filter(Boolean)
-      : [];
-  } catch (_) { sig.uploadFiles = []; }
+  imageDirs.forEach(dir => {
+    try {
+      const files = fs.existsSync(dir) ? fs.readdirSync(dir).map(f => {
+        try { return { f, m: fs.statSync(path.join(dir, f)).mtimeMs, s: fs.statSync(path.join(dir, f)).size }; }
+        catch (_) { return null; }
+      }).filter(Boolean) : [];
+      sig.imageFiles.push({ dir, files });
+    } catch (_) { sig.imageFiles.push({ dir, files: [] }); }
+  });
   return sig;
 }
 
@@ -103,8 +110,11 @@ function saveBackup() {
   try {
     db.pragma('wal_checkpoint(TRUNCATE)');
     fs.copyFileSync(dbPath, backupPath);
-    // 同步上传的图片文件到备份目录
-    syncDirUp(uploadsDir, path.join(backupDir, 'uploads'));
+    // 同步所有图片目录（uploads + avatar）到备份目录
+    imageDirs.forEach(dir => {
+      const rel = path.relative(publicDir, dir);
+      syncDirUp(dir, path.join(backupDir, rel));
+    });
     const meta = {
       savedAt: new Date().toISOString(),
       tables: {}
