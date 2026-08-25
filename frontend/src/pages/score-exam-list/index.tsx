@@ -511,6 +511,28 @@ export default function ScoreExamList() {
                               onClick={() => setConfirmDelete({ id: item.id, type: 'exam', name: item.name })}>删除</button>
                           </>
       )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Pagination */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #F2F3F5' }}>
+              <span style={{ fontSize: 13, color: '#86909C' }}>
+                第 {page}/{totalPages} 页，共 {filteredItems.length} 条
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-default btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一页</button>
+                <button className="btn btn-default btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>下一页</button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Import Modal */}
       {showImport && (
         <div className="modal-overlay" onClick={() => setShowImport(false)}>
           <div className="modal" style={{maxWidth:460}} onClick={e => e.stopPropagation()}>
@@ -535,26 +557,6 @@ export default function ScoreExamList() {
           </div>
         </div>
       )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Pagination */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #F2F3F5' }}>
-              <span style={{ fontSize: 13, color: '#86909C' }}>
-                第 {page}/{totalPages} 页，共 {filteredItems.length} 条
-              </span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-default btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一页</button>
-                <button className="btn btn-default btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>下一页</button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
 
       {/* Batch Form Modal */}
       {showBatchForm && (
