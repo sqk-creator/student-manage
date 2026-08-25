@@ -1,11 +1,11 @@
 {
-  "savedAt": "2026-08-25T06:25:39.047Z",
+  "savedAt": "2026-08-25T07:03:17.617Z",
   "tables": {
-    "classes": 0,
-    "students": 0,
-    "exams": 0,
-    "banners": 0,
-    "exam_groups": 0,
-    "scores": 0
+    "classes": 9,
+    "students": 450,
+    "exams": 24,
+    "banners": 3,
+    "exam_groups": 4,
+    "scores": 10800
   }
 }
