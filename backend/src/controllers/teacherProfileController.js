@@ -8,9 +8,9 @@ exports.list = (req, res) => {
       SELECT ct.id as ct_id, ct.role, ct.subject, c.id as class_id, c.name as class_name, c.grade
       FROM class_teachers ct
       JOIN classes c ON ct.class_id = c.id
-      WHERE ct.teacher_id = ? AND c.teacher_id = ?
+      WHERE ct.teacher_id = ?
       ORDER BY c.name
-    `).all(t.id, req.teacherId);
+    `).all(t.id);
     const honors = db.prepare('SELECT * FROM teacher_honors WHERE teacher_id = ? ORDER BY date DESC').all(t.id);
     return { ...t, classes, honors };
   });

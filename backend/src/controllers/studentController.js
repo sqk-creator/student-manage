@@ -13,8 +13,8 @@ exports.list = (req, res) => {
 
 exports.listAll = (req, res) => {
   const { keyword, class_id } = req.query;
-  let sql = 'SELECT s.*, c.name as class_name FROM students s JOIN classes c ON s.class_id = c.id WHERE c.teacher_id = ?';
-  const params = [req.teacherId];
+  let sql = 'SELECT s.*, c.name as class_name FROM students s JOIN classes c ON s.class_id = c.id WHERE 1=1';
+  const params = [];
   if (keyword) {
     sql += ' AND (s.name LIKE ? OR s.student_no LIKE ?)';
     params.push('%' + keyword + '%', '%' + keyword + '%');
@@ -30,7 +30,7 @@ exports.listAll = (req, res) => {
 
 exports.create = (req, res) => {
   const classId = req.params.classId;
-  const cls = db.prepare('SELECT * FROM classes WHERE id = ? AND teacher_id = ?').get(classId, req.teacherId);
+  const cls = db.prepare('SELECT * FROM classes WHERE id = ?').get(classId);
   if (!cls) return res.status(404).json({ error: '班级不存在' });
 
   const { name, student_no, gender, phone, birth_date, hometown, photo, class_role } = req.body;
@@ -68,8 +68,7 @@ exports.get = (req, res) => {
 };
 
 exports.update = (req, res) => {
-  const student = db.prepare('SELECT s.* FROM students s JOIN classes c ON s.class_id = c.id WHERE s.id = ? AND c.teacher_id = ?')
-    .get(req.params.id, req.teacherId);
+  const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id);
 
   if (!student) return res.status(404).json({ error: '学生不存在' });
 
@@ -78,7 +77,7 @@ exports.update = (req, res) => {
   if (!student_no || !student_no.trim()) return res.status(422).json({ error: '学号为必填项' });
 
   if (class_id !== undefined && class_id !== student.class_id) {
-    const cls = db.prepare('SELECT id FROM classes WHERE id = ? AND teacher_id = ?').get(class_id, req.teacherId);
+    const cls = db.prepare('SELECT id FROM classes WHERE id = ?').get(class_id);
     if (!cls) return res.status(404).json({ error: '目标班级不存在' });
   }
 
@@ -101,11 +100,10 @@ exports.transfer = (req, res) => {
   const { class_id } = req.body;
   if (!class_id) return res.status(422).json({ error: '目标班级ID为必填项' });
 
-  const student = db.prepare('SELECT s.* FROM students s JOIN classes c ON s.class_id = c.id WHERE s.id = ? AND c.teacher_id = ?')
-    .get(req.params.id, req.teacherId);
+  const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id);
   if (!student) return res.status(404).json({ error: '学生不存在' });
 
-  const cls = db.prepare('SELECT id FROM classes WHERE id = ? AND teacher_id = ?').get(class_id, req.teacherId);
+  const cls = db.prepare('SELECT id FROM classes WHERE id = ?').get(class_id);
   if (!cls) return res.status(404).json({ error: '目标班级不存在' });
 
   db.prepare('UPDATE students SET class_id = ? WHERE id = ?').run(class_id, req.params.id);
@@ -114,8 +112,7 @@ exports.transfer = (req, res) => {
 };
 
 exports.remove = (req, res) => {
-  const student = db.prepare('SELECT s.id FROM students s JOIN classes c ON s.class_id = c.id WHERE s.id = ? AND c.teacher_id = ?')
-    .get(req.params.id, req.teacherId);
+  const student = db.prepare('SELECT id FROM students WHERE id = ?').get(req.params.id);
   if (!student) return res.status(404).json({ error: '学生不存在' });
   db.prepare('DELETE FROM students WHERE id = ?').run(req.params.id);
   res.json({ message: '删除成功' });
