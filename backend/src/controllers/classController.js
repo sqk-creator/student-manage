@@ -7,9 +7,11 @@ exports.list = (req, res) => {
   if (grade_id) { where += ' AND c.grade_id = ?'; params.push(grade_id); }
   if (type) { where += ' AND c.type = ?'; params.push(type); }
   const classes = db.prepare(`
-    SELECT c.*,
+    SELECT c.*, g.grade_name,
+      COALESCE(NULLIF(c.grade, ''), g.grade_name, '') as grade_display,
       (SELECT COUNT(*) FROM students WHERE class_id = c.id) as student_count
     FROM classes c
+    LEFT JOIN grades g ON c.grade_id = g.id
     ${where}
     ORDER BY c.created_at DESC
   `).all(...params);

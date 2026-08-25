@@ -44,12 +44,13 @@ export default function Classes() {
   };
 
   const openEdit = (c: any) => {
-    setEditId(c.id); setEditName(c.name); setEditGrade(c.grade || ''); setEditGradeId(c.grade_id || 0); setEditType(c.type || ''); setShowEdit(true);
+    setEditId(c.id); setEditName(c.name); setEditGrade(c.grade_display || c.grade || ''); setEditGradeId(c.grade_id || 0); setEditType(c.type || ''); setShowEdit(true);
   };
 
   const handleUpdate = async () => {
     if (!editName.trim()) return alert('请输入班级名称');
-    const data: any = { name: editName.trim(), grade: editGrade, type: editType, grade_id: editGradeId || null };
+    const gname = editGradeId ? grades.find(g => g.id === editGradeId)?.grade_name || editGrade : editGrade;
+    const data: any = { name: editName.trim(), grade: gname, type: editType, grade_id: editGradeId || null };
     try { await api.updateClass(editId, data); setShowEdit(false); loadClasses(); }
     catch (e: any) { alert(e.message); }
   };
@@ -158,7 +159,7 @@ export default function Classes() {
                 <tr key={c.id}>
                   <td>{c.id}</td>
                   <td style={{fontWeight:500}}>{c.name}</td>
-                  <td>{c.grade || '-'}</td>
+                  <td>{c.grade_display || c.grade || '-'}</td>
                   <td>{c.type || '-'}</td>
                   <td><span className="tag tag-blue">{c.student_count || 0}</span></td>
                   <td>{c.created_at?.split(' ')[0] || '-'}</td>
