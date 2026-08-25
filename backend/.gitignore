@@ -1,5 +1,4 @@
-# SQLite database
-*.db
+# SQLite database (仅忽略 WAL/SHM 临时文件，保留 data.db 持久化)
 *.db-shm
 *.db-wal
 

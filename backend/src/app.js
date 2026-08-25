@@ -4,6 +4,9 @@ const path = require('path');
 const { authMiddleware } = require('./middleware/auth');
 const { photoUpload, excelUpload, batchUpload } = require('./shared/upload');
 const ExcelImporter = require('./shared/excel-import');
+const dbModule = require('./db');
+const db = dbModule;
+const persistence = dbModule.persistence;
 
 const authRoutes = require('./routes/auth');
 const classRoutes = require('./routes/classes');
@@ -955,6 +958,55 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: '服务器异常' });
 });
 
+// 持久化：数据备份接口
+app.get('/api/persistence/backup', authMiddleware, (req, res) => {
+  const result = persistence.saveBackup();
+  res.json({ success: result, info: persistence.getBackupInfo() });
+});
+
+app.get('/api/persistence/info', (req, res) => {
+  res.json(persistence.getBackupInfo());
+});
+
+// 持久化：启动定时备份（每60秒检查一次，有变化则备份）
+let lastBackupTables = null;
+setInterval(() => {
+  try {
+    const currentTables = {};
+    ['classes', 'students', 'exams', 'banners', 'exam_groups', 'scores'].forEach(t => {
+      try {
+        currentTables[t] = db.prepare(`SELECT COUNT(*) as cnt FROM ${t}`).get().cnt;
+      } catch (_) { currentTables[t] = 0; }
+    });
+    
+    const changed = JSON.stringify(currentTables) !== JSON.stringify(lastBackupTables);
+    if (changed) {
+      persistence.saveBackup();
+      lastBackupTables = { ...currentTables };
+    }
+  } catch (_) {}
+}, 60000);
+
+// 持久化：进程关闭时保存备份
+process.on('SIGINT', () => {
+  console.log('[DB Persistence] 收到终止信号，保存数据备份...');
+  persistence.saveBackup();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('[DB Persistence] 收到终止信号，保存数据备份...');
+  persistence.saveBackup();
+  process.exit(0);
+});
+
+// 持久化：首次启动立即备份一次（确保初始数据被保存）
+setTimeout(() => {
+  console.log('[DB Persistence] 首次启动，保存初始数据备份...');
+  persistence.saveBackup();
+}, 5000);
+
 app.listen(PORT, () => {
   console.log(`后端服务已启动: http://localhost:${PORT}`);
+  console.log('[DB Persistence] 数据持久化已启用，备份目录: .monkeycode/db-backup/');
 });

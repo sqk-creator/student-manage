@@ -1,11 +1,75 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
 const dbPath = path.join(__dirname, '..', 'data.db');
+const backupDir = path.join(__dirname, '..', '..', '.monkeycode', 'db-backup');
+
+// 持久化：确保备份目录存在
+if (!fs.existsSync(backupDir)) {
+  fs.mkdirSync(backupDir, { recursive: true });
+}
+const backupPath = path.join(backupDir, 'data.db.bak');
+const backupMetaPath = path.join(backupDir, 'backup-meta.json');
+
+// 持久化：检查并恢复数据
+if (fs.existsSync(backupPath)) {
+  // 如果备份存在且当前数据库为空，则从备份恢复
+  try {
+    const tempDb = new Database(dbPath);
+    const classesCount = tempDb.prepare('SELECT COUNT(*) as cnt FROM classes').get().cnt;
+    const studentsCount = tempDb.prepare('SELECT COUNT(*) as cnt FROM students').get().cnt;
+    tempDb.close();
+    
+    if (classesCount === 0 && studentsCount === 0) {
+      console.log('[DB Persistence] 检测到空数据库，正在从备份恢复...');
+      fs.copyFileSync(backupPath, dbPath);
+      console.log('[DB Persistence] 数据恢复成功');
+    }
+  } catch (e) {
+    // 如果数据库文件损坏或无法打开，从备份恢复
+    console.log('[DB Persistence] 数据库异常，正在从备份恢复...');
+    fs.copyFileSync(backupPath, dbPath);
+    console.log('[DB Persistence] 数据恢复成功');
+  }
+}
+
+// 创建数据库连接
 const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+
+// 持久化方法
+function saveBackup() {
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+    fs.copyFileSync(dbPath, backupPath);
+    const meta = {
+      savedAt: new Date().toISOString(),
+      tables: {}
+    };
+    ['classes', 'students', 'exams', 'banners', 'exam_groups', 'scores'].forEach(t => {
+      try {
+        meta.tables[t] = db.prepare(`SELECT COUNT(*) as cnt FROM ${t}`).get().cnt;
+      } catch (_) { meta.tables[t] = 0; }
+    });
+    fs.writeFileSync(backupMetaPath, JSON.stringify(meta, null, 2));
+    console.log('[DB Persistence] 备份保存成功:', meta.tables);
+    return true;
+  } catch (err) {
+    console.error('[DB Persistence] 备份保存失败:', err.message);
+    return false;
+  }
+}
+
+const persistence = {
+  saveBackup,
+  getBackupInfo: () => {
+    if (!fs.existsSync(backupMetaPath)) return null;
+    return JSON.parse(fs.readFileSync(backupMetaPath, 'utf8'));
+  }
+};
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS teachers (
@@ -288,4 +352,6 @@ try { db.exec('ALTER TABLE teacher_profiles ADD COLUMN employee_no VARCHAR(30) N
 // 照片批量绑定操作日志表
 try { db.exec('CREATE TABLE IF NOT EXISTS photo_batch_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id VARCHAR(64) NOT NULL DEFAULT \'\', target_type VARCHAR(10) NOT NULL DEFAULT \'student\', operator_id INTEGER NOT NULL DEFAULT 0, operator_name VARCHAR(50) NOT NULL DEFAULT \'\', total INTEGER NOT NULL DEFAULT 0, success INTEGER NOT NULL DEFAULT 0, failed INTEGER NOT NULL DEFAULT 0, skipped INTEGER NOT NULL DEFAULT 0, unmatched INTEGER NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)'); } catch (_) {}
 
+// 导出数据库实例和持久化方法
+db.persistence = persistence;
 module.exports = db;
