@@ -132,8 +132,10 @@ function lineTrendGeom(w, h, items) {
 
   const chartW = w - padL - padR;
   const chartH = h - padT - padB;
+  const padIn = 26;
+  const innerW = chartW - padIn * 2;
   const xs = values.map((_, i) =>
-    values.length > 1 ? padL + (i / (values.length - 1)) * chartW : padL + chartW / 2
+    values.length > 1 ? padL + padIn + (i / (values.length - 1)) * innerW : padL + chartW / 2
   );
   const ys = values.map((v) => padT + (yMax - v) / (yMax - yMin) * chartH);
 
@@ -144,8 +146,10 @@ function lineTrendGeom(w, h, items) {
     padR,
     padT,
     padB,
+    padIn,
     chartW,
     chartH,
+    innerW,
     values,
     names,
     maxs,
@@ -158,7 +162,7 @@ function lineTrendGeom(w, h, items) {
   };
 }
 
-function drawTrendBase(ctx, w, h, g) {
+function drawTrendLayer(ctx, w, h, g, prog) {
   ctx.clearRect(0, 0, w, h);
   if (!g || !g.xs || !g.xs.length) return;
   const { padL, padR, padT, chartH, yMax, yMin, xs, ys } = g;
@@ -190,23 +194,67 @@ function drawTrendBase(ctx, w, h, g) {
   ctx.fillStyle = grad;
   ctx.fill();
 
+  // 折线按进度渐进绘制
+  const n = xs.length;
+  const done = Math.max(0, Math.min(1, prog == null ? 1 : prog)) * (n - 1);
+  const lastSeg = Math.floor(done);
   ctx.beginPath();
-  xs.forEach((x, i) => (i === 0 ? ctx.moveTo(x, ys[i]) : ctx.lineTo(x, ys[i])));
+  for (let i = 0; i <= lastSeg; i++) {
+    if (i === 0) ctx.moveTo(xs[i], ys[i]);
+    else ctx.lineTo(xs[i], ys[i]);
+  }
+  if (lastSeg < n - 1) {
+    const frac = done - lastSeg;
+    ctx.lineTo(
+      xs[lastSeg] + (xs[lastSeg + 1] - xs[lastSeg]) * frac,
+      ys[lastSeg] + (ys[lastSeg + 1] - ys[lastSeg]) * frac
+    );
+  }
   ctx.strokeStyle = MAIN_COLOR;
   ctx.lineWidth = 4;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.stroke();
 
-  xs.forEach((x, i) => {
+  // 数据点：默认白色圆缩小
+  for (let i = 0; i < n; i++) {
+    if (i > done) break;
     ctx.beginPath();
-    ctx.arc(x, ys[i], 6, 0, Math.PI * 2);
+    ctx.arc(xs[i], ys[i], 4, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.lineWidth = 2;
     ctx.strokeStyle = MAIN_COLOR;
     ctx.stroke();
-  });
+  }
+}
+
+function drawTrendBase(ctx, w, h, g) {
+  drawTrendLayer(ctx, w, h, g, 1);
+}
+
+function animateLineTrend(ctx, node, w, h, items, cb) {
+  const g = lineTrendGeom(w, h, items);
+  if (!g) {
+    if (cb) cb(g);
+    return;
+  }
+  const duration = 600;
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+  let start = null;
+  const frame = (ts) => {
+    if (!start) start = ts;
+    const elapsed = ts - start;
+    const progress = Math.min(elapsed / duration, 1);
+    drawTrendLayer(ctx, w, h, g, easeOutCubic(progress));
+    if (progress < 1) {
+      node.requestAnimationFrame(frame);
+    } else if (cb) {
+      drawTrendLayer(ctx, w, h, g, 1);
+      cb(g);
+    }
+  };
+  node.requestAnimationFrame(frame);
 }
 
 function textWidth(ctx, str, fallback) {
@@ -266,26 +314,39 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   const x = g.xs[idx];
   const y = g.ys[idx];
 
-  ctx.font = 'bold 18px ' + FONT_FAMILY;
-  const valW = textWidth(ctx, val.toFixed(1), 40);
-  ctx.font = 'bold 18px ' + FONT_FAMILY;
-  const rateW = textWidth(ctx, String(rate), 30);
-  ctx.font = '14px ' + FONT_FAMILY;
-  const slashW = textWidth(ctx, '/', 8);
-  const maxW = maxV > 0 ? textWidth(ctx, String(maxV), 20) : 0;
-  const percentW = textWidth(ctx, '%', 10);
-  ctx.font = 'bold 13px ' + FONT_FAMILY;
-  const nameW = textWidth(ctx, name, name.length * 13);
+  const valueFont = 24; // 分数/得分率 大字号
+  const pctFont = 13; // "%" 小字号
+  const nameFont = 13;
+  ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
+  const valW = textWidth(ctx, val.toFixed(1), 46);
+  const rateW = textWidth(ctx, String(rate), 34);
+  ctx.font = valueFont + 'px ' + FONT_FAMILY;
+  const slashW = textWidth(ctx, '/', 10);
+  const maxW = maxV > 0 ? textWidth(ctx, String(maxV), 24) : 0;
+  ctx.font = pctFont + 'px ' + FONT_FAMILY;
+  const pctW = textWidth(ctx, '%', 9);
+  ctx.font = 'bold ' + nameFont + 'px ' + FONT_FAMILY;
+  const nameW = textWidth(ctx, name, name.length * nameFont);
 
-  const gap = 4;
-  const valueLineW = valW + gap + slashW + gap + maxW + 10 + rateW + gap + percentW + 10;
-  const boxW = Math.max(nameW + 4, valueLineW) + 36;
-  const contentH = 26 + (g.yIsFlat ? 22 : 0);
-  const boxH = contentH + 28;
+  const padT = 14; // 卡片 padding-top
+  const padB = 14; // 卡片 padding-bottom（与 padT 一致）
+  const contentPad = 18;
+  const pctGap = 1; // "%" 与得分率数值间距缩小
+  const rowGap = 8;
+  const nameRowH = nameFont + 4;
+  const valueRowH = valueFont + 4;
+  const boxH = padT + nameRowH + rowGap + valueRowH + padB + (g.yIsFlat ? 24 : 0);
 
-  let bx = x + 18;
-  if (bx + boxW > w - 10) bx = Math.max(10, x - 18 - boxW);
-  const by = Math.max(10, Math.min(y - 10, h - boxH - 10));
+  const leftBlockW = valW + 4 + slashW + 4 + maxW;
+  const rightBlockW = rateW + pctGap + pctW;
+  const valueLineW = leftBlockW + 20 + rightBlockW;
+  const boxW = Math.max(nameW, valueLineW) + contentPad * 2;
+
+  // 卡片位置：优先放上方，放不下则放下方，均与数据点保持间距，避免遮住数据点
+  const gapP = 22;
+  let by = y - boxH - gapP;
+  if (by < 8) by = Math.min(y + gapP, h - boxH - 8);
+  const bx = Math.max(8, Math.min(x - boxW / 2, w - boxW - 8));
 
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.15)';
@@ -300,47 +361,53 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   roundRectPath(ctx, bx, by, boxW, boxH, 12);
   ctx.stroke();
 
+  // 第一行：考试名
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillStyle = '#1A1A1A';
-  ctx.font = 'bold 13px ' + FONT_FAMILY;
-  ctx.fillText(name, bx + 18, by + 14);
+  ctx.font = 'bold ' + nameFont + 'px ' + FONT_FAMILY;
+  ctx.fillText(name, bx + contentPad, by + padT);
 
-  const lineY = by + 14 + 20;
-  let curX = bx + 18;
-  ctx.font = 'bold 18px ' + FONT_FAMILY;
+  // 第二行：分数 + 得分率（右对齐）
+  const valueTop = by + padT + nameRowH + rowGap;
+  // 左侧：分数
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = '#1A1A1A';
-  ctx.fillText(val.toFixed(1), curX, lineY);
-  curX += valW + gap;
-  ctx.font = '14px ' + FONT_FAMILY;
+  ctx.fillText(val.toFixed(1), bx + contentPad, valueTop);
+  let curX = bx + contentPad + valW + 4;
+  ctx.font = valueFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = AXIS_COLOR;
-  ctx.fillText('/', curX, lineY + 2);
-  curX += slashW + gap;
+  ctx.fillText('/', curX, valueTop);
+  curX += slashW + 4;
   if (maxV > 0) {
-    ctx.fillText(String(maxV), curX, lineY + 2);
-    curX += maxW + 10;
+    ctx.fillText(String(maxV), curX, valueTop);
   }
-  ctx.font = 'bold 18px ' + FONT_FAMILY;
-  ctx.fillStyle = MAIN_COLOR;
-  ctx.fillText(String(rate), curX, lineY);
-  curX += rateW + gap;
-  ctx.font = '14px ' + FONT_FAMILY;
+  // 右侧：得分率数值与 "%" 居右对齐，"%" 紧贴得分率
+  const rightX = bx + boxW - contentPad;
+  ctx.textAlign = 'right';
+  ctx.font = pctFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = AXIS_COLOR;
-  ctx.fillText('%', curX, lineY + 2);
+  ctx.fillText('%', rightX, valueTop + valueFont * 0.12);
+  ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
+  ctx.fillStyle = MAIN_COLOR;
+  ctx.fillText(String(rate), rightX - pctGap - pctW, valueTop);
+  ctx.textAlign = 'left';
 
   if (g.yIsFlat) {
-    const hy = by + boxH - 16;
+    const hy = valueTop + valueRowH + 4;
     ctx.setLineDash([1, 0]);
     ctx.strokeStyle = GRID_COLOR;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(bx + 18, hy - 4);
-    ctx.lineTo(bx + boxW - 18, hy - 4);
+    ctx.moveTo(bx + contentPad, hy);
+    ctx.lineTo(bx + boxW - contentPad, hy);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = '#FA8C16';
     ctx.font = '11px ' + FONT_FAMILY;
-    ctx.fillText('各次考试平均分无明显差距', bx + 18, hy + 1);
+    ctx.fillText('各次考试平均分无明显差距', bx + contentPad, hy + 4);
   }
 }
 
@@ -356,6 +423,42 @@ function niceMax(v) {
   return n * pow;
 }
 
+// 圆角路径：可单独控制四个角的圆角（corners: {tl,tr,br,bl} 布尔）
+function roundRectCorners(ctx, x, y, w, h, r, c) {
+  r = Math.min(r, w / 2, h / 2);
+  const tl = c && c.tl ? r : 0;
+  const tr = c && c.tr ? r : 0;
+  const br = c && c.br ? r : 0;
+  const bl = c && c.bl ? r : 0;
+  ctx.beginPath();
+  ctx.moveTo(x + tl, y);
+  if (tr > 0) {
+    ctx.lineTo(x + w - tr, y);
+    ctx.arcTo(x + w, y, x + w, y + tr, tr);
+  } else {
+    ctx.lineTo(x + w, y);
+  }
+  if (br > 0) {
+    ctx.lineTo(x + w, y + h - br);
+    ctx.arcTo(x + w, y + h, x + w - br, y + h, br);
+  } else {
+    ctx.lineTo(x + w, y + h);
+  }
+  if (bl > 0) {
+    ctx.lineTo(x + bl, y + h);
+    ctx.arcTo(x, y + h, x, y + h - bl, bl);
+  } else {
+    ctx.lineTo(x, y + h);
+  }
+  if (tl > 0) {
+    ctx.lineTo(x, y + tl);
+    ctx.arcTo(x, y, x + tl, y, tl);
+  } else {
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
 function drawHistogram(ctx, w, h, data, opts) {
   ctx.clearRect(0, 0, w, h);
   const xAxis = (data && data.xAxis) || [];
@@ -364,8 +467,8 @@ function drawHistogram(ctx, w, h, data, opts) {
   const stack = !!(opts && opts.stack);
   const padL = 34;
   const padR = 14;
-  const padT = 26;
-  const padB = 30;
+  const padT = 15; // 减小顶部留白
+  const padB = 40; // 为斜向标签预留空间
   const chartW = w - padL - padR;
   const chartH = h - padT - padB;
 
@@ -381,15 +484,17 @@ function drawHistogram(ctx, w, h, data, opts) {
   });
   const yMax = niceMax(maxV);
 
+  // Y 轴网格：细分间距，压缩顶部空白
+  const gridNum = 4;
   ctx.font = '11px ' + FONT_FAMILY;
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1;
   ctx.fillStyle = '#909399';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  for (let i = 0; i <= 3; i++) {
-    const gy = padT + i * (chartH / 3);
-    const gv = yMax - i * (yMax / 3);
+  for (let i = 0; i <= gridNum; i++) {
+    const gy = padT + i * (chartH / gridNum);
+    const gv = yMax - i * (yMax / gridNum);
     ctx.beginPath();
     ctx.moveTo(padL, gy);
     ctx.lineTo(w - padR, gy);
@@ -404,13 +509,27 @@ function drawHistogram(ctx, w, h, data, opts) {
     const cx = padL + slotW * i + slotW / 2;
     if (stack) {
       let accY = padT + chartH;
-      series.forEach((s) => {
+      const n = series.length;
+      series.forEach((s, j) => {
         const v = s.data[i] || 0;
         const bh = v / yMax * chartH;
         const by = accY - bh;
         ctx.fillStyle = s.color || MAIN_COLOR;
-        roundRectPath(ctx, cx - barW / 2, by, barW, bh, 3);
-        ctx.fill();
+        if (n > 1) {
+          // 双分柱平滑衔接：下柱上两角平、上柱下两角平，上柱上两角保持圆角
+          const isTop = j === n - 1;
+          const isBottom = j === 0;
+          roundRectCorners(ctx, cx - barW / 2, by, barW, bh, 3, {
+            tl: isTop,
+            tr: isTop,
+            br: isBottom,
+            bl: isBottom
+          });
+          ctx.fill();
+        } else {
+          roundRectPath(ctx, cx - barW / 2, by, barW, bh, 3);
+          ctx.fill();
+        }
         if (v > 0) {
           ctx.fillStyle = '#909399';
           ctx.font = '10px ' + FONT_FAMILY;
@@ -422,7 +541,7 @@ function drawHistogram(ctx, w, h, data, opts) {
         accY = by;
       });
     } else {
-      const v = (series[0].data[i] || 0);
+      const v = series[0].data[i] || 0;
       const bh = v / yMax * chartH;
       const by = padT + chartH - bh;
       ctx.fillStyle = series[0].color || MAIN_COLOR;
@@ -434,13 +553,18 @@ function drawHistogram(ctx, w, h, data, opts) {
       ctx.fillText(String(v), cx, by - 2);
     }
 
+    // X 轴标签：斜向展示，避免重叠
+    let label = xAxis[i] || '';
+    if (label.length > 3) label = label.slice(0, 3);
+    ctx.save();
+    ctx.translate(cx, h - padB + 10);
+    ctx.rotate(-Math.PI / 4);
     ctx.fillStyle = '#909399';
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
     ctx.font = '10px ' + FONT_FAMILY;
-    let label = xAxis[i] || '';
-    if (label.length > 5) label = label.slice(0, 5);
-    ctx.fillText(label, cx, h - padB + 6);
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
   });
 }
 
@@ -668,6 +792,7 @@ module.exports = {
   drawGauge,
   animateGauge,
   drawLineTrend,
+  animateLineTrend,
   drawTrendSelected,
   drawHistogram,
   drawSparkline,

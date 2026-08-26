@@ -107,7 +107,9 @@
           <view class="legend-item"><view class="legend-dot dot-good"></view>良好</view>
           <view class="legend-item"><view class="legend-dot dot-exc"></view>优秀</view>
         </view>
-        <canvas type="2d" id="rateDistCanvas" class="hist-canvas"></canvas>
+        <scroll-view class="hist-scroll" scroll-x show-scrollbar="{{false}}" enable-flex>
+          <canvas type="2d" id="rateDistCanvas" class="hist-canvas" style="width: {{rateDistWidth}}px;"></canvas>
+        </scroll-view>
       </view>
 
       <view class="card-normal grade-rate2-card">
@@ -115,7 +117,9 @@
           <view class="cs-rate-label">平均及格率</view>
           <view class="cs-rate-value grade-c">{{summary.passRate}}<text class="cs-rate-unit">%</text></view>
         </view>
-        <canvas type="2d" id="passDistCanvas" class="hist-canvas"></canvas>
+        <scroll-view class="hist-scroll" scroll-x show-scrollbar="{{false}}" enable-flex>
+          <canvas type="2d" id="passDistCanvas" class="hist-canvas" style="width: {{passDistWidth}}px;"></canvas>
+        </scroll-view>
       </view>
 
       <view class="card-normal class-leaderboard" wx:if="{{classList.length}}">

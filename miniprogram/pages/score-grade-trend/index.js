@@ -25,6 +25,8 @@ Page({
     },
     rateDistData: { xAxis: [], series: [] },
     passDistData: { xAxis: [], series: [] },
+    rateDistWidth: 0,
+    passDistWidth: 0,
     classList: [],
     lineItems: [],
     groups: [],
@@ -305,6 +307,14 @@ Page({
     const type = d.exam_type || (types.length ? types[0].key : '');
     const activeSubj = this.data.activeSubj;
 
+    const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+    const winW = info.windowWidth || 375;
+    const rpx = winW / 750;
+    const cardInnerW = Math.max(120, winW - 136 * rpx);
+    const minSlot = 44 * rpx;
+    const rateDistWidth = Math.max(cardInnerW, distNames.length * minSlot);
+    const passDistWidth = Math.max(cardInnerW, passNames.length * minSlot);
+
     this.setData(
       {
         hasData: true,
@@ -317,6 +327,8 @@ Page({
         subjBtns,
         activeSubj: activeSubj === 'total' ? 'total' : activeSubj,
         groups: d.groups || [],
+        rateDistWidth,
+        passDistWidth,
         summary: {
           scoreRate: s.avg_score_rate || 0,
           totalExams: s.total_exams || 0,
@@ -344,6 +356,7 @@ Page({
 
     charts.getCanvas(this, 'gaugeCanvas').then((res) => {
       if (!res) return;
+      this._gv = -1;
       charts.animateGauge({
         ctx: res.ctx,
         node: res.node,
@@ -351,7 +364,11 @@ Page({
         h: res.h,
         targetRate: gaugeRate,
         onFrame: (val) => {
-          this.setData({ 'summary.scoreRate': val });
+          // 节流：仅当整数取值变化时才 setData，减少重渲染卡顿
+          if (this._gv !== val) {
+            this._gv = val;
+            this.setData({ 'summary.scoreRate': val });
+          }
         }
       });
     });
@@ -359,7 +376,9 @@ Page({
     charts.getCanvas(this, 'trendCanvas').then((res) => {
       if (!res) return;
       this.currentLineItems = lineItems;
-      this.trendGeom = charts.drawLineTrend(res.ctx, res.w, res.h, lineItems);
+      charts.animateLineTrend(res.ctx, res.node, res.w, res.h, lineItems, (g) => {
+        this.trendGeom = g;
+      });
     });
 
     charts.getCanvas(this, 'rateDistCanvas').then((res) => {
@@ -385,7 +404,9 @@ Page({
     this.currentLineItems = groups;
     charts.getCanvas(this, 'trendCanvas').then((res) => {
       if (!res) return;
-      this.trendGeom = charts.drawLineTrend(res.ctx, res.w, res.h, groups);
+      charts.animateLineTrend(res.ctx, res.node, res.w, res.h, groups, (g) => {
+        this.trendGeom = g;
+      });
     });
   },
 
