@@ -2,6 +2,12 @@ const MAIN_COLOR = '#14A89A';
 const GRID_COLOR = '#E5E6EB';
 const AXIS_COLOR = '#909399';
 const FONT_FAMILY = 'sans-serif';
+// rpx→px：750rpx = 屏幕宽度。工具提示卡片的所有间距/字号/圆角都按 rpx 规划，随设备宽度自适应。
+const _winInfo = typeof wx !== 'undefined' ? (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()) : { windowWidth: 375 };
+const RPX = _winInfo.windowWidth / 750;
+function rx(v) {
+  return v * RPX;
+}
 
 function getCanvas(page, id, retry) {
   retry = retry || 0;
@@ -320,52 +326,53 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   const x = g.xs[idx];
   const y = g.ys[idx];
 
-  const valueFont = 24; // 分数/得分率 大字号
-  const pctFont = 13; // "%" 小字号
-  const nameFont = 13;
+  // 全部尺寸改为 rpx（经 rx 换成 px），随设备宽度自适应
+  const valueFont = rx(44); // 分数/得分率 大字号
+  const pctFont = rx(24);   // "%" / "/" / 满分 小字号
+  const nameFont = rx(24);  // 考试名
   ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
-  const valW = textWidth(ctx, val.toFixed(1), 46);
-  const rateW = textWidth(ctx, String(rate), 34);
+  const valW = textWidth(ctx, val.toFixed(1), rx(86));
+  const rateW = textWidth(ctx, String(rate), rx(64));
   ctx.font = valueFont + 'px ' + FONT_FAMILY;
-  const slashW = textWidth(ctx, '/', 10);
-  const maxW = maxV > 0 ? textWidth(ctx, String(maxV), 24) : 0;
+  const slashW = textWidth(ctx, '/', rx(20));
+  const maxW = maxV > 0 ? textWidth(ctx, String(maxV), rx(46)) : 0;
   ctx.font = pctFont + 'px ' + FONT_FAMILY;
-  const pctW = textWidth(ctx, '%', 9);
+  const pctW = textWidth(ctx, '%', rx(18));
   ctx.font = 'bold ' + nameFont + 'px ' + FONT_FAMILY;
-  const nameW = textWidth(ctx, name, name.length * nameFont);
+  const nameW = textWidth(ctx, name, name.length * rx(24));
 
-  const padT = 14; // 卡片 padding-top
-  const padB = 14; // 卡片 padding-bottom（与 padT 一致）
-  const contentPad = 18;
-  const pctGap = 1; // "%" 与得分率数值间距缩小
-  const rowGap = 8;
-  const nameRowH = nameFont + 4;
-  const valueRowH = valueFont + 4;
-  const boxH = padT + nameRowH + rowGap + valueRowH + padB + (g.yIsFlat ? 24 : 0);
+  const padT = rx(26); // 卡片 padding-top
+  const padB = rx(26); // 卡片 padding-bottom（与 padT 一致）
+  const contentPad = rx(34);
+  const symGap = rx(6); // "/" 与左右、以及 "%" 与左侧得分率 统一间距 (rpx)
+  const rowGap = rx(8); // 第一行(考试名)与第二行(得分)间距，已缩小 (rpx)
+  const radius = rx(24); // 卡片圆角 (rpx)
+  const nameRowH = nameFont + rx(6);
+  const valueRowH = valueFont + rx(6);
+  const boxH = padT + nameRowH + rowGap + valueRowH + padB + (g.yIsFlat ? rx(46) : 0);
 
-  const leftBlockW = valW + 4 + slashW + 4 + maxW;
-  const rightBlockW = rateW + pctGap + pctW;
-  // 分数取值所在行取消组间间距
+  const leftBlockW = valW + symGap + slashW + symGap + maxW;
+  const rightBlockW = rateW + symGap + pctW;
   const valueLineW = leftBlockW + rightBlockW;
   const boxW = Math.max(nameW, valueLineW) + contentPad * 2;
 
   // 卡片位置：优先放上方，放不下则放下方，均与数据点保持间距，避免遮住数据点
-  const gapP = 22;
+  const gapP = rx(46);
   let by = y - boxH - gapP;
-  if (by < 8) by = Math.min(y + gapP, h - boxH - 8);
-  const bx = Math.max(8, Math.min(x - boxW / 2, w - boxW - 8));
+  if (by < rx(8)) by = Math.min(y + gapP, h - boxH - rx(8));
+  const bx = Math.max(rx(8), Math.min(x - boxW / 2, w - boxW - rx(8)));
 
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.15)';
-  ctx.shadowBlur = 20;
-  ctx.shadowOffsetY = 4;
+  ctx.shadowBlur = rx(40);
+  ctx.shadowOffsetY = rx(8);
   ctx.fillStyle = '#ffffff';
-  roundRectPath(ctx, bx, by, boxW, boxH, 12);
+  roundRectPath(ctx, bx, by, boxW, boxH, radius);
   ctx.fill();
   ctx.restore();
   ctx.strokeStyle = 'rgba(0,0,0,0.05)';
   ctx.lineWidth = 1;
-  roundRectPath(ctx, bx, by, boxW, boxH, 12);
+  roundRectPath(ctx, bx, by, boxW, boxH, radius);
   ctx.stroke();
 
   // 第一行：考试名
@@ -375,7 +382,7 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   ctx.font = 'bold ' + nameFont + 'px ' + FONT_FAMILY;
   ctx.fillText(name, bx + contentPad, by + padT);
 
-  // 第二行：分数 + /满分 + 得分率%（同行、底部对齐、组间取消间距）
+  // 第二行：分数 + /满分 + 得分率%（同行、底部对齐、组间间距与 "%" 一致）
   const valueTop = by + padT + nameRowH + rowGap;
   // 以分数大字的底部为公共基线，使小数号元素与各自左侧数值底部对齐
   const valueBase = valueTop + valueFont;
@@ -385,21 +392,21 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = '#1A1A1A';
   ctx.fillText(val.toFixed(1), bx + contentPad, valueBase);
-  let curX = bx + contentPad + valW + 4;
-  // "/满分取值"：字号与 "%" 一致，并与其左侧分数底部对齐
+  // "/满分取值"：与左侧分数、右侧满分之间均保留 symGap 间距
+  let curX = bx + contentPad + valW + symGap;
   ctx.font = pctFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = AXIS_COLOR;
   ctx.fillText('/', curX, valueBase);
-  curX += slashW + 4;
+  curX += slashW + symGap;
   if (maxV > 0) {
     ctx.fillText(String(maxV), curX, valueBase);
   }
-  // 右侧：得分率（大字，居右）+ "%"（小字，紧贴，与其左侧得分率底部对齐）
+  // 右侧：得分率（大字，居右）+ "%"（小字，紧贴且与左侧得分率间距为 symGap）
   const rightX = bx + boxW - contentPad;
   ctx.textAlign = 'right';
   ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = MAIN_COLOR;
-  ctx.fillText(String(rate), rightX - pctGap - pctW, valueBase);
+  ctx.fillText(String(rate), rightX - symGap - pctW, valueBase);
   ctx.font = pctFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = AXIS_COLOR;
   ctx.fillText('%', rightX, valueBase);
@@ -407,7 +414,7 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   ctx.textAlign = 'left';
 
   if (g.yIsFlat) {
-    const hy = valueTop + valueRowH + 4;
+    const hy = valueTop + valueRowH + rx(6);
     ctx.setLineDash([1, 0]);
     ctx.strokeStyle = GRID_COLOR;
     ctx.lineWidth = 1;
@@ -417,8 +424,8 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = '#FA8C16';
-    ctx.font = '11px ' + FONT_FAMILY;
-    ctx.fillText('各次考试平均分无明显差距', bx + contentPad, hy + 4);
+    ctx.font = rx(22) + 'px ' + FONT_FAMILY;
+    ctx.fillText('各次考试平均分无明显差距', bx + contentPad, hy + rx(6));
   }
 }
 

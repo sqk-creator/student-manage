@@ -466,13 +466,17 @@ function animateLineTrend(cvs,g){
   var duration=600;
   function easeOutCubic(t){return 1-Math.pow(1-t,3);}
   var start=null;
+  // 关键修复：ctx 在 cvs（getCtx 返回的 {ctx,w,h}）上，而非几何对象 g 上。
+  // 原来使用 g.ctx 为 undefined，每帧 drawTrendLayer(g.ctx,..) 抛错，导致"仅点击后才显示"。
   function frame(ts){
     if(!start)start=ts;
     var progress=Math.min((ts-start)/duration,1);
-    drawTrendLayer(g.ctx,g.w,g.h,g,easeOutCubic(progress));
+    drawTrendLayer(cvs.ctx,cvs.w,cvs.h,g,easeOutCubic(progress));
     if(progress<1)requestAnimationFrame(frame);
-    else drawTrendLayer(g.ctx,g.w,g.h,g,1);
+    else drawTrendLayer(cvs.ctx,cvs.w,cvs.h,g,1);
   }
+  // 首帧同步绘制，保证 rAF 尚未触发时画布也立即有内容（网格+起点）
+  drawTrendLayer(cvs.ctx,cvs.w,cvs.h,g,0);
   requestAnimationFrame(frame);
   return g;
 }
@@ -501,66 +505,73 @@ function drawTrendTooltip(ctx,w,h,g,idx){
   var rate=maxV>0?Math.round(val/maxV*100):0;
   var x=g.xs[idx];
   var y=g.ys[idx];
-  var valueFont=24,pctFont=13,nameFont=13;
+  // rpx→px：以模拟手机壳宽度为 750rpx 基准换算，与小程序 rpx 单位一致
+  var K=(document.querySelector('.shell')&&document.querySelector('.shell').getBoundingClientRect().width)||430;
+  K=K/750;
+  function rz(v){return v*K;}
+  var valueFont=rz(44),pctFont=rz(24),nameFont=rz(24);
   ctx.font='bold '+valueFont+'px sans-serif';
-  var valW=textWidth(ctx,val.toFixed(1),46);
-  var rateW=textWidth(ctx,String(rate),34);
+  var valW=textWidth(ctx,val.toFixed(1),rz(86));
+  var rateW=textWidth(ctx,String(rate),rz(64));
   ctx.font=valueFont+'px sans-serif';
-  var slashW=textWidth(ctx,'/',10);
-  var maxW=maxV>0?textWidth(ctx,String(maxV),24):0;
+  var slashW=textWidth(ctx,'/',rz(20));
+  var maxW=maxV>0?textWidth(ctx,String(maxV),rz(46)):0;
   ctx.font=pctFont+'px sans-serif';
-  var pctW=textWidth(ctx,'%',9);
+  var pctW=textWidth(ctx,'%',rz(18));
   ctx.font='bold '+nameFont+'px sans-serif';
-  var nameW=textWidth(ctx,name,name.length*13);
-  var padT2=14,padB2=14;
-  var contentPad=18;
-  var pctGap=1;
-  var rowGap=8;
-  var nameRowH=nameFont+4;
-  var valueRowH=valueFont+4;
-  var boxH=padT2+nameRowH+rowGap+valueRowH+padB2+(g.yIsFlat?24:0);
-  var leftBlockW=valW+4+slashW+4+maxW;
-  var rightBlockW=rateW+pctGap+pctW;
+  var nameW=textWidth(ctx,name,name.length*rz(24));
+  var padT=rz(26),padB=rz(26);
+  var contentPad=rz(34);
+  var symGap=rz(6);     // "/" 与左右、以及 "%" 与左侧得分率 统一间距
+  var rowGap=rz(8);     // 第一行(考试名)与第二行(得分)间距（缩小）
+  var nameRowH=nameFont+rz(6);
+  var valueRowH=valueFont+rz(6);
+  var radius=rz(24);
+  var boxH=padT+nameRowH+rowGap+valueRowH+padB+(g.yIsFlat?rz(46):0);
+  var leftBlockW=valW+symGap+slashW+symGap+maxW;
+  var rightBlockW=rateW+symGap+pctW;
   var valueLineW=leftBlockW+rightBlockW;
   var boxW=Math.max(nameW,valueLineW)+contentPad*2;
-  var gapP=22;
+  var gapP=rz(46);
   var by=y-boxH-gapP;
-  if(by<8)by=Math.min(y+gapP,h-boxH-8);
-  var bx=Math.max(8,Math.min(x-boxW/2,w-boxW-8));
+  if(by<rz(8))by=Math.min(y+gapP,h-boxH-rz(8));
+  var bx=Math.max(rz(8),Math.min(x-boxW/2,w-boxW-rz(8)));
   ctx.save();
-  ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=20;ctx.shadowOffsetY=4;
+  ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=rz(40);ctx.shadowOffsetY=rz(8);
   ctx.fillStyle='#fff';
-  roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.fill();
+  roundRectPath(ctx,bx,by,boxW,boxH,radius);ctx.fill();
   ctx.restore();
   ctx.strokeStyle='rgba(0,0,0,0.05)';ctx.lineWidth=1;
-  roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.stroke();
+  roundRectPath(ctx,bx,by,boxW,boxH,radius);ctx.stroke();
   ctx.textAlign='left';ctx.textBaseline='top';
   ctx.fillStyle='#1A1A1A';ctx.font='bold '+nameFont+'px sans-serif';
-  ctx.fillText(name,bx+contentPad,by+padT2);
-  var valueTop=by+padT2+nameRowH+rowGap;
+  ctx.fillText(name,bx+contentPad,by+padT);
+  var valueTop=by+padT+nameRowH+rowGap;
   var valueBase=valueTop+valueFont;
   ctx.textBaseline='alphabetic';ctx.textAlign='left';
   ctx.font='bold '+valueFont+'px sans-serif';ctx.fillStyle='#1A1A1A';
   ctx.fillText(val.toFixed(1),bx+contentPad,valueBase);
-  var curX=bx+contentPad+valW+4;
+  // "/" 与左（得分数值）、右（满分数值）间距均为 symGap，与 "%" 一致
+  var curX=bx+contentPad+valW+symGap;
   ctx.font=pctFont+'px sans-serif';ctx.fillStyle='#909399';
   ctx.fillText('/',curX,valueBase);
-  curX+=slashW+4;
+  curX+=slashW+symGap;
   if(maxV>0){ctx.fillText(String(maxV),curX,valueBase);}
   var rightX=bx+boxW-contentPad;
   ctx.textAlign='right';
   ctx.font='bold '+valueFont+'px sans-serif';ctx.fillStyle='#14A89A';
-  ctx.fillText(String(rate),rightX-pctGap-pctW,valueBase);
+  // "%" 与左侧得分率间距为 symGap
+  ctx.fillText(String(rate),rightX-symGap-pctW,valueBase);
   ctx.font=pctFont+'px sans-serif';ctx.fillStyle='#909399';
   ctx.fillText('%',rightX,valueBase);
   ctx.textBaseline='top';ctx.textAlign='left';
   if(g.yIsFlat){
-    var hy=valueTop+valueRowH+4;
+    var hy=valueTop+valueRowH+rz(6);
     ctx.setLineDash([1,0]);ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(bx+contentPad,hy);ctx.lineTo(bx+boxW-contentPad,hy);ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle='#FA8C16';ctx.font='11px sans-serif';
-    ctx.fillText('各次考试平均分无明显差距',bx+contentPad,hy+4);
+    ctx.fillStyle='#FA8C16';ctx.font=rz(22)+'px sans-serif';
+    ctx.fillText('各次考试平均分无明显差距',bx+contentPad,hy+rz(6));
   }
 }
 function roundRectCorners(ctx,x,y,w,h,r,c){
