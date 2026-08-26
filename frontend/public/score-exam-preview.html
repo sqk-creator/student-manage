@@ -69,7 +69,7 @@ body{
 }
 
 /* ---- 看考试 ---- */
-.exam-filter-row{display:flex;align-items:flex-start;gap:10px;padding:0 16px 10px;}
+.exam-filter-row{display:flex;align-items:flex-start;gap:10px;padding:16px 16px 0;justify-content:center;}
 .sub-tab-wrap{display:inline-flex;background:#F0F1F2;border-radius:20px;padding:3px;flex-shrink:0;}
 .sub-tab{
   padding:8px 20px;text-align:center;border-radius:18px;font-size:14px;font-weight:500;
@@ -81,13 +81,15 @@ body{
 .group-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.04);}
 .card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
 .card-title{font-size:17px;font-weight:700;color:#1D2129;}
-.card-grade{font-size:12px;color:#14A89A;background:rgba(20,168,154,.08);padding:2px 8px;border-radius:8px;white-space:nowrap;}
-.card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
-.meta-tag{font-size:12px;color:#86909C;background:#F2F3F5;padding:3px 8px;border-radius:6px;}
+.card-grade{font-size:12px;color:#14A89A;white-space:nowrap;}
+.card-meta{display:flex;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+.card-meta span+span::before{content:'|';margin:0 6px;color:#D8DCE0;}
+.meta-tag{font-size:12px;color:#86909C;}
 .card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
 .stat-item{text-align:center;background:#F7F8FA;border-radius:10px;padding:10px 6px;}
 .stat-label{font-size:11px;color:#86909C;}
-.stat-value{font-size:18px;font-weight:700;color:#1D2129;margin-top:2px;}
+.stat-value{font-size:24px;font-weight:700;color:#1D2129;margin-top:2px;}
+.stat-percent{font-size:12px;font-weight:700;}
 .stat-value.green{color:#14A89A;}
 .card-actions{display:flex;gap:10px;}
 .card-btn{flex:1;padding:10px 0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;text-align:center;}
@@ -200,8 +202,9 @@ function renderGroupCards(){
   var html='';
   summaries.forEach(function(g){
     html+='<div class="group-card">'
-      +'<div class="card-header"><span class="card-title">'+escapeHtml(g.group_name)+'</span><span class="card-grade">'+escapeHtml(g.grade_name)+'</span></div>'
+      +'<div class="card-header"><span class="card-title">'+escapeHtml(g.group_name)+'</span></div>'
       +'<div class="card-meta">'
+      +'<span class="card-grade">'+escapeHtml(g.grade_name)+'</span>'
       +'<span class="meta-tag">'+escapeHtml(examTypeLabel(g.exam_type))+'</span>'
       +'<span class="meta-tag">'+escapeHtml(g.exam_date)+'</span>'
       +'<span class="meta-tag">满分 '+g.total_score+'</span>'
@@ -209,7 +212,7 @@ function renderGroupCards(){
       +'</div>'
       +'<div class="card-stats">'
       +'<div class="stat-item"><div class="stat-label">年级均分</div><div class="stat-value green">'+g.avg_total+'</div></div>'
-      +'<div class="stat-item"><div class="stat-label">及格率</div><div class="stat-value">'+g.pass_rate+'%</div></div>'
+      +'<div class="stat-item"><div class="stat-label">及格率</div><div class="stat-value">'+g.pass_rate+'<span class="stat-percent">%</span></div></div>'
       +'<div class="stat-item"><div class="stat-label">科目数</div><div class="stat-value">'+g.subjects.length+'</div></div>'
       +'</div>'
       +'<div class="card-actions">'
@@ -228,8 +231,9 @@ function renderSingleCards(){
   var html='';
   singleExams.forEach(function(e){
     html+='<div class="group-card">'
-      +'<div class="card-header"><span class="card-title">'+escapeHtml(e.exam_name)+'</span><span class="card-grade">'+escapeHtml(e.subject)+'</span></div>'
+      +'<div class="card-header"><span class="card-title">'+escapeHtml(e.exam_name)+'</span></div>'
       +'<div class="card-meta">'
+      +'<span class="card-grade">'+escapeHtml(e.subject)+'</span>'
       +'<span class="meta-tag">'+escapeHtml(e.exam_date)+'</span>'
       +'<span class="meta-tag">满分 '+e.total_score+'</span>'
       +'</div>'
