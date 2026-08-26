@@ -254,7 +254,7 @@ function renderTrend(){
     var arrow=change>0?'↑':(change<0?'↓':'');
     var sign=change>=0?'+':'';
     var trendJson=escapeHtml(JSON.stringify((cls.trends||[]).map(function(t){return t.avg_total||0;})));
-    var href='class-trend-preview.html?grade_id='+document.getElementById('gradeSelect').value+'&class_id='+cls.class_id+'&class_name='+encodeURIComponent(cls.class_name);
+    var href='class-trend-preview.html?grade_id='+document.getElementById('gradeSelect').value+'&class_id='+cls.class_id;
     return'<div class="cb-card" onclick="location.href=\''+href+'\'">'
       +'<div class="cb-rank"><div class="cb-rank-num">'+(rank<10?'0'+rank:rank)+'</div></div>'
       +'<div class="cb-main"><div class="cb-name">'+escapeHtml(cls.class_name)+'</div>'
