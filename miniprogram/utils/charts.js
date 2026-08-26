@@ -78,7 +78,7 @@ function drawGauge(ctx, w, h, rate) {
   }
 }
 
-function animateGauge({ ctx, node, w, h, targetRate, onFrame }) {
+function animateGauge({ ctx, node, w, h, targetRate, onFrame, onComplete }) {
   let start = null;
   const duration = 1200;
   const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
@@ -92,8 +92,9 @@ function animateGauge({ ctx, node, w, h, targetRate, onFrame }) {
     if (onFrame) onFrame(Math.round(targetRate * eased));
     if (progress < 1) {
       node.requestAnimationFrame(frame);
-    } else if (onFrame) {
-      onFrame(targetRate);
+    } else {
+      if (onFrame) onFrame(targetRate);
+      if (onComplete) onComplete();
     }
   };
   node.requestAnimationFrame(frame);
@@ -475,7 +476,7 @@ function drawHistogram(ctx, w, h, data, opts) {
   const series = (data && data.series) || [];
   if (!xAxis.length || !series.length) return;
   const stack = !!(opts && opts.stack);
-  const padL = 28;
+  const padL = 30; // 与折线图 trend-canvas 的 padL 保持一致
   const padR = 14;
   const padT = 15; // 减小顶部留白
   const padB = 40; // 为斜向标签预留空间
@@ -494,13 +495,13 @@ function drawHistogram(ctx, w, h, data, opts) {
   });
   const yMax = niceMax(maxV);
 
-  // Y 轴网格：细分间距，压缩顶部空白；Y轴数值与容器左侧取消间距（左对齐贴边 + 收紧padL）
+  // Y 轴网格：细分间距，压缩顶部空白；Y轴数值右对齐贴齐折线图同款间距（padL-6）
   const gridNum = 4;
   ctx.font = '11px ' + FONT_FAMILY;
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1;
   ctx.fillStyle = '#909399';
-  ctx.textAlign = 'left';
+  ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   for (let i = 0; i <= gridNum; i++) {
     const gy = padT + i * (chartH / gridNum);
@@ -509,7 +510,7 @@ function drawHistogram(ctx, w, h, data, opts) {
     ctx.moveTo(padL, gy);
     ctx.lineTo(w - padR, gy);
     ctx.stroke();
-    ctx.fillText(Math.round(gv), 0, gy);
+    ctx.fillText(Math.round(gv), padL - 6, gy);
   }
 
   const slotW = chartW / xAxis.length;

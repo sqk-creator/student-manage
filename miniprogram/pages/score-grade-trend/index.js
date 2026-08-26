@@ -369,10 +369,18 @@ Page({
             this._gv = val;
             this.setData({ 'summary.scoreRate': val });
           }
+        },
+        // 关键修复：仪表盘动画期间 onFrame 会持续 setData 触发页面重渲染，
+        // 并行绘制的折线图 / 直方图 / 火花图画布会被清掉（只有点击后才重绘成功）。
+        // 改到仪表盘动画完全结束、setData 风暴停止后再绘制其余图表，保证页面加载即显示。
+        onComplete: () => {
+          this.drawTrendAndDist(lineItems, rateDistData, passDistData, classList);
         }
       });
     });
+  },
 
+  drawTrendAndDist(lineItems, rateDistData, passDistData, classList) {
     charts.getCanvas(this, 'trendCanvas').then((res) => {
       if (!res) return;
       this.currentLineItems = lineItems;
