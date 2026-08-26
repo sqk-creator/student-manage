@@ -94,10 +94,10 @@
   .rate-avg-cards { display: flex; gap: 40px; }
   .cs-rate { text-align: left; }
   .cs-rate-label { font-size: 13px; color: #333333; font-weight: 500; }
-  .cs-rate-value { font-size: 44px; font-weight: 800; color: #14A89A; line-height: 1; margin-top: 4px; }
+  .cs-rate-value { font-size: 44px; font-weight: 800; color: #14A89A; line-height: 1; margin-top: 4px; margin-bottom: 14px; }
   .cs-rate-unit { font-size: 18px; font-weight: 600; color: #333333; }
   .cs-rate-value.grade-b { color: #2979FF; }
-  .dual-legend { display: flex; justify-content: flex-end; gap: 16px; margin-top: 14px; font-size: 12px; color: #909399; }
+  .dual-legend { display: flex; justify-content: flex-end; gap: 16px; margin-top: 0; font-size: 12px; color: #909399; }
   .legend-item { display: flex; align-items: center; gap: 4px; }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
   .dot-good { background: #2979FF; }
@@ -605,24 +605,25 @@ function drawHistogram(ctx,w,h,data,stack){
     if(stack){
       var accY=padT+chartH;
       var n=series.length;
+      var visibleCount=0;
+      series.forEach(function(s){if((s.data[i]||0)>0)visibleCount++;});
       series.forEach(function(s,j){
         var v=s.data[i]||0;
+        if(!(v>0))return;
         var bh=v/yMax*chartH;
         var by=accY-bh;
         ctx.fillStyle=s.color||'#14A89A';
-        if(n>1){
+        if(n>1&&visibleCount>1){
           var isTop=(j===n-1),isBottom=(j===0);
           roundRectCorners(ctx,cx-barW/2,by,barW,bh,3,{tl:isTop,tr:isTop,br:isBottom,bl:isBottom});
           ctx.fill();
         }else{
-          roundRectPath(ctx,cx-barW/2,by,barW,bh,3);ctx.fill();
+          roundRectCorners(ctx,cx-barW/2,by,barW,bh,3,{tl:true,tr:true,br:false,bl:false});ctx.fill();
         }
-        if(v>0){
-          ctx.fillStyle='#909399';ctx.font='10px sans-serif';
-          ctx.textAlign='center';ctx.textBaseline='bottom';
-          ctx.fillText(String(v),cx,by-2);
-          ctx.font='11px sans-serif';
-        }
+        ctx.fillStyle='#909399';ctx.font='10px sans-serif';
+        ctx.textAlign='center';ctx.textBaseline='bottom';
+        ctx.fillText(String(v),cx,by-2);
+        ctx.font='11px sans-serif';
         accY=by;
       });
     }else{

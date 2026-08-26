@@ -301,6 +301,8 @@
   color: #14A89A;
   line-height: 1;
   margin-top: 8rpx;
+  /* 与下方.dual-legend的margin-top取值一致，间距统一交由此项控制 */
+  margin-bottom: 28rpx;
 }
 
 .cs-rate-value .cs-rate-unit {
@@ -325,7 +327,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 32rpx;
-  margin-top: 28rpx;
+  margin-top: 0;
   font-size: 24rpx;
   color: #909399;
 }

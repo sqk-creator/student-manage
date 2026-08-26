@@ -27,7 +27,9 @@ function getCanvas(page, id, retry) {
         node.width = w * dpr;
         node.height = h * dpr;
         const ctx = node.getContext('2d');
-        ctx.scale(dpr, dpr);
+        // 用 setTransform 替代累积式 scale：同一 canvas 2d 节点多次 getCanvas 时，
+        // scale() 会不断放大把图表推向画布外（折线图趋势canvas消失）。改为重置——每次按 dpr 完整重建变换。
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         resolve({ ctx, node, w, h });
       });
   });
@@ -510,12 +512,14 @@ function drawHistogram(ctx, w, h, data, opts) {
     if (stack) {
       let accY = padT + chartH;
       const n = series.length;
+      const visibleCount = series.reduce((c, s) => c + (((s.data[i] || 0) > 0) ? 1 : 0), 0);
       series.forEach((s, j) => {
         const v = s.data[i] || 0;
+        if (!(v > 0)) return; // 无数据分段不绘制
         const bh = v / yMax * chartH;
         const by = accY - bh;
         ctx.fillStyle = s.color || MAIN_COLOR;
-        if (n > 1) {
+        if (n > 1 && visibleCount > 1) {
           // 双分柱平滑衔接：下柱上两角平、上柱下两角平，上柱上两角保持圆角
           const isTop = j === n - 1;
           const isBottom = j === 0;
@@ -527,17 +531,21 @@ function drawHistogram(ctx, w, h, data, opts) {
           });
           ctx.fill();
         } else {
-          roundRectPath(ctx, cx - barW / 2, by, barW, bh, 3);
+          // 仅一根分柱（如只有良好）：柱子左上、右上保持圆角
+          roundRectCorners(ctx, cx - barW / 2, by, barW, bh, 3, {
+            tl: true,
+            tr: true,
+            br: false,
+            bl: false
+          });
           ctx.fill();
         }
-        if (v > 0) {
-          ctx.fillStyle = '#909399';
-          ctx.font = '10px ' + FONT_FAMILY;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText(String(v), cx, by - 2);
-          ctx.font = '11px ' + FONT_FAMILY;
-        }
+        ctx.fillStyle = '#909399';
+        ctx.font = '10px ' + FONT_FAMILY;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(String(v), cx, by - 2);
+        ctx.font = '11px ' + FONT_FAMILY;
         accY = by;
       });
     } else {
