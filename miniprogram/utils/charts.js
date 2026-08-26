@@ -52,6 +52,10 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+let _gaugeGeomCache = null;
+let _gaugeCacheW = 0;
+let _gaugeCacheH = 0;
+
 function drawGauge(ctx, w, h, rate) {
   const cx = w / 2;
   const cy = h - 75;
@@ -66,20 +70,30 @@ function drawGauge(ctx, w, h, rate) {
 
   ctx.clearRect(0, 0, w, h);
   ctx.lineCap = 'round';
-  for (let i = 0; i < totalTicks; i++) {
-    const angle = startAngle - (i / (totalTicks - 1)) * arcSpan;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const innerR = r - tickLen;
-    const x1 = cx + innerR * cos;
-    const y1 = cy - innerR * sin;
-    const x2 = cx + r * cos;
-    const y2 = cy - r * sin;
+  // 点阵几何（刻度端点）不随 rate 变化，只算一次并缓存，动画每帧仅重绘，省去三角函数与数组分配
+  let geom;
+  if (_gaugeGeomCache && _gaugeCacheW === w && _gaugeCacheH === h) {
+    geom = _gaugeGeomCache;
+  } else {
+    geom = [];
+    for (let i = 0; i < totalTicks; i++) {
+      const angle = startAngle - (i / (totalTicks - 1)) * arcSpan;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const innerR = r - tickLen;
+      geom.push([cx + innerR * cos, cy - innerR * sin, cx + r * cos, cy - r * sin]);
+    }
+    _gaugeGeomCache = geom;
+    _gaugeCacheW = w;
+    _gaugeCacheH = h;
+  }
+  for (let j = 0; j < totalTicks; j++) {
+    const p = geom[j];
     ctx.lineWidth = tickWidth;
-    ctx.strokeStyle = i < activeTicks ? MAIN_COLOR : 'rgba(0,0,0,0.12)';
+    ctx.strokeStyle = j < activeTicks ? MAIN_COLOR : 'rgba(0,0,0,0.12)';
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    ctx.moveTo(p[0], p[1]);
+    ctx.lineTo(p[2], p[3]);
     ctx.stroke();
   }
 }

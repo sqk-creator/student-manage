@@ -357,6 +357,7 @@ Page({
     charts.getCanvas(this, 'gaugeCanvas').then((res) => {
       if (!res) return;
       this._gv = -1;
+      this._gaugeT = 0;
       charts.animateGauge({
         ctx: res.ctx,
         node: res.node,
@@ -364,9 +365,13 @@ Page({
         h: res.h,
         targetRate: gaugeRate,
         onFrame: (val) => {
-          // 节流：仅当整数取值变化时才 setData，减少重渲染卡顿
-          if (this._gv !== val) {
+          // 节流 setData（主因卡顿）：画布本身由 charts.drawGauge 每帧 rAF 绘制，
+          // 这里仅需同步顶部数值文本。既要求取整值变化，又限制约 30fps（33ms）才触发，
+          // 避免每帧 setData 触发视图层重渲染导致仪表盘与折线图动画掉帧卡顿。
+          const now = Date.now();
+          if (this._gv !== val && now - this._gaugeT >= 33) {
             this._gv = val;
+            this._gaugeT = now;
             this.setData({ 'summary.scoreRate': val });
           }
         },

@@ -335,38 +335,49 @@ function roundRectPath(ctx,x,y,w,h,r){
   ctx.arcTo(x,y,x+w,y,rr);
   ctx.closePath();
 }
+var _gaugeGeomCache=null,_gaugeCacheW=0,_gaugeCacheH=0;
 function drawGauge(ctx,w,h,rate){
   var cx=w/2,cy=h-75,r=Math.min(cx-24,96);
   var totalTicks=32,activeTicks=Math.round((rate||0)/100*totalTicks);
   var tickLen=10,tickWidth=5;
-  var startAngle=Math.PI+Math.PI/6,endAngle=-Math.PI/6,arcSpan=startAngle-endAngle;
   ctx.clearRect(0,0,w,h);
   ctx.lineCap='round';
-  for(var i=0;i<totalTicks;i++){
-    var angle=startAngle-(i/(totalTicks-1))*arcSpan;
-    var cos=Math.cos(angle),sin=Math.sin(angle);
-    var innerR=r-tickLen;
+  // 点阵几何只算一次并缓存（刻度端点不随 rate 变化），动画每帧仅重绘，省去三角函数与数组分配
+  var geom;
+  if(_gaugeGeomCache&&_gaugeCacheW===w&&_gaugeCacheH===h){geom=_gaugeGeomCache;}
+  else{
+    geom=[];
+    var startAngle=Math.PI+Math.PI/6,endAngle=-Math.PI/6,arcSpan=startAngle-endAngle;
+    for(var i=0;i<totalTicks;i++){
+      var angle=startAngle-(i/(totalTicks-1))*arcSpan;
+      var cos=Math.cos(angle),sin=Math.sin(angle),innerR=r-tickLen;
+      geom.push([cx+innerR*cos,cy-innerR*sin,cx+r*cos,cy-r*sin]);
+    }
+    _gaugeGeomCache=geom;_gaugeCacheW=w;_gaugeCacheH=h;
+  }
+  for(var j=0;j<totalTicks;j++){
+    var p=geom[j];
     ctx.lineWidth=tickWidth;
-    ctx.strokeStyle=i<activeTicks?'#14A89A':'rgba(0,0,0,0.12)';
-    ctx.beginPath();
-    ctx.moveTo(cx+innerR*cos,cy-innerR*sin);
-    ctx.lineTo(cx+r*cos,cy-r*sin);
-    ctx.stroke();
+    ctx.strokeStyle=j<activeTicks?'#14A89A':'rgba(0,0,0,0.12)';
+    ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(p[2],p[3]);ctx.stroke();
   }
 }
 function animateGauge(cvs){
   var targetRate=parseInt(document.querySelector('.grade-rate-card').dataset.rate)||0;
+  // 只取一次 ctx/尺寸：原实现每帧 getCtx 都会重置 canvas.width（强制底层缓冲重分配+清空）
+  // 并调用 getBoundingClientRect（强制回流），是动画卡顿的主因。改为复用一个上下文。
+  var g=getCtx('gaugeCanvas');
+  if(!g)return;
+  var ctx=g.ctx,w=g.w,h=g.h;
+  var gv=document.getElementById('gaugeValue');
   var start=null,duration=1200;
   function easeOutCubic(t){return 1-Math.pow(1-t,3);}
   function frame(ts){
     if(!start)start=ts;
     var progress=Math.min((ts-start)/duration,1);
     var eased=easeOutCubic(progress);
-    var num=Math.round(targetRate*eased);
-    var gv=document.getElementById('gaugeValue');
-    if(gv)gv.innerHTML=num+'<span class="gauge-unit">%</span>';
-    var g=getCtx('gaugeCanvas');
-    if(g)drawGauge(g.ctx,g.w,g.h,targetRate*eased);
+    if(gv)gv.innerHTML=Math.round(targetRate*eased)+'<span class="gauge-unit">%</span>';
+    drawGauge(ctx,w,h,targetRate*eased);
     if(progress<1)requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -430,12 +441,12 @@ function drawTrendLayer(ctx,w,h,g,prog){
     ctx.beginPath();ctx.moveTo(g.padL,gy);ctx.lineTo(w-g.padR,gy);ctx.stroke();
     ctx.fillText(Math.round(gv),g.padL-6,gy);
   }
-  var grad=ctx.createLinearGradient(0,g.padT,0,g.padT+g.chartH);
-  grad.addColorStop(0,'rgba(20,168,154,0.40)');grad.addColorStop(1,'rgba(20,168,154,0)');
+  // 渐变随动画每帧复用（缓存到几何对象上），避免反复 createLinearGradient 造成 GC 卡顿
+  if(!g._grad){g._grad=ctx.createLinearGradient(0,g.padT,0,g.padT+g.chartH);g._grad.addColorStop(0,'rgba(20,168,154,0.40)');g._grad.addColorStop(1,'rgba(20,168,154,0)');}
   ctx.beginPath();ctx.moveTo(g.xs[0],g.padT+g.chartH);
   g.xs.forEach(function(x,j){ctx.lineTo(x,g.ys[j]);});
   ctx.lineTo(g.xs[g.xs.length-1],g.padT+g.chartH);ctx.closePath();
-  ctx.fillStyle=grad;ctx.fill();
+  ctx.fillStyle=g._grad;ctx.fill();
   var n=g.xs.length;
   var done=Math.max(0,Math.min(1,prog==null?1:prog))*(n-1);
   var lastSeg=Math.floor(done);
