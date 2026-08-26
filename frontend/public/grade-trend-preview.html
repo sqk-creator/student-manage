@@ -521,7 +521,7 @@ function drawTrendTooltip(ctx,w,h,g,idx){
   var boxH=padT2+nameRowH+rowGap+valueRowH+padB2+(g.yIsFlat?24:0);
   var leftBlockW=valW+4+slashW+4+maxW;
   var rightBlockW=rateW+pctGap+pctW;
-  var valueLineW=leftBlockW+20+rightBlockW;
+  var valueLineW=leftBlockW+rightBlockW;
   var boxW=Math.max(nameW,valueLineW)+contentPad*2;
   var gapP=22;
   var by=y-boxH-gapP;
@@ -538,21 +538,22 @@ function drawTrendTooltip(ctx,w,h,g,idx){
   ctx.fillStyle='#1A1A1A';ctx.font='bold '+nameFont+'px sans-serif';
   ctx.fillText(name,bx+contentPad,by+padT2);
   var valueTop=by+padT2+nameRowH+rowGap;
-  ctx.textAlign='left';ctx.textBaseline='top';
+  var valueBase=valueTop+valueFont;
+  ctx.textBaseline='alphabetic';ctx.textAlign='left';
   ctx.font='bold '+valueFont+'px sans-serif';ctx.fillStyle='#1A1A1A';
-  ctx.fillText(val.toFixed(1),bx+contentPad,valueTop);
+  ctx.fillText(val.toFixed(1),bx+contentPad,valueBase);
   var curX=bx+contentPad+valW+4;
-  ctx.font=valueFont+'px sans-serif';ctx.fillStyle='#909399';
-  ctx.fillText('/',curX,valueTop);
+  ctx.font=pctFont+'px sans-serif';ctx.fillStyle='#909399';
+  ctx.fillText('/',curX,valueBase);
   curX+=slashW+4;
-  if(maxV>0){ctx.fillText(String(maxV),curX,valueTop);}
+  if(maxV>0){ctx.fillText(String(maxV),curX,valueBase);}
   var rightX=bx+boxW-contentPad;
   ctx.textAlign='right';
-  ctx.font=pctFont+'px sans-serif';ctx.fillStyle='#909399';
-  ctx.fillText('%',rightX,valueTop+valueFont*0.12);
   ctx.font='bold '+valueFont+'px sans-serif';ctx.fillStyle='#14A89A';
-  ctx.fillText(String(rate),rightX-pctGap-pctW,valueTop);
-  ctx.textAlign='left';
+  ctx.fillText(String(rate),rightX-pctGap-pctW,valueBase);
+  ctx.font=pctFont+'px sans-serif';ctx.fillStyle='#909399';
+  ctx.fillText('%',rightX,valueBase);
+  ctx.textBaseline='top';ctx.textAlign='left';
   if(g.yIsFlat){
     var hy=valueTop+valueRowH+4;
     ctx.setLineDash([1,0]);ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
@@ -577,7 +578,7 @@ function drawHistogram(ctx,w,h,data,stack){
   ctx.clearRect(0,0,w,h);
   var xAxis=data.xAxis||[],series=data.series||[];
   if(!xAxis.length||!series.length)return;
-  var padL=34,padR=14,padT=15,padB=40;
+  var padL=28,padR=14,padT=15,padB=40;
   var chartW=w-padL-padR,chartH=h-padT-padB;
   var maxV=0;
   xAxis.forEach(function(_,i){
@@ -591,12 +592,12 @@ function drawHistogram(ctx,w,h,data,stack){
   var yMax=niceMax(maxV);
   var gridNum=4;
   ctx.font='11px sans-serif';ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
-  ctx.fillStyle='#909399';ctx.textAlign='right';ctx.textBaseline='middle';
+  ctx.fillStyle='#909399';ctx.textAlign='left';ctx.textBaseline='middle';
   for(var i=0;i<=gridNum;i++){
     var gy=padT+i*(chartH/gridNum);
     var gv=yMax-i*(yMax/gridNum);
     ctx.beginPath();ctx.moveTo(padL,gy);ctx.lineTo(w-padR,gy);ctx.stroke();
-    ctx.fillText(Math.round(gv),padL-6,gy);
+    ctx.fillText(Math.round(gv),0,gy);
   }
   var slotW=chartW/xAxis.length;
   var barW=Math.max(6,Math.min(slotW*0.55,stack?slotW*0.5:slotW*0.4));

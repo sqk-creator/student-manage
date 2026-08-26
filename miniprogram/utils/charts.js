@@ -239,24 +239,27 @@ function animateLineTrend(ctx, node, w, h, items, cb) {
   const g = lineTrendGeom(w, h, items);
   if (!g) {
     if (cb) cb(g);
-    return;
+    return g;
   }
   const duration = 600;
   const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
-  let start = null;
-  const frame = (ts) => {
-    if (!start) start = ts;
-    const elapsed = ts - start;
+  const start = Date.now();
+  // 首帧同步绘制，保证页面加载时画布立即有内容（即使后续定时器被节流也能看到网格与起点）
+  drawTrendLayer(ctx, w, h, g, 0);
+  const tick = () => {
+    const elapsed = Date.now() - start;
     const progress = Math.min(elapsed / duration, 1);
     drawTrendLayer(ctx, w, h, g, easeOutCubic(progress));
     if (progress < 1) {
-      node.requestAnimationFrame(frame);
+      // 用 setTimeout 驱动动画：canvas 2d 节点的 requestAnimationFrame 在部分环境不可靠，
+      // 会导致页面加载时折线图一直不显示、仅交互后才绘制。改用定时器保证动画必然走完。
+      setTimeout(tick, 16);
     } else if (cb) {
-      drawTrendLayer(ctx, w, h, g, 1);
       cb(g);
     }
   };
-  node.requestAnimationFrame(frame);
+  setTimeout(tick, 16);
+  return g;
 }
 
 function textWidth(ctx, str, fallback) {
@@ -341,7 +344,8 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
 
   const leftBlockW = valW + 4 + slashW + 4 + maxW;
   const rightBlockW = rateW + pctGap + pctW;
-  const valueLineW = leftBlockW + 20 + rightBlockW;
+  // 分数取值所在行取消组间间距
+  const valueLineW = leftBlockW + rightBlockW;
   const boxW = Math.max(nameW, valueLineW) + contentPad * 2;
 
   // 卡片位置：优先放上方，放不下则放下方，均与数据点保持间距，避免遮住数据点
@@ -370,31 +374,35 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   ctx.font = 'bold ' + nameFont + 'px ' + FONT_FAMILY;
   ctx.fillText(name, bx + contentPad, by + padT);
 
-  // 第二行：分数 + 得分率（右对齐）
+  // 第二行：分数 + /满分 + 得分率%（同行、底部对齐、组间取消间距）
   const valueTop = by + padT + nameRowH + rowGap;
-  // 左侧：分数
-  ctx.textBaseline = 'top';
+  // 以分数大字的底部为公共基线，使小数号元素与各自左侧数值底部对齐
+  const valueBase = valueTop + valueFont;
+  ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
+  // 左侧：分数（大字）
   ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = '#1A1A1A';
-  ctx.fillText(val.toFixed(1), bx + contentPad, valueTop);
+  ctx.fillText(val.toFixed(1), bx + contentPad, valueBase);
   let curX = bx + contentPad + valW + 4;
-  ctx.font = valueFont + 'px ' + FONT_FAMILY;
-  ctx.fillStyle = AXIS_COLOR;
-  ctx.fillText('/', curX, valueTop);
-  curX += slashW + 4;
-  if (maxV > 0) {
-    ctx.fillText(String(maxV), curX, valueTop);
-  }
-  // 右侧：得分率数值与 "%" 居右对齐，"%" 紧贴得分率
-  const rightX = bx + boxW - contentPad;
-  ctx.textAlign = 'right';
+  // "/满分取值"：字号与 "%" 一致，并与其左侧分数底部对齐
   ctx.font = pctFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = AXIS_COLOR;
-  ctx.fillText('%', rightX, valueTop + valueFont * 0.12);
+  ctx.fillText('/', curX, valueBase);
+  curX += slashW + 4;
+  if (maxV > 0) {
+    ctx.fillText(String(maxV), curX, valueBase);
+  }
+  // 右侧：得分率（大字，居右）+ "%"（小字，紧贴，与其左侧得分率底部对齐）
+  const rightX = bx + boxW - contentPad;
+  ctx.textAlign = 'right';
   ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = MAIN_COLOR;
-  ctx.fillText(String(rate), rightX - pctGap - pctW, valueTop);
+  ctx.fillText(String(rate), rightX - pctGap - pctW, valueBase);
+  ctx.font = pctFont + 'px ' + FONT_FAMILY;
+  ctx.fillStyle = AXIS_COLOR;
+  ctx.fillText('%', rightX, valueBase);
+  ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
 
   if (g.yIsFlat) {
@@ -467,7 +475,7 @@ function drawHistogram(ctx, w, h, data, opts) {
   const series = (data && data.series) || [];
   if (!xAxis.length || !series.length) return;
   const stack = !!(opts && opts.stack);
-  const padL = 34;
+  const padL = 28;
   const padR = 14;
   const padT = 15; // 减小顶部留白
   const padB = 40; // 为斜向标签预留空间
@@ -486,13 +494,13 @@ function drawHistogram(ctx, w, h, data, opts) {
   });
   const yMax = niceMax(maxV);
 
-  // Y 轴网格：细分间距，压缩顶部空白
+  // Y 轴网格：细分间距，压缩顶部空白；Y轴数值与容器左侧取消间距（左对齐贴边 + 收紧padL）
   const gridNum = 4;
   ctx.font = '11px ' + FONT_FAMILY;
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1;
   ctx.fillStyle = '#909399';
-  ctx.textAlign = 'right';
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   for (let i = 0; i <= gridNum; i++) {
     const gy = padT + i * (chartH / gridNum);
@@ -501,7 +509,7 @@ function drawHistogram(ctx, w, h, data, opts) {
     ctx.moveTo(padL, gy);
     ctx.lineTo(w - padR, gy);
     ctx.stroke();
-    ctx.fillText(Math.round(gv), padL - 6, gy);
+    ctx.fillText(Math.round(gv), 0, gy);
   }
 
   const slotW = chartW / xAxis.length;
