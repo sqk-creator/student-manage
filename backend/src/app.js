@@ -249,7 +249,7 @@ app.get('/api/public/exam-group-summaries', (req, res) => {
     const totals = studentTotals.map(s => s.total);
     const avgTotal = totals.length ? Math.round(totals.reduce((a,b)=>a+b,0)/totals.length) : 0;
     const maxPossible = grp.total_score || exams.reduce((s,e)=>s+e.total_score,0);
-    const passCount = totals.filter(t => t >= maxPossible * 0.6 && t < maxPossible * 0.8).length;
+    const passCount = totals.filter(t => t >= maxPossible * 0.6).length;
     const passRate = totals.length ? Math.round(passCount/totals.length*100) : 0;
     return {
       group_id: grp.id,
@@ -262,7 +262,7 @@ app.get('/api/public/exam-group-summaries', (req, res) => {
       subjects,
       student_count: studentTotals.length,
       avg_total: avgTotal,
-      pass_rate: passRate + '%'
+      pass_rate: passRate
     };
   });
   res.json(summaries);

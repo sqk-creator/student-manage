@@ -54,9 +54,9 @@
       <view class="group-card" wx:for="{{groups}}" wx:key="id">
         <view class="card-header">
           <text class="card-title">{{item.groupName}}</text>
-          <text class="card-grade">{{item.gradeName}}</text>
         </view>
         <view class="card-meta">
+          <text class="card-grade">{{item.gradeName}}</text>
           <text class="meta-tag">{{item.examType}}</text>
           <text class="meta-tag">{{item.examDate}}</text>
           <text class="meta-tag">满分 {{item.totalScore}}</text>
@@ -68,8 +68,8 @@
             <view class="stat-value green">{{item.avgTotal}}</view>
           </view>
           <view class="stat-item">
-            <view class="stat-label">一般率</view>
-            <view class="stat-value">{{item.passRate}}</view>
+            <view class="stat-label">及格率</view>
+            <view class="stat-value">{{item.passNum}}<text class="stat-percent">%</text></view>
           </view>
           <view class="stat-item">
             <view class="stat-label">科目数</view>

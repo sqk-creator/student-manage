@@ -119,7 +119,7 @@ Page({
           totalScore: g.total_score,
           studentCount: g.student_count,
           avgTotal: g.avg_total,
-          passRate: g.pass_rate,
+          passNum: g.pass_rate,
           subjectCount: (g.subjects || []).length
         }));
         this.setData({ groups: list, loading: false });

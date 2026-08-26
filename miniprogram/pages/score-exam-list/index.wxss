@@ -110,7 +110,8 @@
   display: flex;
   align-items: flex-start;
   gap: 24rpx;
-  padding: 24rpx 32rpx 0;
+  padding: 32rpx 32rpx 0;
+  justify-content: center;
 }
 
 .sub-tab-wrap {
@@ -185,26 +186,25 @@
 .card-grade {
   font-size: 24rpx;
   color: #14A89A;
-  background: #E6F7F5;
-  padding: 6rpx 16rpx;
-  border-radius: 12rpx;
   white-space: nowrap;
-  margin-left: 12rpx;
 }
 
 .card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12rpx;
+  align-items: center;
   margin-bottom: 24rpx;
+}
+
+.card-meta text + text::before {
+  content: '|';
+  margin: 0 12rpx;
+  color: #D8DCE0;
 }
 
 .meta-tag {
   font-size: 24rpx;
   color: #909399;
-  background: #F0F8F6;
-  padding: 6rpx 16rpx;
-  border-radius: 12rpx;
 }
 
 .card-stats {
@@ -227,10 +227,15 @@
 }
 
 .stat-value {
-  font-size: 48rpx;
+  font-size: 64rpx;
   font-weight: 700;
   color: #1A1A1A;
   margin-top: 4rpx;
+}
+
+.stat-percent {
+  font-size: 32rpx;
+  font-weight: 700;
 }
 
 .stat-value.green {
