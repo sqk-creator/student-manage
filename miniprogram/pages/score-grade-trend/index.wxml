@@ -120,7 +120,7 @@
 
       <view class="card-normal class-leaderboard" wx:if="{{classList.length}}">
         <view class="class-leaderboard-title">班级排行榜</view>
-        <view class="cb-card" wx:for="{{classList}}" wx:key="rank" data-index="{{index}}" bindtap="onClassTap">
+        <view class="cb-card" wx:for="{{classList}}" wx:key="rank" data-index="{{index}}" hover-class="cb-card-hover" capture-bind:tap="onClassTap">
           <view class="cb-rank">
             <view class="cb-rank-num">{{item.rank}}</view>
           </view>

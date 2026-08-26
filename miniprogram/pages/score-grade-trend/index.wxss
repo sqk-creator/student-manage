@@ -353,6 +353,10 @@
   height: 520rpx;
   margin-top: 8rpx;
   display: block;
+  pointer-events: none;
+}
+.cb-card-hover {
+  background: #EDF7F5;
 }
 
 .class-leaderboard {
