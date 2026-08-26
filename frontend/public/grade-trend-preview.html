@@ -69,7 +69,7 @@
     box-shadow: 0 2px 10px rgba(20, 168, 154, 0.08);
     padding: 16px; margin-bottom: 16px;
   }
-  .grade-trend-card { padding-top: 10px; }
+  .grade-trend-card { padding-top: 16px; margin-bottom: 16px; }
 
   .grade-rate-card { position: relative; height: 180px; overflow: hidden; }
   .gauge-canvas { width: 100%; height: 100%; display: block; }
@@ -90,25 +90,27 @@
   .subj-btn.active { background: #14A89A; color: #FFFFFF; border-color: #14A89A; font-weight: 600; }
   .trend-canvas { width: 100%; height: 200px; margin-top: 10px; display: block; }
 
-  .grade-rate2-card { padding-top: 14px; }
+  .grade-rate2-card { padding-top: 16px; }
   .rate-avg-cards { display: flex; gap: 40px; }
   .cs-rate { text-align: left; }
   .cs-rate-label { font-size: 13px; color: #333333; font-weight: 500; }
   .cs-rate-value { font-size: 44px; font-weight: 800; color: #14A89A; line-height: 1; margin-top: 4px; }
   .cs-rate-unit { font-size: 18px; font-weight: 600; color: #333333; }
   .cs-rate-value.grade-b { color: #2979FF; }
-  .dual-legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: #909399; }
+  .dual-legend { display: flex; justify-content: flex-end; gap: 16px; margin-top: 14px; font-size: 12px; color: #909399; }
   .legend-item { display: flex; align-items: center; gap: 4px; }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
   .dot-good { background: #2979FF; }
   .dot-exc { background: #14A89A; }
-  .hist-canvas { width: 100%; height: 260px; margin-top: 4px; display: block; }
+  .hist-scroll { width: 100%; margin-top: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .hist-scroll::-webkit-scrollbar { display: none; }
+  .hist-canvas { display: inline-block; height: 260px; }
 
   .class-leaderboard-title { font-size: 17px; font-weight: 600; color: #1A1A1A; margin-bottom: 12px; }
   .cb-card { display: flex; align-items: stretch; background: #F7FCFB; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; }
   .cb-card:active { opacity: 0.8; }
   .cb-rank { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 36px; margin-right: 18px; }
-  .cb-rank-num { font-size: 32px; font-weight: 700; font-style: italic; opacity: 0.2; color: #14A89A; line-height: 1; }
+  .cb-rank-num { font-size: 32px; font-weight: 700; font-style: italic; opacity: 0.2; color: #14A89A; line-height: 1; transform: scaleY(1.3); }
   .cb-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
   .cb-name { font-size: 15px; font-weight: 600; color: #1A1A1A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cb-scores { display: flex; align-items: flex-end; gap: 10px; margin-top: 6px; }
@@ -288,11 +290,11 @@ function renderTrend(){
     +'<div class="cs-rate"><div class="cs-rate-label">良好率-平均</div><div class="cs-rate-value grade-b">'+(s.avg_good_rate||0)+'<span class="cs-rate-unit">%</span></div></div>'
     +'</div>'
     +'<div class="dual-legend"><div class="legend-item"><div class="legend-dot dot-good"></div>良好</div><div class="legend-item"><div class="legend-dot dot-exc"></div>优秀</div></div>'
-    +'<canvas class="hist-canvas" id="rateDistCanvas"></canvas>'
+    +'<div class="hist-scroll" id="rateDistScroll"><canvas class="hist-canvas" id="rateDistCanvas"></canvas></div>'
     +'</div>'
     +'<div class="card-normal grade-rate2-card">'
     +'<div class="cs-rate"><div class="cs-rate-label">平均及格率</div><div class="cs-rate-value">'+passAvg+'<span class="cs-rate-unit">%</span></div></div>'
-    +'<canvas class="hist-canvas" id="passDistCanvas"></canvas>'
+    +'<div class="hist-scroll" id="passDistScroll"><canvas class="hist-canvas" id="passDistCanvas"></canvas></div>'
     +'</div>';
   if(classes.length){
     html+='<div class="card-normal"><div class="class-leaderboard-title">班级排行榜</div>'+leaderHtml+'</div>';
@@ -403,17 +405,19 @@ function lineTrendGeom(w,h,items){
   if(ySpan<10)step=1;else if(ySpan<30)step=2;else if(ySpan<60)step=5;else step=10;
   yMin=Math.floor(yMin/step)*step;yMax=Math.ceil(yMax/step)*step;
   var chartW=w-padL-padR,chartH=h-padT-padB;
-  var xs=values.map(function(_,i){return values.length>1?padL+i*(chartW/(values.length-1)):padL+chartW/2;});
+  var padIn=26,innerW=chartW-padIn*2;
+  var xs=values.map(function(_,i){return values.length>1?padL+padIn+i*(innerW/(values.length-1)):padL+chartW/2;});
   var ys=values.map(function(v){return padT+(yMax-v)/(yMax-yMin)*chartH;});
   return {
     w:w,h:h,padL:padL,padR:padR,padT:padT,padB:padB,
-    chartW:chartW,chartH:chartH,values:values,
+    chartW:chartW,chartH:chartH,innerW:innerW,
+    values:values,
     names:(items||[]).map(function(it){return it.name||'';}),
     maxs:(items||[]).map(function(it){return it.max||0;}),
     yMin:yMin,yMax:yMax,step:step,yIsFlat:yIsFlat,xs:xs,ys:ys
   };
 }
-function drawTrendBase(ctx,w,h,g){
+function drawTrendLayer(ctx,w,h,g,prog){
   ctx.clearRect(0,0,w,h);
   if(!g||!g.xs||!g.xs.length)return;
   var i,gy,gv;
@@ -429,21 +433,47 @@ function drawTrendBase(ctx,w,h,g){
   var grad=ctx.createLinearGradient(0,g.padT,0,g.padT+g.chartH);
   grad.addColorStop(0,'rgba(20,168,154,0.40)');grad.addColorStop(1,'rgba(20,168,154,0)');
   ctx.beginPath();ctx.moveTo(g.xs[0],g.padT+g.chartH);
-  g.xs.forEach(function(x,i){ctx.lineTo(x,g.ys[i]);});
+  g.xs.forEach(function(x,j){ctx.lineTo(x,g.ys[j]);});
   ctx.lineTo(g.xs[g.xs.length-1],g.padT+g.chartH);ctx.closePath();
   ctx.fillStyle=grad;ctx.fill();
+  var n=g.xs.length;
+  var done=Math.max(0,Math.min(1,prog==null?1:prog))*(n-1);
+  var lastSeg=Math.floor(done);
   ctx.beginPath();
-  g.xs.forEach(function(x,i){i===0?ctx.moveTo(x,g.ys[i]):ctx.lineTo(x,g.ys[i]);});
+  for(i=0;i<=lastSeg;i++){i===0?ctx.moveTo(g.xs[i],g.ys[i]):ctx.lineTo(g.xs[i],g.ys[i]);}
+  if(lastSeg<n-1){
+    var frac=done-lastSeg;
+    ctx.lineTo(g.xs[lastSeg]+(g.xs[lastSeg+1]-g.xs[lastSeg])*frac,g.ys[lastSeg]+(g.ys[lastSeg+1]-g.ys[lastSeg])*frac);
+  }
   ctx.strokeStyle='#14A89A';ctx.lineWidth=4;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
-  g.xs.forEach(function(x,i){
-    ctx.beginPath();ctx.arc(x,g.ys[i],6,0,Math.PI*2);
+  for(i=0;i<n;i++){
+    if(i>done)break;
+    ctx.beginPath();ctx.arc(g.xs[i],g.ys[i],4,0,Math.PI*2);
     ctx.fillStyle='#fff';ctx.fill();
     ctx.lineWidth=2;ctx.strokeStyle='#14A89A';ctx.stroke();
-  });
+  }
+}
+function drawTrendBase(ctx,w,h,g){
+  drawTrendLayer(ctx,w,h,g,1);
 }
 function drawLineTrend(ctx,w,h,items){
   var g=lineTrendGeom(w,h,items);
   drawTrendBase(ctx,w,h,g);
+  return g;
+}
+function animateLineTrend(cvs,g){
+  if(!g)return g;
+  var duration=600;
+  function easeOutCubic(t){return 1-Math.pow(1-t,3);}
+  var start=null;
+  function frame(ts){
+    if(!start)start=ts;
+    var progress=Math.min((ts-start)/duration,1);
+    drawTrendLayer(g.ctx,g.w,g.h,g,easeOutCubic(progress));
+    if(progress<1)requestAnimationFrame(frame);
+    else drawTrendLayer(g.ctx,g.w,g.h,g,1);
+  }
+  requestAnimationFrame(frame);
   return g;
 }
 function drawTrendSelected(ctx,w,h,g,idx){
@@ -471,23 +501,32 @@ function drawTrendTooltip(ctx,w,h,g,idx){
   var rate=maxV>0?Math.round(val/maxV*100):0;
   var x=g.xs[idx];
   var y=g.ys[idx];
-  ctx.font='bold 18px sans-serif';
-  var valW=textWidth(ctx,val.toFixed(1),40);
-  var rateW=textWidth(ctx,String(rate),30);
-  ctx.font='14px sans-serif';
-  var slashW=textWidth(ctx,'/',8);
-  var maxW=maxV>0?textWidth(ctx,String(maxV),20):0;
-  var percentW=textWidth(ctx,'%',10);
-  ctx.font='bold 13px sans-serif';
+  var valueFont=24,pctFont=13,nameFont=13;
+  ctx.font='bold '+valueFont+'px sans-serif';
+  var valW=textWidth(ctx,val.toFixed(1),46);
+  var rateW=textWidth(ctx,String(rate),34);
+  ctx.font=valueFont+'px sans-serif';
+  var slashW=textWidth(ctx,'/',10);
+  var maxW=maxV>0?textWidth(ctx,String(maxV),24):0;
+  ctx.font=pctFont+'px sans-serif';
+  var pctW=textWidth(ctx,'%',9);
+  ctx.font='bold '+nameFont+'px sans-serif';
   var nameW=textWidth(ctx,name,name.length*13);
-  var gap=4;
-  var valueLineW=valW+gap+slashW+gap+maxW+10+rateW+gap+percentW+10;
-  var boxW=Math.max(nameW+4,valueLineW)+36;
-  var contentH=26+(g.yIsFlat?22:0);
-  var boxH=contentH+28;
-  var bx=x+18;
-  if(bx+boxW>w-10)bx=Math.max(10,x-18-boxW);
-  var by=Math.max(10,Math.min(y-10,h-boxH-10));
+  var padT2=14,padB2=14;
+  var contentPad=18;
+  var pctGap=1;
+  var rowGap=8;
+  var nameRowH=nameFont+4;
+  var valueRowH=valueFont+4;
+  var boxH=padT2+nameRowH+rowGap+valueRowH+padB2+(g.yIsFlat?24:0);
+  var leftBlockW=valW+4+slashW+4+maxW;
+  var rightBlockW=rateW+pctGap+pctW;
+  var valueLineW=leftBlockW+20+rightBlockW;
+  var boxW=Math.max(nameW,valueLineW)+contentPad*2;
+  var gapP=22;
+  var by=y-boxH-gapP;
+  if(by<8)by=Math.min(y+gapP,h-boxH-8);
+  var bx=Math.max(8,Math.min(x-boxW/2,w-boxW-8));
   ctx.save();
   ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=20;ctx.shadowOffsetY=4;
   ctx.fillStyle='#fff';
@@ -496,36 +535,49 @@ function drawTrendTooltip(ctx,w,h,g,idx){
   ctx.strokeStyle='rgba(0,0,0,0.05)';ctx.lineWidth=1;
   roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.stroke();
   ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='#1A1A1A';ctx.font='bold 13px sans-serif';
-  ctx.fillText(name,bx+18,by+14);
-  var lineY=by+14+20;
-  var curX=bx+18;
-  ctx.font='bold 18px sans-serif';ctx.fillStyle='#1A1A1A';
-  ctx.fillText(val.toFixed(1),curX,lineY);
-  curX+=valW+gap;
-  ctx.font='14px sans-serif';ctx.fillStyle='#909399';
-  ctx.fillText('/',curX,lineY+2);
-  curX+=slashW+gap;
-  if(maxV>0){ctx.fillText(String(maxV),curX,lineY+2);curX+=maxW+10;}
-  ctx.font='bold 18px sans-serif';ctx.fillStyle='#14A89A';
-  ctx.fillText(String(rate),curX,lineY);
-  curX+=rateW+gap;
-  ctx.font='14px sans-serif';ctx.fillStyle='#909399';
-  ctx.fillText('%',curX,lineY+2);
+  ctx.fillStyle='#1A1A1A';ctx.font='bold '+nameFont+'px sans-serif';
+  ctx.fillText(name,bx+contentPad,by+padT2);
+  var valueTop=by+padT2+nameRowH+rowGap;
+  ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.font='bold '+valueFont+'px sans-serif';ctx.fillStyle='#1A1A1A';
+  ctx.fillText(val.toFixed(1),bx+contentPad,valueTop);
+  var curX=bx+contentPad+valW+4;
+  ctx.font=valueFont+'px sans-serif';ctx.fillStyle='#909399';
+  ctx.fillText('/',curX,valueTop);
+  curX+=slashW+4;
+  if(maxV>0){ctx.fillText(String(maxV),curX,valueTop);}
+  var rightX=bx+boxW-contentPad;
+  ctx.textAlign='right';
+  ctx.font=pctFont+'px sans-serif';ctx.fillStyle='#909399';
+  ctx.fillText('%',rightX,valueTop+valueFont*0.12);
+  ctx.font='bold '+valueFont+'px sans-serif';ctx.fillStyle='#14A89A';
+  ctx.fillText(String(rate),rightX-pctGap-pctW,valueTop);
+  ctx.textAlign='left';
   if(g.yIsFlat){
-    var hy=by+boxH-16;
+    var hy=valueTop+valueRowH+4;
     ctx.setLineDash([1,0]);ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(bx+18,hy-4);ctx.lineTo(bx+boxW-18,hy-4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx+contentPad,hy);ctx.lineTo(bx+boxW-contentPad,hy);ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle='#FA8C16';ctx.font='11px sans-serif';
-    ctx.fillText('各次考试平均分无明显差距',bx+18,hy+1);
+    ctx.fillText('各次考试平均分无明显差距',bx+contentPad,hy+4);
   }
+}
+function roundRectCorners(ctx,x,y,w,h,r,c){
+  r=Math.min(r,w/2,h/2);
+  var tl=c&&c.tl?r:0,tr=c&&c.tr?r:0,br=c&&c.br?r:0,bl=c&&c.bl?r:0;
+  ctx.beginPath();
+  ctx.moveTo(x+tl,y);
+  if(tr>0){ctx.lineTo(x+w-tr,y);ctx.arcTo(x+w,y,x+w,y+tr,tr);}else{ctx.lineTo(x+w,y);}
+  if(br>0){ctx.lineTo(x+w,y+h-br);ctx.arcTo(x+w,y+h,x+w-br,y+h,br);}else{ctx.lineTo(x+w,y+h);}
+  if(bl>0){ctx.lineTo(x+bl,y+h);ctx.arcTo(x,y+h,x,y+h-bl,bl);}else{ctx.lineTo(x,y+h);}
+  if(tl>0){ctx.lineTo(x,y+tl);ctx.arcTo(x,y,x+tl,y,tl);}else{ctx.lineTo(x,y);}
+  ctx.closePath();
 }
 function drawHistogram(ctx,w,h,data,stack){
   ctx.clearRect(0,0,w,h);
   var xAxis=data.xAxis||[],series=data.series||[];
   if(!xAxis.length||!series.length)return;
-  var padL=34,padR=14,padT=26,padB=30;
+  var padL=34,padR=14,padT=15,padB=40;
   var chartW=w-padL-padR,chartH=h-padT-padB;
   var maxV=0;
   xAxis.forEach(function(_,i){
@@ -537,11 +589,12 @@ function drawHistogram(ctx,w,h,data,stack){
     if(sum>maxV)maxV=sum;
   });
   var yMax=niceMax(maxV);
+  var gridNum=4;
   ctx.font='11px sans-serif';ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
   ctx.fillStyle='#909399';ctx.textAlign='right';ctx.textBaseline='middle';
-  for(var i=0;i<=3;i++){
-    var gy=padT+i*(chartH/3);
-    var gv=yMax-i*(yMax/3);
+  for(var i=0;i<=gridNum;i++){
+    var gy=padT+i*(chartH/gridNum);
+    var gv=yMax-i*(yMax/gridNum);
     ctx.beginPath();ctx.moveTo(padL,gy);ctx.lineTo(w-padR,gy);ctx.stroke();
     ctx.fillText(Math.round(gv),padL-6,gy);
   }
@@ -551,12 +604,19 @@ function drawHistogram(ctx,w,h,data,stack){
     var cx=padL+slotW*i+slotW/2;
     if(stack){
       var accY=padT+chartH;
-      series.forEach(function(s){
+      var n=series.length;
+      series.forEach(function(s,j){
         var v=s.data[i]||0;
         var bh=v/yMax*chartH;
         var by=accY-bh;
         ctx.fillStyle=s.color||'#14A89A';
-        roundRectPath(ctx,cx-barW/2,by,barW,bh,3);ctx.fill();
+        if(n>1){
+          var isTop=(j===n-1),isBottom=(j===0);
+          roundRectCorners(ctx,cx-barW/2,by,barW,bh,3,{tl:isTop,tr:isTop,br:isBottom,bl:isBottom});
+          ctx.fill();
+        }else{
+          roundRectPath(ctx,cx-barW/2,by,barW,bh,3);ctx.fill();
+        }
         if(v>0){
           ctx.fillStyle='#909399';ctx.font='10px sans-serif';
           ctx.textAlign='center';ctx.textBaseline='bottom';
@@ -574,11 +634,15 @@ function drawHistogram(ctx,w,h,data,stack){
       ctx.fillStyle='#909399';ctx.textAlign='center';ctx.textBaseline='bottom';
       ctx.fillText(String(v),cx,by-2);
     }
-    ctx.fillStyle='#909399';ctx.textAlign='center';ctx.textBaseline='top';
-    ctx.font='10px sans-serif';
     var label=xAxis[i]||'';
-    if(label.length>5)label=label.slice(0,5);
-    ctx.fillText(label,cx,h-padB+6);
+    if(label.length>3)label=label.slice(0,3);
+    ctx.save();
+    ctx.translate(cx,h-padB+10);
+    ctx.rotate(-Math.PI/4);
+    ctx.fillStyle='#909399';ctx.textAlign='right';ctx.textBaseline='top';
+    ctx.font='10px sans-serif';
+    ctx.fillText(label,0,0);
+    ctx.restore();
   });
 }
 function drawSparkline(ctx,w,h,trend){
@@ -606,7 +670,8 @@ function drawTrendChart(){
   var g=getCtx('trendCanvas');
   if(!g)return;
   currentTrendItems=lineItemsFor(activeSubj);
-  trendGeom=drawLineTrend(g.ctx,g.w,g.h,currentTrendItems);
+  var geom=lineTrendGeom(g.w,g.h,currentTrendItems);
+  trendGeom=animateLineTrend(g,geom);
   bindTrendEvents();
 }
 function bindTrendEvents(){
@@ -638,13 +703,21 @@ function renderTrendSelection(idx){
   if(idx>=0&&trendGeom)drawTrendSelected(g.ctx,g.w,g.h,trendGeom,idx);
   else trendGeom=drawLineTrend(g.ctx,g.w,g.h,currentTrendItems);
 }
+function setupHist(id,scrollId,n,stack){
+  var cvs=document.getElementById(id);
+  if(!cvs)return;
+  var avail=document.getElementById(scrollId).clientWidth||360;
+  var minSlot=22;
+  cvs.style.width=Math.max(avail,n*minSlot)+'px';
+  var data=(id==='rateDistCanvas')?rateDistData:passDistData;
+  var g=getCtx(id);
+  if(g)drawHistogram(g.ctx,g.w,g.h,data,stack);
+}
 function drawAll(){
   animateGauge(document.getElementById('gaugeCanvas'));
   drawTrendChart();
-  var g=getCtx('rateDistCanvas');
-  if(g)drawHistogram(g.ctx,g.w,g.h,rateDistData,true);
-  g=getCtx('passDistCanvas');
-  if(g)drawHistogram(g.ctx,g.w,g.h,passDistData,false);
+  setupHist('rateDistCanvas','rateDistScroll',rateDistData.xAxis.length,true);
+  setupHist('passDistCanvas','passDistScroll',passDistData.xAxis.length,false);
   document.querySelectorAll('.cb-spark').forEach(function(cv){
     var trend=JSON.parse(cv.dataset.trend);
     var rect=cv.getBoundingClientRect();
