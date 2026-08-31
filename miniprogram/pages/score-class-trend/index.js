@@ -39,7 +39,24 @@ Page({
     groups: [],
     loading: false,
     emptyMsg: '',
-    hasData: false
+    hasData: false,
+    stickyTop: 0
+  },
+
+  onReady() {
+    setTimeout(() => this.measureHeader(), 300);
+  },
+
+  measureHeader() {
+    wx.createSelectorQuery()
+      .in(this)
+      .select('.page-header')
+      .boundingClientRect((rect) => {
+        if (rect && rect.height) {
+          this.setData({ stickyTop: rect.height });
+        }
+      })
+      .exec();
   },
 
   onLoad(options) {

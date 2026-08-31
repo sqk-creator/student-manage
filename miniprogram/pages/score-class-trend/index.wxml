@@ -7,18 +7,6 @@
     </view>
     <view class="header-title-row">
       <text class="page-title">成绩档案</text>
-      <picker
-        mode="selector"
-        range="{{classOptions}}"
-        range-key="name"
-        value="{{classIndex}}"
-        bindchange="onClassChange"
-      >
-        <view class="grade-select">
-          <text class="grade-select-text">{{classOptions[classIndex].name}}</text>
-          <text class="grade-select-arrow">▾</text>
-        </view>
-      </picker>
     </view>
     <view class="main-tabs">
       <view class="main-tab" data-tab="exam" bindtap="onMainTab">看考试</view>
@@ -27,6 +15,33 @@
       <view class="main-tab" data-tab="student" bindtap="onMainTab">看个人</view>
     </view>
   </view>
+
+  <picker
+    mode="selector"
+    range="{{classOptions}}"
+    range-key="name"
+    value="{{classIndex}}"
+    bindchange="onClassChange"
+    wx:if="{{classInfo.name}}"
+  >
+    <view class="class-info" style="top: {{stickyTop}}px;">
+      <view class="class-info-left">
+        <view class="class-info-name">
+          {{classInfo.name}}
+          <text class="class-info-tag" wx:if="{{classInfo.type}}">{{classInfo.type}}</text>
+        </view>
+      </view>
+      <view class="class-info-right">
+        <view class="ci-avatar" wx:for="{{classInfo.avatars}}" wx:key="index" wx:for-item="av">
+          <image wx:if="{{av.src}}" class="ci-avatar-img" src="{{av.src}}" mode="aspectFill"></image>
+          <text wx:else>{{av.letter}}</text>
+        </view>
+        <text class="ci-count-num">{{classInfo.studentCount}}</text>
+        <text class="ci-count-unit">人</text>
+        <view class="ci-arrow">▾</view>
+      </view>
+    </view>
+  </picker>
 
   <view class="type-switch" wx:if="{{showTypeSwitch}}">
     <view
@@ -47,23 +62,6 @@
     </view>
 
     <block wx:else>
-
-      <view class="card-normal class-info">
-        <view class="class-info-left">
-          <view class="class-info-name">
-            {{classInfo.name}}
-            <text class="class-info-tag" wx:if="{{classInfo.type}}">{{classInfo.type}}</text>
-          </view>
-          <view class="class-info-count">{{classInfo.studentCount}}人</view>
-        </view>
-        <view class="class-info-right">
-          <view class="ci-avatar" wx:for="{{classInfo.avatars}}" wx:key="index" wx:for-item="av">
-            <image wx:if="{{av.src}}" class="ci-avatar-img" src="{{av.src}}" mode="aspectFill"></image>
-            <text wx:else>{{av.letter}}</text>
-          </view>
-          <view class="ci-arrow">▾</view>
-        </view>
-      </view>
 
       <view class="card-large class-stats-card">
         <view class="cs-rate">

@@ -70,15 +70,19 @@
     padding: 16px; margin-bottom: 16px;
   }
 
-  .class-info { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
-  .class-info-left { display: flex; flex-direction: column; gap: 5px; }
-  .class-info-name { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; color: #1A1A1A; }
+  .class-info-bar { position: sticky; z-index: 89; background: #FFFFFF; }
+  .class-info { display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; padding: 12px 32px; border-radius: 0; margin-top: 2px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); cursor: pointer; }
+  .class-info-left { display: flex; align-items: center; min-width: 0; }
+  .class-info-name { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; color: #1A1A1A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .class-info-tag { font-size: 11px; color: #14A89A; background: #E6F7F5; border-radius: 6px; padding: 2px 7px; font-weight: 500; }
-  .class-info-count { font-size: 12px; color: #909399; }
-  .class-info-right { display: flex; align-items: center; gap: 6px; }
-  .ci-avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #BEEFDA, #35B9AA); display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 700; font-size: 14px; }
+  .class-info-right { display: flex; align-items: center; flex-shrink: 0; }
+  .ci-avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #35B9AA, #35B9AA); display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 700; font-size: 14px; border: 1px solid #FFFFFF; position: relative; }
+  .ci-avatar + .ci-avatar { margin-left: -12px; }
   .ci-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .ci-arrow { font-size: 12px; color: #909399; }
+  .ci-count-num { font-size: 16px; font-weight: 600; color: #1A1A1A; margin-left: 12px; line-height: 1; }
+  .ci-count-unit { font-size: 12px; color: #909399; margin-left: 2px; }
+  .ci-arrow { font-size: 12px; color: #909399; margin-left: 6px; }
+  .hidden-class-select { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
   .class-stats-card { padding-top: 10px; }
   .cs-rate { text-align: left; }
@@ -161,7 +165,6 @@
     </div>
     <div class="header-title-row">
       <span class="page-title">成绩档案</span>
-      <select class="grade-select" id="classSelect" onchange="onClassChange()"></select>
     </div>
     <div class="main-tabs">
       <button class="main-tab" onclick="location.href='score-exam-preview.html'">看考试</button>
@@ -170,6 +173,8 @@
       <button class="main-tab" onclick="toast('小程序中对应「看个人」页，功能开发中')">看个人</button>
     </div>
   </div>
+  <div class="class-info-bar" id="classInfoBar"></div>
+  <select class="hidden-class-select" id="classSelect" onchange="onClassChange()"></select>
   <div class="type-switch" id="typeSwitch" style="display:none"></div>
   <div class="tab-content" id="classTrendContent"></div>
   </div>
@@ -209,36 +214,37 @@ function examTypeShort(t){
   return t||'';
 }
 
+var selectedGradeId='';
+
 async function loadAll(){
   try{
     var r=await fetch('/api/public/grades');
     grades=await r.json();
-    var gSel=document.createElement('select');
-    gSel.className='grade-select';
-    gSel.innerHTML=grades.map(function(g,i){
-      return'<option value="'+g.id+'">'+escapeHtml(g.grade_name)+'</option>';
-    }).join('');
-    var hr=document.querySelector('.header-title-row');
-    hr.appendChild(gSel);
-    gSel.onchange=function(){
-      activeType='';activeSubj='total';
-      loadClasses();
-    };
-    if(preGradeId){
-      var preIdx=grades.findIndex(function(g){return String(g.id)===String(preGradeId);});
-      if(preIdx>=0)gSel.selectedIndex=preIdx;
-    }
+    selectedGradeId=preGradeId||(grades.length?String(grades[0].id):'');
+    syncSticky();
     await loadClasses();
   }catch(e){
     document.getElementById('classTrendContent').innerHTML='<div class="empty-state"><div class="empty-icon">--</div>数据加载失败</div>';
   }
 }
 
+function syncSticky(){
+  var ph=document.querySelector('.page-header');
+  var bar=document.getElementById('classInfoBar');
+  if(ph&&bar)bar.style.top=ph.offsetHeight+'px';
+}
+
+function openClassPicker(){
+  var s=document.getElementById('classSelect');
+  if(!s)return;
+  if(s.showPicker)s.showPicker();
+  else s.click();
+}
+
 async function loadClasses(){
   var r=await fetch('/api/public/classes');
   var all=await r.json();
-  var gid=getGradeId();
-  classesList=(all||[]).filter(function(c){return String(c.grade_id)===String(gid);});
+  classesList=(all||[]).filter(function(c){return String(c.grade_id)===String(selectedGradeId);});
   var cSel=document.getElementById('classSelect');
   cSel.innerHTML=classesList.map(function(c){
     return'<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>';
@@ -252,14 +258,6 @@ async function loadClasses(){
     return;
   }
   loadTrend();
-}
-
-function getGradeId(){
-  var sels=document.querySelectorAll('.header-title-row .grade-select');
-  for(var i=0;i<sels.length;i++){
-    if(sels[i].id!=='classSelect')return sels[i].value;
-  }
-  return grades.length?grades[0].id:'';
 }
 
 function onClassChange(){
@@ -389,12 +387,18 @@ function renderClassTrend(d,etype){
     return'<div class="ci-avatar">'+escapeHtml((st.student_name||'').slice(0,1))+'</div>';
   }).join(''));
 
-  var html=''
-    +'<div class="card-normal class-info">'
-    +'<div class="class-info-left"><div class="class-info-name">'+escapeHtml(classInfoName)+(classType?'<span class="class-info-tag">'+escapeHtml(classType)+'</span>':'')+'</div>'
-    +'<div class="class-info-count">'+students.length+'人</div></div>'
-    +'<div class="class-info-right">'+avatarsHtml+'<span class="ci-arrow">▾</span></div>'
+  document.getElementById('classInfoBar').innerHTML=
+    '<div class="class-info" onclick="openClassPicker()">'
+    +'<div class="class-info-left"><div class="class-info-name">'+escapeHtml(classInfoName)+(classType?'<span class="class-info-tag">'+escapeHtml(classType)+'</span>':'')+'</div></div>'
+    +'<div class="class-info-right">'+avatarsHtml
+    +'<span class="ci-count-num">'+students.length+'</span>'
+    +'<span class="ci-count-unit">人</span>'
+    +'<span class="ci-arrow">▾</span>'
     +'</div>'
+    +'</div>';
+  syncSticky();
+
+  var html=''
     +'<div class="card-large class-stats-card">'
     +'<div class="cs-rate"><div class="cs-rate-label">平均得分率</div><div class="cs-rate-value">'+scoreRate+'<span class="cs-rate-unit">%</span></div></div>'
     +'<div class="gauge-stats">'
