@@ -173,6 +173,7 @@
 /* —— 年级统考（group）卡片：标签置顶材质 —— */
 .group-card.group-exam {
   padding-top: 0; /* 顶部贴住卡片 group-card 上边缘 */
+  margin-bottom: 32rpx;
 }
 
 .card-top-tags {
@@ -188,7 +189,7 @@
   font-weight: 600;
   color: #14A89A;
   background: rgba(20, 168, 154, 0.10);
-  padding: 8rpx 20rpx;
+  padding: 16rpx 20rpx;
   border-radius: 0 0 10rpx 10rpx; /* 左上、右上角为直角 */
   white-space: nowrap;
 }
@@ -199,7 +200,7 @@
   font-weight: 600;
   color: #86909C;
   background: #F2F3F5;
-  padding: 8rpx 20rpx;
+  padding: 16rpx 20rpx;
   border-radius: 0 0 10rpx 10rpx; /* 左上、右上角为直角 */
   white-space: nowrap;
 }
