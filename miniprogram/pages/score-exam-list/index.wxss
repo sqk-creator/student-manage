@@ -170,6 +170,47 @@
   box-shadow: 0 4rpx 20rpx rgba(20, 168, 154, 0.08);
 }
 
+/* —— 年级统考（group）卡片：标签置顶材质 —— */
+.group-card.group-exam {
+  padding-top: 0; /* 顶部贴住卡片 group-card 上边缘 */
+}
+
+.card-top-tags {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 22rpx;
+}
+
+.tag-grade {
+  font-size: 22rpx;
+  line-height: 1.2;
+  font-weight: 500;
+  color: #14A89A;
+  background: rgba(20, 168, 154, 0.10);
+  padding: 8rpx 20rpx;
+  border-radius: 0 0 10rpx 10rpx; /* 左上、右上角为直角 */
+  white-space: nowrap;
+}
+
+.tag-type {
+  font-size: 22rpx;
+  line-height: 1.2;
+  color: #86909C;
+  background: #F2F3F5;
+  padding: 8rpx 20rpx;
+  border-radius: 0 0 10rpx 10rpx; /* 左上、右上角为直角 */
+  white-space: nowrap;
+}
+
+.card-title-wrap {
+  margin-bottom: 20rpx;
+}
+
+.group-card.group-exam .card-title {
+  font-size: 38rpx; /* 考试标题适当放大 */
+}
+
 .card-header {
   display: flex;
   align-items: flex-start;

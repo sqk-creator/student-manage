@@ -51,13 +51,15 @@
         <view class="empty-icon">--</view>
         <view>暂无年级统考数据</view>
       </view>
-      <view class="group-card" wx:for="{{groups}}" wx:key="id">
-        <view class="card-header">
+      <view class="group-card group-exam" wx:for="{{groups}}" wx:key="id">
+        <view class="card-top-tags">
+          <text class="tag-grade">{{item.gradeName}}</text>
+          <text class="tag-type">{{item.examType}}</text>
+        </view>
+        <view class="card-title-wrap">
           <text class="card-title">{{item.groupName}}</text>
         </view>
         <view class="card-meta">
-          <text class="card-grade">{{item.gradeName}}</text>
-          <text class="meta-tag">{{item.examType}}</text>
           <text class="meta-tag">{{item.examDate}}</text>
           <text class="meta-tag">满分 {{item.totalScore}}</text>
           <text class="meta-tag">{{item.studentCount}}人参考</text>

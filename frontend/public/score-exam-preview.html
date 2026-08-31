@@ -79,6 +79,12 @@ body{
 .tab-content{padding:12px 16px 120px;}
 
 .group-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+.group-card.group-exam{padding-top:0;}
+.card-top-tags{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.tag-grade{font-size:11px;line-height:1.2;font-weight:500;color:#14A89A;background:rgba(20,168,154,.10);padding:4px 10px;border-radius:0 0 5px 5px;white-space:nowrap;}
+.tag-type{font-size:11px;line-height:1.2;color:#86909C;background:#F2F3F5;padding:4px 10px;border-radius:0 0 5px 5px;white-space:nowrap;}
+.card-title-wrap{margin-bottom:12px;}
+.group-card.group-exam .card-title{font-size:19px;}
 .card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
 .card-title{font-size:17px;font-weight:700;color:#1D2129;}
 .card-grade{font-size:12px;color:#14A89A;white-space:nowrap;}
@@ -201,11 +207,10 @@ function renderGroupCards(){
   }
   var html='';
   summaries.forEach(function(g){
-    html+='<div class="group-card">'
-      +'<div class="card-header"><span class="card-title">'+escapeHtml(g.group_name)+'</span></div>'
+    html+='<div class="group-card group-exam">'
+      +'<div class="card-top-tags"><span class="tag-grade">'+escapeHtml(g.grade_name)+'</span><span class="tag-type">'+escapeHtml(examTypeLabel(g.exam_type))+'</span></div>'
+      +'<div class="card-title-wrap"><span class="card-title">'+escapeHtml(g.group_name)+'</span></div>'
       +'<div class="card-meta">'
-      +'<span class="card-grade">'+escapeHtml(g.grade_name)+'</span>'
-      +'<span class="meta-tag">'+escapeHtml(examTypeLabel(g.exam_type))+'</span>'
       +'<span class="meta-tag">'+escapeHtml(g.exam_date)+'</span>'
       +'<span class="meta-tag">满分 '+g.total_score+'</span>'
       +'<span class="meta-tag">'+g.student_count+'人参考</span>'
