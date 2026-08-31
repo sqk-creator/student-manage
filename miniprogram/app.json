@@ -9,10 +9,10 @@
     "pages/score-student/index"
   ],
   "window": {
-    "navigationBarBackgroundColor": "#F1F8F7",
+    "navigationBarBackgroundColor": "#FFFFFF",
     "navigationBarTitleText": "班级组织",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#F1F8F7"
+    "backgroundColor": "#FFFFFF"
   },
   "tabBar": {
     "color": "#86909C",
