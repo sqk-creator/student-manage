@@ -108,17 +108,21 @@
 
 \[预览拉起规则（强制约定）]
 
-* Date: 2026-08-26
+* Date: 2026-09-01
 
-* Context: 用户发布"0.3.5-预览拉起规则"
+* Context: 用户发布"0.3.6-预览规则定义"，强化并替换 0.3.5 的预览拉起规则，要求每次严格执行并保持一致性
 
 * Category: 行为指令
 
 * Instructions:
 
-  * 每次"拉起预览"，必须提供整个系统的预览入口，而不是单个页面的预览
+  * 每次"拉起预览"，必须提供整个系统的完整预览入口，而不是单个页面的预览；必须严格保持每次一致，禁止变更端口或入口
 
-  * 预览入口统一从系统入口页开始：前端根路径（frontend 开发服务器 <http://localhost:3000/> → frontend/src/pages/entry/index.tsx），从该入口页点击进入移动H5端 / 小程序端（等效预览）/ 管理后台等各端卡片
+  * 端口固定：前端一律走 3000（frontend 开发服务器，cd /workspace/frontend && npx vite --host 0.0.0.0），后端一律走 3001（cd /workspace/backend && node src/app.js）
+
+  * 每次拉起预览必须**同时启动后端服务**：后端不在运行时，/api 请求经 vite 代理到 3001 会返回 500 空 body，管理后台报 "Failed to execute 'json' on 'Response': Unexpected end of JSON input"。拉起预览前必须先确认 3001 已运行
+
+  * 预览入口统一从系统入口页开始：前端根路径 <http://localhost:3000/> → frontend/src/pages/entry/index.tsx（EntryPage，小程序端 + 管理后台入口），从该入口页点击进入移动H5端 / 小程序端（等效预览）/ 管理后台等各端卡片
 
   * 仅在用户明确指定单个页面时才单独拉起该页面；未指定时一律拉系统入口页
 
