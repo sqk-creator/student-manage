@@ -136,17 +136,23 @@
   opacity: 0.4;
 }
 
-.class-info {
+/* 吸顶容器：与 .page-header 一致的吸顶行为；margin-top 放在吸顶容器上，滚动时保持 4rpx 缝隙不消失、不闪动 */
+.class-info-bar {
   position: sticky;
+  top: 0;
   z-index: 90;
+  background: #FFFFFF;
+  margin-top: 4rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.class-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #FFFFFF;
   padding: 24rpx 64rpx;
   border-radius: 0; /* 直角，贴住 page-header 下方 */
-  margin-top: 4rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
 .class-info-left {
@@ -213,7 +219,7 @@
   font-size: 32rpx;
   font-weight: 600;
   color: #1A1A1A;
-  margin-left: 24rpx;
+  margin-left: 12rpx;
   line-height: 1;
 }
 
@@ -230,7 +236,7 @@
 }
 
 .class-stats-card {
-  padding-top: 20rpx;
+  padding-top: 32rpx; /* 与 padding-left 保持一致 */
 }
 
 .cs-rate {
@@ -325,14 +331,7 @@
 }
 
 .dist-card {
-  padding-top: 28rpx;
-}
-
-.dist-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: #1A1A1A;
-  margin-bottom: 20rpx;
+  padding-top: 32rpx; /* 与 padding-left 保持一致 */
 }
 
 .dist-rate {
@@ -374,7 +373,7 @@
 
 .hist-canvas {
   width: 100%;
-  height: 520rpx;
+  height: 400rpx; /* 与折线图 trend-canvas 高度保持一致 */
   margin-top: 8rpx;
   display: block;
 }
@@ -387,7 +386,6 @@
   margin-top: 28rpx;
   padding: 24rpx 28rpx;
   background: linear-gradient(90deg, #E6F7F5, #FFFFFF);
-  border: 1rpx solid #E8EFED;
   border-radius: 20rpx;
   overflow: hidden;
 }

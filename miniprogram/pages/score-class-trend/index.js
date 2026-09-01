@@ -552,7 +552,8 @@ Page({
     charts.getCanvas(this, 'trendCanvas').then((res) => {
       if (!res) return;
       this.currentLineItems = lineItems;
-      this.trendGeom = charts.drawLineTrend(res.ctx, res.w, res.h, lineItems);
+      // 折线图统一走渐进绘制动效（加载/切换沿用同一套动效）
+      this.trendGeom = charts.animateLineTrend(res.ctx, res.node, res.w, res.h, lineItems);
     });
 
     charts.getCanvas(this, 'distCanvas').then((res) => {
@@ -578,7 +579,8 @@ Page({
     this.currentLineItems = groups;
     charts.getCanvas(this, 'trendCanvas').then((res) => {
       if (!res) return;
-      this.trendGeom = charts.drawLineTrend(res.ctx, res.w, res.h, groups);
+      // 切换科目沿用折线图加载动效
+      this.trendGeom = charts.animateLineTrend(res.ctx, res.node, res.w, res.h, groups);
     });
   },
 

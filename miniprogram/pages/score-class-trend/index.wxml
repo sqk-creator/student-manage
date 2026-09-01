@@ -24,21 +24,23 @@
     bindchange="onClassChange"
     wx:if="{{classInfo.name}}"
   >
-    <view class="class-info" style="top: {{stickyTop}}px;">
-      <view class="class-info-left">
-        <view class="class-info-name">
-          {{classInfo.name}}
-          <text class="class-info-tag" wx:if="{{classInfo.type}}">{{classInfo.type}}</text>
+    <view class="class-info-bar" style="top: {{stickyTop}}px;">
+      <view class="class-info">
+        <view class="class-info-left">
+          <view class="class-info-name">
+            {{classInfo.name}}
+            <text class="class-info-tag" wx:if="{{classInfo.type}}">{{classInfo.type}}</text>
+          </view>
         </view>
-      </view>
-      <view class="class-info-right">
-        <view class="ci-avatar" wx:for="{{classInfo.avatars}}" wx:key="index" wx:for-item="av">
-          <image wx:if="{{av.src}}" class="ci-avatar-img" src="{{av.src}}" mode="aspectFill"></image>
-          <text wx:else>{{av.letter}}</text>
+        <view class="class-info-right">
+          <view class="ci-avatar" wx:for="{{classInfo.avatars}}" wx:key="index" wx:for-item="av">
+            <image wx:if="{{av.src}}" class="ci-avatar-img" src="{{av.src}}" mode="aspectFill"></image>
+            <text wx:else>{{av.letter}}</text>
+          </view>
+          <text class="ci-count-num">{{classInfo.studentCount}}</text>
+          <text class="ci-count-unit">人</text>
+          <view class="ci-arrow">▾</view>
         </view>
-        <text class="ci-count-num">{{classInfo.studentCount}}</text>
-        <text class="ci-count-unit">人</text>
-        <view class="ci-arrow">▾</view>
       </view>
     </view>
   </picker>
@@ -104,7 +106,6 @@
       </view>
 
       <view class="card-normal dist-card">
-        <view class="dist-title">优劣分布分析</view>
         <view class="dist-rate">
           <view class="cs-rate">
             <view class="cs-rate-label">平均及格率</view>

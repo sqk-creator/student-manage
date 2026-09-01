@@ -20,7 +20,7 @@
     box-shadow: 0 20px 60px rgba(0,0,0,0.45);
   }
   .status-bar {
-    height: 44px; background: #F0F8F6; flex-shrink: 0;
+    height: 44px; background: #FFFFFF; flex-shrink: 0;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 16px; color: #1A1A1A; font-size: 15px; font-weight: 600;
   }
@@ -43,7 +43,7 @@
   .capsule-line { width: 1px; height: 14px; background: #E5E6EB; margin: 0 10px; }
   .capsule-circle { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #C9CDD4; margin-right: 8px; }
   .header-title-row { display: flex; align-items: center; justify-content: space-between; padding: 0 0 12px; }
-  .page-title { font-size: 20px; font-weight: 600; color: #1A1A1A; line-height: 1.2; }
+  .page-title { font-size: 28px; font-weight: 900; color: #1D2129; line-height: 1.2; }
   .grade-select { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 8px; background: #F0F8F6; cursor: pointer; border: none; font-size: 13px; color: #909399; }
   .main-tabs { display: flex; }
   .main-tab { flex: 1; padding: 10px 5px; text-align: center; font-size: 14px; font-weight: 400; color: #909399; position: relative; background: none; border: none; cursor: pointer; }
@@ -70,8 +70,8 @@
     padding: 16px; margin-bottom: 16px;
   }
 
-  .class-info-bar { position: sticky; z-index: 89; background: #FFFFFF; }
-  .class-info { display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; padding: 12px 32px; border-radius: 0; margin-top: 2px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); cursor: pointer; }
+  .class-info-bar { position: sticky; z-index: 89; background: #FFFFFF; margin-top: 2px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  .class-info { display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; padding: 12px 32px; border-radius: 0; cursor: pointer; }
   .class-info-left { display: flex; align-items: center; min-width: 0; }
   .class-info-name { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; color: #1A1A1A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .class-info-tag { font-size: 11px; color: #14A89A; background: #E6F7F5; border-radius: 6px; padding: 2px 7px; font-weight: 500; }
@@ -84,7 +84,7 @@
   .ci-arrow { font-size: 12px; color: #909399; margin-left: 6px; }
   .hidden-class-select { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
-  .class-stats-card { padding-top: 10px; }
+  .class-stats-card { padding-top: 16px; } /* 与 padding-left 保持一致 */
   .cs-rate { text-align: left; }
   .cs-rate-label { font-size: 13px; color: #333333; font-weight: 500; }
   .cs-rate-value { font-size: 44px; font-weight: 800; color: #14A89A; line-height: 1; margin-top: 4px; }
@@ -102,16 +102,15 @@
   .subj-btn.active { background: #14A89A; color: #FFFFFF; border-color: #14A89A; font-weight: 600; }
   .trend-canvas { width: 100%; height: 200px; margin-top: 10px; display: block; }
 
-  .dist-card { padding-top: 14px; }
-  .dist-title { font-size: 17px; font-weight: 600; color: #1A1A1A; margin-bottom: 12px; }
+  .dist-card { padding-top: 16px; } /* 与 padding-left 保持一致 */
   .dist-rate { margin-bottom: 4px; }
   .dist-rate-grid { display: flex; flex-wrap: wrap; gap: 8px 6px; margin: 12px 0 4px; }
   .dist-rate-grid .gauge-stat { width: calc(50% - 3px); flex: none; align-items: flex-start; text-align: left; gap: 3px; padding: 9px 12px; }
   .dist-stat { display: flex; align-items: baseline; gap: 1px; font-size: 22px; }
   .dist-rate-grid .gauge-stat.fail .dist-stat text:first-child { color: #F75F5C; }
   .dist-rate-unit { font-size: 12px; font-weight: 600; color: #909399; }
-  .hist-canvas { width: 100%; height: 260px; margin-top: 4px; display: block; }
-  .dist-eval { position: relative; display: flex; flex-direction: column; align-items: flex-start; margin-top: 14px; padding: 12px 14px; background: linear-gradient(90deg, #F0FAF8, #FFFFFF); border: 1px solid #E3F2EF; border-radius: 10px; overflow: hidden; }
+  .hist-canvas { width: 100%; height: 200px; margin-top: 4px; display: block; } /* 与折线图 trend-canvas 高度一致 */
+  .dist-eval { position: relative; display: flex; flex-direction: column; align-items: flex-start; margin-top: 14px; padding: 12px 14px; background: linear-gradient(90deg, #F0FAF8, #FFFFFF); border-radius: 10px; overflow: hidden; }
   .eval-badge { display: inline-block; padding: 3px 10px; background: #14A89A; color: #FFFFFF; font-size: 12px; font-weight: 700; letter-spacing: 2px; border-radius: 12px 0 12px 0; }
   .dist-eval-text { padding: 6px 0 0; font-size: 15px; line-height: 1.6; text-align: left; font-weight: 700; }
   .dist-eval-note { color: #909399; font-size: 12px; margin-top: 4px; }
@@ -413,7 +412,6 @@ function renderClassTrend(d,etype){
     +'<canvas class="trend-canvas" id="trendCanvas"></canvas>'
     +'</div>'
     +'<div class="card-normal dist-card">'
-    +'<div class="dist-title">优劣分布分析</div>'
     +'<div class="dist-rate"><div class="cs-rate"><div class="cs-rate-label">平均及格率</div><div class="cs-rate-value grade-c">'+avgPassAll+'<span class="cs-rate-unit">%</span></div></div></div>'
     +'<div class="dist-rate-grid">'
     +'<div class="gauge-stat"><div class="gauge-stat-label">优秀率-平均</div><div class="gauge-stat-value dist-stat"><span>'+rateAvg.excellent_rate+'</span><span class="dist-rate-unit">%</span></div></div>'
@@ -591,6 +589,58 @@ function drawTrendBase(ctx,w,h,g){
 function drawLineTrend(ctx,w,h,items){
   var g=lineTrendGeom(w,h,items);
   drawTrendBase(ctx,w,h,g);
+  return g;
+}
+/* 折线图加载动效：按进度渐进绘制折线与数据点（与小程序 charts.js animateLineTrend 一致） */
+function drawTrendProgress(ctx,w,h,g,prog){
+  ctx.clearRect(0,0,w,h);
+  if(!g||!g.xs||!g.xs.length)return;
+  var i,gy,gv;
+  ctx.font='11px sans-serif';
+  ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
+  ctx.fillStyle='#909399';ctx.textAlign='right';ctx.textBaseline='middle';
+  for(i=0;i<=3;i++){
+    gy=g.padT+i*(g.chartH/3);
+    gv=g.yMax-i*((g.yMax-g.yMin)/3);
+    ctx.beginPath();ctx.moveTo(g.padL,gy);ctx.lineTo(w-g.padR,gy);ctx.stroke();
+    ctx.fillText(Math.round(gv),g.padL-6,gy);
+  }
+  var done=Math.max(0,Math.min(1,prog==null?1:prog))*(g.xs.length-1);
+  var lastSeg=Math.floor(done);
+  var grad=ctx.createLinearGradient(0,g.padT,0,g.padT+g.chartH);
+  grad.addColorStop(0,'rgba(20,168,154,0.40)');grad.addColorStop(1,'rgba(20,168,154,0)');
+  ctx.beginPath();ctx.moveTo(g.xs[0],g.padT+g.chartH);
+  for(i=0;i<=lastSeg;i++)ctx.lineTo(g.xs[i],g.ys[i]);
+  ctx.lineTo(g.xs[lastSeg],g.padT+g.chartH);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();
+  for(i=0;i<=lastSeg;i++){if(i===0)ctx.moveTo(g.xs[i],g.ys[i]);else ctx.lineTo(g.xs[i],g.ys[i]);}
+  if(lastSeg<g.xs.length-1){
+    var frac=done-lastSeg;
+    ctx.lineTo(g.xs[lastSeg]+(g.xs[lastSeg+1]-g.xs[lastSeg])*frac,g.ys[lastSeg]+(g.ys[lastSeg+1]-g.ys[lastSeg])*frac);
+  }
+  ctx.strokeStyle='#14A89A';ctx.lineWidth=4;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+  for(i=0;i<g.xs.length;i++){
+    if(i>done)break;
+    ctx.beginPath();ctx.arc(g.xs[i],g.ys[i],6,0,Math.PI*2);
+    ctx.fillStyle='#fff';ctx.fill();
+    ctx.lineWidth=2;ctx.strokeStyle='#14A89A';ctx.stroke();
+  }
+}
+function animateLineTrend(ctx,w,h,items,cb){
+  var g=lineTrendGeom(w,h,items);
+  if(!g){if(cb)cb(g);return g;}
+  var duration=600;
+  var easeOutCubic=function(t){return 1-Math.pow(1-t,3);};
+  var start=Date.now();
+  function tick(){
+    var progress=Math.min((Date.now()-start)/duration,1);
+    drawTrendProgress(ctx,w,h,g,easeOutCubic(progress));
+    if(progress<1)requestAnimationFrame(tick);
+    else if(cb)cb(g);
+  }
+  drawTrendProgress(ctx,w,h,g,0);
+  requestAnimationFrame(tick);
   return g;
 }
 function drawTrendSelected(ctx,w,h,g,idx){
@@ -891,7 +941,8 @@ function drawTrendChart(){
   var g=getCtx('trendCanvas');
   if(!g)return;
   currentLineItems=lineItemsFor(activeSubj);
-  trendGeom=drawLineTrend(g.ctx,g.w,g.h,currentLineItems);
+  // 加载 & 切换科目沿用同一套折线图渐进动效
+  trendGeom=animateLineTrend(g.ctx,g.w,g.h,currentLineItems);
   bindTrendEvents();
 }
 function bindTrendEvents(){
