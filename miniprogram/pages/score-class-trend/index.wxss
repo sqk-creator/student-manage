@@ -136,14 +136,13 @@
   opacity: 0.4;
 }
 
-/* 吸顶容器：与 .page-header 一致的吸顶行为；margin-top 放在吸顶容器上，滚动时保持 4rpx 缝隙不消失、不闪动。
+/* 吸顶容器：与 .page-header 一致的吸顶行为；不设 margin-top。
    上边框线为浅灰（仅顶边），作为与上方 page-header 的分隔，其余边框线不展示 */
 .class-info-bar {
   position: sticky;
   top: 0;
   z-index: 90;
   background: #FFFFFF;
-  margin-top: 4rpx;
   border-top: 1rpx solid #E5E8EB;
 }
 
@@ -220,7 +219,7 @@
   font-size: 32rpx;
   font-weight: 600;
   color: #1A1A1A;
-  margin-left: 12rpx;
+  margin-left: 6rpx;
   line-height: 1;
 }
 
@@ -271,7 +270,7 @@
 .gauge-stats {
   display: flex;
   gap: 24rpx;
-  margin: 32rpx 0 24rpx;
+  margin: 32rpx 0 36rpx; /* margin-bottom 与看年级页 .gauge-stats 保持一致 */
 }
 
 .gauge-stat {
