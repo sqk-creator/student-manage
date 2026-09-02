@@ -85,8 +85,10 @@
   .hidden-class-select { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
   /* 班级选择底部弹出窗：透明蒙版 + 从页面底部向上滑出 */
-  .popup { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 500; }
-  .popup .popup-mask { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); opacity: 0; transition: opacity .2s; pointer-events: auto; }
+  /* 关闭态 visibility:hidden 且 mask 不设 pointer-events，确保不拦截页面滚动/点击/返回 */
+  .popup { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 500; visibility: hidden; transition: visibility 0s .26s; }
+  .popup.open { pointer-events: auto; visibility: visible; transition: visibility 0s 0s; }
+  .popup .popup-mask { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); opacity: 0; transition: opacity .2s; }
   .popup .popup-sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .25s; max-height: 70%; display: flex; flex-direction: column; pointer-events: auto; }
   .popup-handle { width: 36px; height: 4px; border-radius: 2px; background: #E5E6EB; margin: 10px auto 0; flex-shrink: 0; }
   .popup-title { font-size: 17px; font-weight: 700; color: #1A1A1A; text-align: center; padding: 14px 16px; flex-shrink: 0; }
