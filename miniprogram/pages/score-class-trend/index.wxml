@@ -94,15 +94,7 @@
             bindtap="onSubjTap"
           >{{item.label}}</view>
         </scroll-view>
-        <canvas
-          type="2d"
-          id="trendCanvas"
-          class="trend-canvas"
-          bindtouchstart="onTrendTouchStart"
-          bindtouchmove="onTrendTouchMove"
-          bindtouchend="onTrendTouchEnd"
-          bindtouchcancel="onTrendTouchEnd"
-        ></canvas>
+        <view class="trend-area"><trend-line items="{{trendItems}}" /></view>
       </view>
 
       <view class="card-normal dist-card">

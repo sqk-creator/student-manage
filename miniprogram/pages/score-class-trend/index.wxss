@@ -323,11 +323,10 @@
   font-weight: 600;
 }
 
-.trend-canvas {
+/* 折线图容器：下接 trend-line 组件（组件内画布高 400rpx），此处只控制与上方科目胶囊的间距 */
+.trend-area {
   width: 100%;
-  height: 400rpx;
   margin-top: 20rpx;
-  display: block;
 }
 
 .dist-card {

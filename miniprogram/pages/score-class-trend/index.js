@@ -36,6 +36,7 @@ Page({
     radarStats: { max: 0, min: 0, range: 0, avg: 0 },
     studentList: [],
     lineItems: [],
+    trendItems: [],
     groups: [],
     loading: false,
     emptyMsg: '',
@@ -209,57 +210,9 @@ Page({
     const subj = e.currentTarget.dataset.subj;
     if (subj === this.data.activeSubj) return;
     this.setData({ activeSubj: subj });
-    this.drawLineChart();
-  },
-
-  onTrendTouchStart(e) {
-    const t = e.touches && e.touches[0];
-    if (!t) return;
-    const idx = this.trendIdxFromXY(t.x, t.y);
-    if (idx >= 0) this.renderTrendSelection(idx);
-  },
-
-  onTrendTouchMove(e) {
-    const t = e.touches && e.touches[0];
-    if (!t) return;
-    const idx = this.trendIdxFromXY(t.x, t.y);
-    if (idx >= 0) this.renderTrendSelection(idx);
-  },
-
-  onTrendTouchEnd() {
-    this.renderTrendSelection(-1);
-  },
-
-  trendIdxFromXY(x, y) {
-    const g = this.trendGeom;
-    if (!g || !g.xs || !g.xs.length) return -1;
-    if (x < g.padL - 30 || x > g.w - g.padR + 30) return -1;
-    let best = 0;
-    let bd = Infinity;
-    g.xs.forEach((v, i) => {
-      const d = Math.abs(v - x);
-      if (d < bd) {
-        bd = d;
-        best = i;
-      }
-    });
-    return best;
-  },
-
-  renderTrendSelection(idx) {
-    charts.getCanvas(this, 'trendCanvas').then((res) => {
-      if (!res) return;
-      if (idx >= 0 && this.trendGeom) {
-        charts.drawTrendSelected(res.ctx, res.w, res.h, this.trendGeom, idx);
-      } else if (this.currentLineItems) {
-        this.trendGeom = charts.drawLineTrend(
-          res.ctx,
-          res.w,
-          res.h,
-          this.currentLineItems
-        );
-      }
-    });
+    // 切换科目：构造该科分组数据交由 trend-line 组件重绘（复用折线图加载动效）
+    const groups = this.buildLineItems();
+    this.setData({ trendItems: groups });
   },
 
   onRadarTouchStart(e) {
@@ -488,7 +441,8 @@ Page({
         radarStats,
         studentList,
         classInfo,
-        lineItems
+        lineItems,
+        trendItems: this.data.activeSubj === 'total' ? lineItems : this.buildLineItems()
       },
       () => {
         setTimeout(() => this.drawCharts(), 120);
@@ -557,14 +511,8 @@ Page({
   },
 
   drawCharts() {
-    const { lineItems, distData, studentList } = this.data;
-
-    charts.getCanvas(this, 'trendCanvas').then((res) => {
-      if (!res) return;
-      this.currentLineItems = lineItems;
-      // 折线图统一走渐进绘制动效（加载/切换沿用同一套动效）
-      this.trendGeom = charts.animateLineTrend(res.ctx, res.node, res.w, res.h, lineItems);
-    });
+    const { distData, studentList } = this.data;
+    // 折线图已交由 trend-line 组件自绘（含加载动效与触摸交互），此处不再处理
 
     charts.getCanvas(this, 'distCanvas').then((res) => {
       if (!res) return;
@@ -581,16 +529,6 @@ Page({
         if (!res) return;
         charts.drawSparkline(res.ctx, res.w, res.h, st.trend);
       });
-    });
-  },
-
-  drawLineChart() {
-    const groups = this.buildLineItems();
-    this.currentLineItems = groups;
-    charts.getCanvas(this, 'trendCanvas').then((res) => {
-      if (!res) return;
-      // 切换科目沿用折线图加载动效
-      this.trendGeom = charts.animateLineTrend(res.ctx, res.node, res.w, res.h, groups);
     });
   },
 
