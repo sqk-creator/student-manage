@@ -29,6 +29,7 @@ Page({
     passDistWidth: 0,
     classList: [],
     lineItems: [],
+    trendItems: [],
     groups: [],
     loading: false,
     emptyMsg: '',
@@ -117,57 +118,10 @@ Page({
   onSubjTap(e) {
     const subj = e.currentTarget.dataset.subj;
     if (subj === this.data.activeSubj) return;
-    this.setData({ activeSubj: subj });
-    this.drawLineChart();
-  },
-
-  onTrendTouchStart(e) {
-    const t = e.touches && e.touches[0];
-    if (!t) return;
-    const idx = this.trendIdxFromXY(t.x, t.y);
-    if (idx >= 0) this.renderTrendSelection(idx);
-  },
-
-  onTrendTouchMove(e) {
-    const t = e.touches && e.touches[0];
-    if (!t) return;
-    const idx = this.trendIdxFromXY(t.x, t.y);
-    if (idx >= 0) this.renderTrendSelection(idx);
-  },
-
-  onTrendTouchEnd() {
-    this.renderTrendSelection(-1);
-  },
-
-  trendIdxFromXY(x, y) {
-    const g = this.trendGeom;
-    if (!g || !g.xs || !g.xs.length) return -1;
-    if (x < g.padL - 30 || x > g.w - g.padR + 30) return -1;
-    let best = 0;
-    let bd = Infinity;
-    g.xs.forEach((v, i) => {
-      const d = Math.abs(v - x);
-      if (d < bd) {
-        bd = d;
-        best = i;
-      }
-    });
-    return best;
-  },
-
-  renderTrendSelection(idx) {
-    charts.getCanvas(this, 'trendCanvas').then((res) => {
-      if (!res) return;
-      if (idx >= 0 && this.trendGeom) {
-        charts.drawTrendSelected(res.ctx, res.w, res.h, this.trendGeom, idx);
-      } else if (this.currentLineItems) {
-        this.trendGeom = charts.drawLineTrend(
-          res.ctx,
-          res.w,
-          res.h,
-          this.currentLineItems
-        );
-      }
+    this.setData({
+      activeSubj: subj,
+      // 切换科目：构造该科分组数据交由 trend-line 组件重绘（复用折线图加载动效）
+      trendItems: this.buildLineItems()
     });
   },
 
@@ -297,7 +251,8 @@ Page({
 
     const lineItems = groups.map((g) => ({
       name: g.group_name,
-      value: g.avg_total || 0
+      value: g.avg_total || 0,
+      max: g.total_score || 0
     }));
 
     const types = (d.available_types || []).map((t) => ({
@@ -342,7 +297,8 @@ Page({
         rateDistData,
         passDistData,
         classList,
-        lineItems
+        lineItems,
+        trendItems: activeSubj === 'total' ? lineItems : this.buildLineItems()
       },
       () => {
         setTimeout(() => this.drawCharts(), 120);
@@ -379,21 +335,13 @@ Page({
         // 并行绘制的折线图 / 直方图 / 火花图画布会被清掉（只有点击后才重绘成功）。
         // 改到仪表盘动画完全结束、setData 风暴停止后再绘制其余图表，保证页面加载即显示。
         onComplete: () => {
-          this.drawTrendAndDist(lineItems, rateDistData, passDistData, classList);
+          this.drawDistAndSparks(rateDistData, passDistData, classList);
         }
       });
     });
   },
 
-  drawTrendAndDist(lineItems, rateDistData, passDistData, classList) {
-    charts.getCanvas(this, 'trendCanvas').then((res) => {
-      if (!res) return;
-      this.currentLineItems = lineItems;
-      charts.animateLineTrend(res.ctx, res.node, res.w, res.h, lineItems, (g) => {
-        this.trendGeom = g;
-      });
-    });
-
+  drawDistAndSparks(rateDistData, passDistData, classList) {
     charts.getCanvas(this, 'rateDistCanvas').then((res) => {
       if (!res) return;
       charts.drawHistogram(res.ctx, res.w, res.h, rateDistData, { stack: true });
@@ -408,17 +356,6 @@ Page({
       charts.getCanvas(this, 'spark' + i).then((res) => {
         if (!res) return;
         charts.drawSparkline(res.ctx, res.w, res.h, cls.trend);
-      });
-    });
-  },
-
-  drawLineChart() {
-    const groups = this.buildLineItems();
-    this.currentLineItems = groups;
-    charts.getCanvas(this, 'trendCanvas').then((res) => {
-      if (!res) return;
-      charts.animateLineTrend(res.ctx, res.node, res.w, res.h, groups, (g) => {
-        this.trendGeom = g;
       });
     });
   },

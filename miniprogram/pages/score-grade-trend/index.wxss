@@ -268,11 +268,8 @@
   font-weight: 600;
 }
 
-.trend-canvas {
-  width: 100%;
-  height: 400rpx;
+.trend-area {
   margin-top: 20rpx;
-  display: block;
 }
 
 .grade-rate2-card {
