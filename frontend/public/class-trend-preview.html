@@ -84,6 +84,21 @@
   .ci-arrow { font-size: 12px; color: #909399; margin-left: 6px; }
   .hidden-class-select { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
+  /* 班级选择底部弹出窗：透明蒙版 + 从页面底部向上滑出 */
+  .popup { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 500; }
+  .popup .popup-mask { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); opacity: 0; transition: opacity .2s; pointer-events: auto; }
+  .popup .popup-sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform .25s; max-height: 70%; display: flex; flex-direction: column; pointer-events: auto; }
+  .popup-handle { width: 36px; height: 4px; border-radius: 2px; background: #E5E6EB; margin: 10px auto 0; flex-shrink: 0; }
+  .popup-title { font-size: 17px; font-weight: 700; color: #1A1A1A; text-align: center; padding: 14px 16px; flex-shrink: 0; }
+  .popup-body { overflow-y: auto; padding: 4px 0 12px; }
+  .class-option { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; font-size: 15px; color: #1A1A1A; cursor: pointer; }
+  .class-option:active { background: #F7F9F9; }
+  .class-option.selected { color: #14A89A; font-weight: 600; }
+  .class-option .tick { color: #14A89A; font-weight: 700; }
+  .popup.open { pointer-events: auto; }
+  .popup.open .popup-mask { opacity: 1; }
+  .popup.open .popup-sheet { transform: translateY(0); }
+
   .class-stats-card { padding-top: 16px; } /* 与 padding-left 保持一致 */
   .cs-rate { text-align: left; }
   .cs-rate-label { font-size: 13px; color: #333333; font-weight: 500; }
@@ -178,6 +193,14 @@
   <div class="tab-content" id="classTrendContent"></div>
   </div>
   </div>
+  <div class="popup" id="classPopup">
+    <div class="popup-mask" onclick="closeClassPicker()"></div>
+    <div class="popup-sheet">
+      <div class="popup-handle"></div>
+      <div class="popup-title">选择班级</div>
+      <div class="popup-body" id="classOptionList"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -219,7 +242,12 @@ async function loadAll(){
   try{
     var r=await fetch('/api/public/grades');
     grades=await r.json();
-    selectedGradeId=preGradeId||(grades.length?String(grades[0].id):'');
+    // 默认选第一个包含班级的年级，保证班级选择器有可选项（避免班级下拉为空弹不出）
+    var cr=await fetch('/api/public/classes');
+    var all=await cr.json();
+    var gidSet={}; all.forEach(function(c){gidSet[c.grade_id]=1;});
+    var withClass=grades.find(function(g){return gidSet[g.id];});
+    selectedGradeId=preGradeId||(withClass?String(withClass.id):(grades.length?String(grades[0].id):''));
     syncSticky();
     await loadClasses();
   }catch(e){
@@ -234,10 +262,28 @@ function syncSticky(){
 }
 
 function openClassPicker(){
+  var list=document.getElementById('classOptionList');
+  var sel=document.getElementById('classSelect');
+  var cur=sel.value;
+  if(!classesList.length)return;
+  list.innerHTML=classesList.map(function(c){
+    var chosen=String(c.id)===String(cur);
+    return'<div class="class-option'+(chosen?' selected':'')+'" onclick="selectClass(\''+c.id+'\')">'
+      +'<span>'+escapeHtml(c.name)+'</span>'
+      +(chosen?'<span class="tick">✓</span>':'')
+      +'</div>';
+  }).join('');
+  document.getElementById('classPopup').className='popup open';
+}
+function selectClass(id){
   var s=document.getElementById('classSelect');
-  if(!s)return;
-  if(s.showPicker)s.showPicker();
-  else s.click();
+  var idx=classesList.findIndex(function(c){return String(c.id)===String(id);});
+  if(idx>=0)s.selectedIndex=idx;
+  closeClassPicker();
+  onClassChange();
+}
+function closeClassPicker(){
+  document.getElementById('classPopup').className='popup';
 }
 
 async function loadClasses(){

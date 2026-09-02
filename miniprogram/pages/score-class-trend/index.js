@@ -149,9 +149,19 @@ Page({
     }
     get('/api/public/classes')
       .then((all) => {
-        const list = (all || [])
+        let list = (all || [])
           .filter((c) => String(c.grade_id) === String(gid))
           .map((c) => ({ id: String(c.id), name: c.name }));
+        // 当前年级无班级时，自动切到第一个包含班级的年级，保证班级选择器有可选项
+        if (!list.length && this.data.gradeOptions.length > 1) {
+          const gidSet = {};
+          (all || []).forEach((c) => { gidSet[String(c.grade_id)] = 1; });
+          const target = this.data.gradeOptions.findIndex((g) => gidSet[String(g.id)]);
+          if (target >= 0 && target !== this.data.gradeIndex) {
+            this.setData({ gradeIndex: target, classIndex: 0 });
+            return this.loadClasses();
+          }
+        }
         let idx = 0;
         if (this.preClassId) {
           const found = list.findIndex((c) => c.id === String(this.preClassId));
