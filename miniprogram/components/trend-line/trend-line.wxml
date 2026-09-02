@@ -1,0 +1,13 @@
+<!-- 通用折线图组件：封装小程序折线图统一标准（样式 + 加载动效 + 触摸交互 + 悬浮卡片）
+     用法：<trend-line items="{{lineItems}}" />  items=[{name,value,max}] -->
+<view class="trend-line-wrap">
+  <canvas
+    type="2d"
+    id="trendCanvas"
+    class="trend-canvas"
+    bindtouchstart="onTouchStart"
+    bindtouchmove="onTouchMove"
+    bindtouchend="onTouchEnd"
+    bindtouchcancel="onTouchCancel"
+  ></canvas>
+</view>

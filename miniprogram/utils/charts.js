@@ -297,6 +297,22 @@ function drawLineTrend(ctx, w, h, items) {
   return g;
 }
 
+// 折线图命中索引：根据触摸坐标返回最近数据点下标（折线图统一交互命中判定）
+function trendIdxFromXY(g, x, y) {
+  if (!g || !g.xs || !g.xs.length) return -1;
+  if (x < g.padL - 30 || x > g.w - g.padR + 30) return -1;
+  let best = 0;
+  let bd = Infinity;
+  g.xs.forEach((v, i) => {
+    const d = Math.abs(v - x);
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
 function drawTrendSelected(ctx, w, h, g, idx) {
   drawTrendBase(ctx, w, h, g);
   if (!g || idx == null || idx < 0 || idx >= g.xs.length) return;
@@ -832,6 +848,7 @@ module.exports = {
   drawLineTrend,
   animateLineTrend,
   drawTrendSelected,
+  trendIdxFromXY,
   drawHistogram,
   drawSparkline,
   drawRadar,
