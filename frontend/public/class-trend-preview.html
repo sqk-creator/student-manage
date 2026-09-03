@@ -205,6 +205,7 @@
   </div>
 </div>
 
+<script src="js/trend-line.js"></script>
 <script>
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g,function(m){
@@ -226,7 +227,7 @@ function toast(msg){
 var SUBJECT_ORDER=['语文','数学','英语','政治','历史','地理'];
 var grades=[],classesList=[],trendData=null;
 var activeType='',activeSubj='total';
-var currentLineItems=[],trendGeom=null,radarGeomX=null,radarItems=[];
+var radarGeomX=null,radarItems=[];
 var savedDistCounts=[0,0,0,0,0];
 
 var preGradeId=getParam('grade_id'),preClassId=getParam('class_id');
@@ -363,10 +364,6 @@ function renderClassTrend(d,etype){
   groups.forEach(function(g){(g.subjects||[]).forEach(function(sub){subjSet[sub.subject]=true;});});
   var subjs=['total'].concat(Object.keys(subjSet));
 
-  var lineItems=groups.map(function(g){
-    return{name:g.group_name,value:g.avg_total||0,max:g.total_score||0};
-  });
-
   var distBkts=[{range:'<60',min:0,max:60},{range:'60-70',min:60,max:70},{range:'70-80',min:70,max:80},{range:'80-90',min:80,max:90},{range:'90-100',min:90,max:101}];
   var lastGrp=groups[groups.length-1];
   var distTotalScore=(lastGrp&&lastGrp.total_score)||0;
@@ -488,7 +485,6 @@ function renderClassTrend(d,etype){
     html+='<div class="card-normal class-leaderboard"><div class="class-leaderboard-title">学生排名</div>'+leaderHtml+'</div>';
   }
   document.getElementById('classTrendContent').innerHTML=html;
-  currentLineItems=lineItems;
   setTimeout(function(){drawAllClass();},100);
 }
 
@@ -496,7 +492,7 @@ function onTypeTap(t){activeType=t;loadTrend(t);}
 function onSubjTap(btn){
   activeSubj=btn.dataset.subj;
   document.querySelectorAll('#subjBtns .subj-btn').forEach(function(b){b.className='subj-btn'+(b.dataset.subj===activeSubj?' active':'');});
-  drawTrendChart();
+  if(window._trendLine)_trendLine.setItems(lineItemsFor(activeSubj));
 }
 
 function evalDistText(c){
@@ -579,193 +575,7 @@ function lineItemsFor(subj){
   });
   return items;
 }
-function lineTrendGeom(w,h,items){
-  var padL=30,padR=10,padT=18,padB=18;
-  var values=(items||[]).map(function(it){return Math.round((it.value||0)*10)/10;});
-  if(!values.length)return null;
-  var yMinOrig=Math.min.apply(null,values),yMaxOrig=Math.max.apply(null,values);
-  var span=yMaxOrig-yMinOrig;
-  var yIsFlat=span===0,yMin,yMax;
-  if(span===0){yMin=Math.max(0,yMinOrig-5);yMax=yMinOrig+5;}
-  else{
-    var buffer=Math.ceil(span*0.3);
-    yMin=Math.max(0,Math.floor(yMinOrig-buffer));
-    yMax=Math.ceil(yMaxOrig+buffer);
-  }
-  var step,ySpan=yMax-yMin;
-  if(ySpan<10)step=1;else if(ySpan<30)step=2;else if(ySpan<60)step=5;else step=10;
-  yMin=Math.floor(yMin/step)*step;yMax=Math.ceil(yMax/step)*step;
-  var chartW=w-padL-padR,chartH=h-padT-padB;
-  var xs=values.map(function(_,i){return values.length>1?padL+i*(chartW/(values.length-1)):padL+chartW/2;});
-  var ys=values.map(function(v){return padT+(yMax-v)/(yMax-yMin)*chartH;});
-  return {
-    w:w,h:h,padL:padL,padR:padR,padT:padT,padB:padB,
-    chartW:chartW,chartH:chartH,values:values,
-    names:(items||[]).map(function(it){return it.name||'';}),
-    maxs:(items||[]).map(function(it){return it.max||0;}),
-    yMin:yMin,yMax:yMax,step:step,yIsFlat:yIsFlat,xs:xs,ys:ys
-  };
-}
-function drawTrendBase(ctx,w,h,g){
-  ctx.clearRect(0,0,w,h);
-  if(!g||!g.xs||!g.xs.length)return;
-  var i,gy,gv;
-  ctx.font='11px sans-serif';
-  ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
-  ctx.fillStyle='#909399';ctx.textAlign='right';ctx.textBaseline='middle';
-  for(i=0;i<=3;i++){
-    gy=g.padT+i*(g.chartH/3);
-    gv=g.yMax-i*((g.yMax-g.yMin)/3);
-    ctx.beginPath();ctx.moveTo(g.padL,gy);ctx.lineTo(w-g.padR,gy);ctx.stroke();
-    ctx.fillText(Math.round(gv),g.padL-6,gy);
-  }
-  var grad=ctx.createLinearGradient(0,g.padT,0,g.padT+g.chartH);
-  grad.addColorStop(0,'rgba(20,168,154,0.40)');grad.addColorStop(1,'rgba(20,168,154,0)');
-  ctx.beginPath();ctx.moveTo(g.xs[0],g.padT+g.chartH);
-  g.xs.forEach(function(x,i){ctx.lineTo(x,g.ys[i]);});
-  ctx.lineTo(g.xs[g.xs.length-1],g.padT+g.chartH);ctx.closePath();
-  ctx.fillStyle=grad;ctx.fill();
-  ctx.beginPath();
-  g.xs.forEach(function(x,i){i===0?ctx.moveTo(x,g.ys[i]):ctx.lineTo(x,g.ys[i]);});
-  ctx.strokeStyle='#14A89A';ctx.lineWidth=4;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
-  g.xs.forEach(function(x,i){
-    ctx.beginPath();ctx.arc(x,g.ys[i],6,0,Math.PI*2);
-    ctx.fillStyle='#fff';ctx.fill();
-    ctx.lineWidth=2;ctx.strokeStyle='#14A89A';ctx.stroke();
-  });
-}
-function drawLineTrend(ctx,w,h,items){
-  var g=lineTrendGeom(w,h,items);
-  drawTrendBase(ctx,w,h,g);
-  return g;
-}
-/* 折线图加载动效：按进度渐进绘制折线与数据点（与小程序 charts.js animateLineTrend 一致） */
-function drawTrendProgress(ctx,w,h,g,prog){
-  ctx.clearRect(0,0,w,h);
-  if(!g||!g.xs||!g.xs.length)return;
-  var i,gy,gv;
-  ctx.font='11px sans-serif';
-  ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
-  ctx.fillStyle='#909399';ctx.textAlign='right';ctx.textBaseline='middle';
-  for(i=0;i<=3;i++){
-    gy=g.padT+i*(g.chartH/3);
-    gv=g.yMax-i*((g.yMax-g.yMin)/3);
-    ctx.beginPath();ctx.moveTo(g.padL,gy);ctx.lineTo(w-g.padR,gy);ctx.stroke();
-    ctx.fillText(Math.round(gv),g.padL-6,gy);
-  }
-  var done=Math.max(0,Math.min(1,prog==null?1:prog))*(g.xs.length-1);
-  var lastSeg=Math.floor(done);
-  var grad=ctx.createLinearGradient(0,g.padT,0,g.padT+g.chartH);
-  grad.addColorStop(0,'rgba(20,168,154,0.40)');grad.addColorStop(1,'rgba(20,168,154,0)');
-  ctx.beginPath();ctx.moveTo(g.xs[0],g.padT+g.chartH);
-  for(i=0;i<=lastSeg;i++)ctx.lineTo(g.xs[i],g.ys[i]);
-  ctx.lineTo(g.xs[lastSeg],g.padT+g.chartH);ctx.closePath();
-  ctx.fillStyle=grad;ctx.fill();
-  ctx.beginPath();
-  for(i=0;i<=lastSeg;i++){if(i===0)ctx.moveTo(g.xs[i],g.ys[i]);else ctx.lineTo(g.xs[i],g.ys[i]);}
-  if(lastSeg<g.xs.length-1){
-    var frac=done-lastSeg;
-    ctx.lineTo(g.xs[lastSeg]+(g.xs[lastSeg+1]-g.xs[lastSeg])*frac,g.ys[lastSeg]+(g.ys[lastSeg+1]-g.ys[lastSeg])*frac);
-  }
-  ctx.strokeStyle='#14A89A';ctx.lineWidth=4;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
-  for(i=0;i<g.xs.length;i++){
-    if(i>done)break;
-    ctx.beginPath();ctx.arc(g.xs[i],g.ys[i],6,0,Math.PI*2);
-    ctx.fillStyle='#fff';ctx.fill();
-    ctx.lineWidth=2;ctx.strokeStyle='#14A89A';ctx.stroke();
-  }
-}
-function animateLineTrend(ctx,w,h,items,cb){
-  var g=lineTrendGeom(w,h,items);
-  if(!g){if(cb)cb(g);return g;}
-  var duration=600;
-  var easeOutCubic=function(t){return 1-Math.pow(1-t,3);};
-  var start=Date.now();
-  function tick(){
-    var progress=Math.min((Date.now()-start)/duration,1);
-    drawTrendProgress(ctx,w,h,g,easeOutCubic(progress));
-    if(progress<1)requestAnimationFrame(tick);
-    else if(cb)cb(g);
-  }
-  drawTrendProgress(ctx,w,h,g,0);
-  requestAnimationFrame(tick);
-  return g;
-}
-function drawTrendSelected(ctx,w,h,g,idx){
-  drawTrendBase(ctx,w,h,g);
-  if(!g||idx==null||idx<0||idx>=g.xs.length)return;
-  var x=g.xs[idx],y=g.ys[idx];
-  var colW=g.xs.length>1?g.chartW/(g.xs.length-1):g.chartW;
-  var maskW=colW*0.5;
-  ctx.fillStyle='rgba(20,168,154,0.1)';
-  ctx.fillRect(x-maskW/2,g.padT,maskW,g.chartH);
-  ctx.setLineDash([6,4]);
-  ctx.strokeStyle='#14A89A';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(x,g.padT);ctx.lineTo(x,g.padT+g.chartH);ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);
-  ctx.fillStyle='rgba(20,168,154,0.25)';ctx.fill();
-  ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);
-  ctx.fillStyle='#fff';ctx.fill();
-  ctx.lineWidth=4;ctx.strokeStyle='#14A89A';ctx.stroke();
-  drawTrendTooltip(ctx,w,h,g,idx);
-}
 function textWidth(ctx,str,fb){try{return ctx.measureText(str).width;}catch(e){return fb||0;}}
-function drawTrendTooltip(ctx,w,h,g,idx){
-  var name=g.names[idx]||'',val=g.values[idx],maxV=g.maxs[idx]||0;
-  var rate=maxV>0?Math.round(val/maxV*100):0;
-  var x=g.xs[idx];
-  var y=g.ys[idx];
-  ctx.font='bold 18px sans-serif';
-  var valW=textWidth(ctx,val.toFixed(1),40);
-  var rateW=textWidth(ctx,String(rate),30);
-  ctx.font='14px sans-serif';
-  var slashW=textWidth(ctx,'/',8);
-  var maxW=maxV>0?textWidth(ctx,String(maxV),20):0;
-  var percentW=textWidth(ctx,'%',10);
-  ctx.font='bold 13px sans-serif';
-  var nameW=textWidth(ctx,name,name.length*13);
-  var gap=4;
-  var valueLineW=valW+gap+slashW+gap+maxW+10+rateW+gap+percentW+10;
-  var boxW=Math.max(nameW+4,valueLineW)+36;
-  var contentH=26+(g.yIsFlat?22:0);
-  var boxH=contentH+28;
-  var bx=x+18;
-  if(bx+boxW>w-10)bx=Math.max(10,x-18-boxW);
-  var by=Math.max(10,Math.min(y-10,h-boxH-10));
-  ctx.save();
-  ctx.shadowColor='rgba(0,0,0,0.15)';ctx.shadowBlur=20;ctx.shadowOffsetY=4;
-  ctx.fillStyle='#fff';
-  roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.fill();
-  ctx.restore();
-  ctx.strokeStyle='rgba(0,0,0,0.05)';ctx.lineWidth=1;
-  roundRectPath(ctx,bx,by,boxW,boxH,12);ctx.stroke();
-  ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='#1A1A1A';ctx.font='bold 13px sans-serif';
-  ctx.fillText(name,bx+18,by+14);
-  var lineY=by+14+20;
-  var curX=bx+18;
-  ctx.font='bold 18px sans-serif';ctx.fillStyle='#1A1A1A';
-  ctx.fillText(val.toFixed(1),curX,lineY);
-  curX+=valW+gap;
-  ctx.font='14px sans-serif';ctx.fillStyle='#909399';
-  ctx.fillText('/',curX,lineY+2);
-  curX+=slashW+gap;
-  if(maxV>0){ctx.fillText(String(maxV),curX,lineY+2);curX+=maxW+10;}
-  ctx.font='bold 18px sans-serif';ctx.fillStyle='#14A89A';
-  ctx.fillText(String(rate),curX,lineY);
-  curX+=rateW+gap;
-  ctx.font='14px sans-serif';ctx.fillStyle='#909399';
-  ctx.fillText('%',curX,lineY+2);
-  if(g.yIsFlat){
-    var hy=by+boxH-16;
-    ctx.setLineDash([1,0]);ctx.strokeStyle='#E5E6EB';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(bx+18,hy-4);ctx.lineTo(bx+boxW-18,hy-4);ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle='#FA8C16';ctx.font='11px sans-serif';
-    ctx.fillText('各次考试平均分无明显差距',bx+18,hy+1);
-  }
-}
 function drawHistogram(ctx,w,h,data,stack){
   ctx.clearRect(0,0,w,h);
   var xAxis=data.xAxis||[],series=data.series||[];
@@ -985,42 +795,12 @@ function radarIdxFromXY(g,x,y){
 }
 
 /* ===== 交互绑定 ===== */
+var _trendLine=null;
 function drawTrendChart(){
-  var g=getCtx('trendCanvas');
-  if(!g)return;
-  currentLineItems=lineItemsFor(activeSubj);
-  // 加载 & 切换科目沿用同一套折线图渐进动效
-  trendGeom=animateLineTrend(g.ctx,g.w,g.h,currentLineItems);
-  bindTrendEvents();
-}
-function bindTrendEvents(){
   var cvs=document.getElementById('trendCanvas');
-  if(!cvs||cvs.dataset.bound)return;
-  cvs.dataset.bound='1';
-  function toIdx(e){
-    var rect=cvs.getBoundingClientRect();
-    var t=e.touches?e.touches[0]:e;
-    return trendIdxFromXY(t.clientX-rect.left,t.clientY-rect.top);
-  }
-  cvs.addEventListener('mousemove',function(e){renderTrendSelection(toIdx(e));});
-  cvs.addEventListener('mouseleave',function(){renderTrendSelection(-1);});
-  cvs.addEventListener('touchstart',function(e){if(e.touches[0])renderTrendSelection(toIdx(e));});
-  cvs.addEventListener('touchmove',function(e){if(e.touches[0])renderTrendSelection(toIdx(e));});
-  cvs.addEventListener('touchend',function(){renderTrendSelection(-1);});
-  cvs.addEventListener('touchcancel',function(){renderTrendSelection(-1);});
-}
-function trendIdxFromXY(x,y){
-  if(!trendGeom||!trendGeom.xs||!trendGeom.xs.length)return -1;
-  if(x<trendGeom.padL-30||x>trendGeom.w-trendGeom.padR+30)return -1;
-  var best=0,bd=Infinity;
-  trendGeom.xs.forEach(function(v,i){var d=Math.abs(v-x);if(d<bd){bd=d;best=i;}});
-  return best;
-}
-function renderTrendSelection(idx){
-  var g=getCtx('trendCanvas');
-  if(!g)return;
-  if(idx>=0&&trendGeom)drawTrendSelected(g.ctx,g.w,g.h,trendGeom,idx);
-  else trendGeom=drawLineTrend(g.ctx,g.w,g.h,currentLineItems);
+  if(!cvs)return;
+  window._trendLine=TrendLine.create(cvs);
+  window._trendLine.setItems(lineItemsFor(activeSubj));
 }
 
 function drawRadarChart(){

@@ -159,6 +159,7 @@
 </div>
 </div>
 </body>
+<script src="js/trend-line.js"></script>
 <script>
 function toast(msg){var t=document.createElement('div');t.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.75);color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;z-index:9999';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},1800);}
 function escapeHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -312,7 +313,7 @@ function onTypeTap(t){activeType=t;loadTrend(t);}
 function onSubjTap(btn){
   activeSubj=btn.dataset.subj;
   document.querySelectorAll('#subjBtns .subj-btn').forEach(function(b){b.className='subj-btn'+(b.dataset.subj===activeSubj?' active':'');});
-  drawTrendChart();
+  if(window._trendLine)_trendLine.setItems(lineItemsFor(activeSubj));
 }
 
 /* ===== canvas 2d 绘制（与小程序 charts.js 一致） ===== */
@@ -688,15 +689,12 @@ function drawSparkline(ctx,w,h,trend){
   ctx.strokeStyle='#14A89A';ctx.lineWidth=2;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
 }
 
-var trendGeom=null;
-var currentTrendItems=[];
+var _trendLine=null;
 function drawTrendChart(){
-  var g=getCtx('trendCanvas');
-  if(!g)return;
-  currentTrendItems=lineItemsFor(activeSubj);
-  var geom=lineTrendGeom(g.w,g.h,currentTrendItems);
-  trendGeom=animateLineTrend(g,geom);
-  bindTrendEvents();
+  var cvs=document.getElementById('trendCanvas');
+  if(!cvs)return;
+  window._trendLine=TrendLine.create(cvs);
+  window._trendLine.setItems(lineItemsFor(activeSubj));
 }
 function bindTrendEvents(){
   var cvs=document.getElementById('trendCanvas');
