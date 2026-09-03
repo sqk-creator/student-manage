@@ -126,6 +126,8 @@
 
   * 仅在用户明确指定单个页面时才单独拉起该页面；未指定时一律拉系统入口页
 
+  * **每次拉起预览必须做浏览器验证**：不能只依赖端口/curl 检查。拉起后必须用浏览器工具实际打开系统入口页及本次涉及的预览页（如看年级/看班级等效预览页），确认页面正常渲染、无白屏、控制台无 JS 报错，并核对该页交互（折线图有内容、科目切换动效、悬浮卡片等），验证通过再向用户报告"预览已拉起"；验证失败先排查修复，不得虚报
+
 \[小程序折线图统一标准与通用组件（强制开发指令）]
 
 * Date: 2026-09-02
@@ -140,15 +142,15 @@
 
   * **标准高度**：`.trend-canvas` 宽 100%、高 400rpx、display block；与上下模块的间距由使用方页面控制（如 .trend-canvas margin-top 20rpx）
 
-  * **绘图规范**（charts.js 统一实现）：主色 #14A89A、网格 #E5E6EB、轴文字 #909399、字体 sans-serif；内边距 padL30/padR10/padT18/padB18/padIn26；Y轴缓冲 buffer=ceil(span\*0.3)，yMin/yMax 钳到 [0,∞)；step 按 ySpan(<10→1,<30→2,<60→5,否则10) 并对齐到 step 整数倍；平坦时 (min,max)=(max(0,v-5),v+5)；网格 4 档（0~3）、Y值右对齐 padL-6；面积渐变蒙版 rgba(20,168,154,0.40)→0；折线 lineWidth4 round 连接；数据点白 r4 + 主色描边 2
+  * **绘图规范**（charts.js 统一实现）：主色 #14A89A、网格 #E5E6EB、轴文字 #909399、字体 sans-serif；内边距 padL30/padR10/padT18/padB18/padIn26；Y轴缓冲 buffer=ceil(span\*0.3)，yMin/yMax 钳到 \[0,∞)；step 按 ySpan(<10→1,<30→2,<60→5,否则10) 并对齐到 step 整数倍；平坦时 (min,max)=(max(0,v-5),v+5)；网格 4 档（0\~3）、Y值右对齐 padL-6；面积渐变蒙版 rgba(20,168,154,0.40)→0；折线 lineWidth4 round 连接；数据点白 r4 + 主色描边 2
 
   * **加载动效**：首次绘制与科目切换均走 charts.animateLineTrend（600ms easeOutCubic）。首帧同步绘制进度0避免空白；用 setTimeout(16ms)（canvas2d 节点的 rAF 部分环境不可靠）保证动效必然走完；折线自左向右渐进绘制、数据点随进度逐点出现
 
-  * **触摸交互**：canvas 绑定 touchstart/move/end/cancel；命中判定 charts.trendIdxFromXY（x 在 [padL-30, w-padR+30] 有效，取最近 xs 下标）；命中调 drawTrendSelected，松手调 drawLineTrend(currentItems) 复位
+  * **触摸交互**：canvas 绑定 touchstart/move/end/cancel；命中判定 charts.trendIdxFromXY（x 在 \[padL-30, w-padR+30] 有效，取最近 xs 下标）；命中调 drawTrendSelected，松手调 drawLineTrend(currentItems) 复位
 
   * **选中渲染**（drawTrendSelected）：淡绿竖条 rgba(20,168,154,0.1) 柱宽 colW\*0.5 + 主色虚线(6,4)线宽1.5 + 高亮点（外圈 rgba(20,168,154,0.25) r10/白 r7/主色描边线宽4）+ 悬浮卡片
 
-  * **悬浮卡片标准**（drawTrendTooltip，全 rpx 自适应）：两行——第一行考试名；第二行左侧「分数 1 位小数 + / + 满分」、右侧「得分率整数% + %」左右分栏。字号：分数/得分率 44rpx bold、/与%与满分 24rpx、考试名 24rpx bold；颜色：考试名与分数 #1A1A1A、/满分% #909399、得分率数字 #14A89A。容器：白底、圆角 24rpx、投影 rgba(0,0,0,0.15) 模糊40rpx 偏移8rpx、描边 rgba(0,0,0,0.05) 1、内边距 上下26rpx 左右34rpx；考试名与数据行间距 8rpx、组内符号间距 6rpx；位置优先数据点上方留 46rpx，上方放不下(by<8rpx)落下方，水平钳制 [8rpx,w-8rpx]。平坦(yIsFlat)时增高 46rpx，下方加 #E5E6EB 分隔线并输出橙色 #FA8C16 22rpx 文案「各次考试平均分无明显差距」
+  * **悬浮卡片标准**（drawTrendTooltip，全 rpx 自适应）：两行——第一行考试名；第二行左侧「分数 1 位小数 + / + 满分」、右侧「得分率整数% + %」左右分栏。字号：分数/得分率 44rpx bold、/与%与满分 24rpx、考试名 24rpx bold；颜色：考试名与分数 #1A1A1A、/满分% #909399、得分率数字 #14A89A。容器：白底、圆角 24rpx、投影 rgba(0,0,0,0.15) 模糊40rpx 偏移8rpx、描边 rgba(0,0,0,0.05) 1、内边距 上下26rpx 左右34rpx；考试名与数据行间距 8rpx、组内符号间距 6rpx；位置优先数据点上方留 46rpx，上方放不下(by<8rpx)落下方，水平钳制 \[8rpx,w-8rpx]。平坦(yIsFlat)时增高 46rpx，下方加 #E5E6EB 分隔线并输出橙色 #FA8C16 22rpx 文案「各次考试平均分无明显差距」
 
 \[小程序 UI 设计规范（强制开发指令）]
 
