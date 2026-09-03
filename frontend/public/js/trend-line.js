@@ -220,11 +220,17 @@
       currItems: [],
       bound: false,
       setItems: function (items) { return animateLineTrend(this, canvasEl, items); },
+      // 语义：依赖模板（原始看年级）——复位/松手只做静态重绘，绝不重播加载动画
       renderSelection: function (idx) {
         var g = getCtx(canvasEl);
         if (!g) return;
         if (idx >= 0 && this.geom) drawTrendSelected(g.ctx, g.w, g.h, this.geom, idx);
-        else this.geom = animateLineTrend(this, canvasEl, this.currItems);
+        else this.redrawBase();
+      },
+      redrawBase: function () {
+        var g = getCtx(canvasEl);
+        if (!g || !this.geom) return;
+        drawTrendLayer(g.ctx, g.w, g.h, this.geom, 1);
       }
     };
     bindEvents(inst, canvasEl);
