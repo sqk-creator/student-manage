@@ -116,6 +116,11 @@
   padding: 32rpx;
 }
 
+/* 1.3.12：大卡片下间距统一为 16px(=32rpx)，页面级覆盖全局 .card-large 的 40rpx */
+.card-large {
+  margin-bottom: 32rpx;
+}
+
 .loading {
   text-align: center;
   padding: 70rpx;
@@ -389,6 +394,16 @@
   overflow: hidden;
 }
 
+/* 1.3.12：学情评价右侧装饰图（bg-right1.png，800x646） */
+.dist-eval-decor {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 208rpx;
+  height: 168rpx;
+  z-index: 0;
+}
+
 .eval-badge {
   display: inline-block;
   padding: 6rpx 20rpx;
@@ -398,6 +413,8 @@
   font-weight: 700;
   letter-spacing: 4rpx;
   border-radius: 24rpx 0 24rpx 0;
+  position: relative;
+  z-index: 1;
 }
 
 .dist-eval-text {
@@ -406,16 +423,20 @@
   line-height: 1.6;
   text-align: left;
   font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 
 .dist-eval-note {
   color: #909399;
   font-size: 24rpx;
   margin-top: 8rpx;
+  position: relative;
+  z-index: 1;
 }
 
 .radar-card {
-  padding-top: 28rpx;
+  padding-top: 32rpx; /* padding-top 取 padding-left(=32rpx)；margin-bottom 由上面 .card-large 统一为 32rpx */
 }
 
 .radar-card-title {
@@ -432,13 +453,8 @@
 }
 
 .radar-eval-badge {
-  font-size: 24rpx;
-  font-weight: 600;
-  color: #FFFFFF;
-  background: linear-gradient(135deg, #14A89A, #33B8AA);
-  border-radius: 16rpx;
-  padding: 8rpx 24rpx;
-  letter-spacing: 2rpx;
+  width: 304rpx;
+  height: 84rpx;
 }
 
 .radar-stats {

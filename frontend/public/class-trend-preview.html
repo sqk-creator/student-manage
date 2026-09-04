@@ -62,7 +62,7 @@
   .card-large {
     background: #FFFFFF; border-radius: 12px;
     box-shadow: 0 2px 10px rgba(20, 168, 154, 0.08);
-    padding: 16px; margin-bottom: 20px;
+    padding: 16px; margin-bottom: 16px;
   }
   .card-normal {
     background: #FFFFFF; border-radius: 10px;
@@ -128,14 +128,15 @@
   .dist-rate-unit { font-size: 12px; font-weight: 600; color: #909399; }
   .hist-canvas { width: 100%; height: 200px; margin-top: 4px; display: block; } /* 与折线图 trend-canvas 高度一致 */
   .dist-eval { position: relative; display: flex; flex-direction: column; align-items: flex-start; margin-top: 14px; padding: 12px 14px; background: linear-gradient(90deg, #F0FAF8, #FFFFFF); border-radius: 10px; overflow: hidden; }
-  .eval-badge { display: inline-block; padding: 3px 10px; background: #14A89A; color: #FFFFFF; font-size: 12px; font-weight: 700; letter-spacing: 2px; border-radius: 12px 0 12px 0; }
-  .dist-eval-text { padding: 6px 0 0; font-size: 15px; line-height: 1.6; text-align: left; font-weight: 700; }
-  .dist-eval-note { color: #909399; font-size: 12px; margin-top: 4px; }
+  .dist-eval-decor { position: absolute; right: 0; bottom: 0; width: 104px; height: 84px; z-index: 0; }
+  .eval-badge { display: inline-block; padding: 3px 10px; background: #14A89A; color: #FFFFFF; font-size: 12px; font-weight: 700; letter-spacing: 2px; border-radius: 12px 0 12px 0; position: relative; z-index: 1; }
+  .dist-eval-text { padding: 6px 0 0; font-size: 15px; line-height: 1.6; text-align: left; font-weight: 700; position: relative; z-index: 1; }
+  .dist-eval-note { color: #909399; font-size: 12px; margin-top: 4px; position: relative; z-index: 1; }
 
-  .radar-card { padding-top: 14px; }
+  .radar-card { padding-top: 16px; }
   .radar-card-title { font-size: 17px; font-weight: 600; color: #1A1A1A; margin-bottom: 12px; }
   .radar-top { display: flex; justify-content: flex-start; margin-bottom: 10px; }
-  .radar-eval-badge { font-size: 12px; font-weight: 600; color: #FFFFFF; background: linear-gradient(135deg, #14A89A, #35B9AA); border-radius: 8px; padding: 4px 12px; letter-spacing: 1px; }
+  .radar-eval-badge { width: 152px; height: 42px; }
   .radar-stats { display: flex; gap: 12px; margin-bottom: 6px; }
   .radar-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .radar-stat-label { font-size: 12px; color: #909399; font-weight: 500; }
@@ -388,7 +389,7 @@ function renderClassTrend(d,etype){
   var evalNote=evalTotal<15?'样本数量较少，分布仅供参考。':'';
   var evalText=evalObj.text,evalColor=evalObj.color;
 
-  var radarItems2=[],radarTag='',radarStats={max:0,min:0,range:0,avg:0};
+  var radarItems2=[],radarTag='',radarBadgeImg='/imgs/badge/badge-balance.png',radarStats={max:0,min:0,range:0,avg:0};
   if(lastGrp&&lastGrp.subjects){
     var items=SUBJECT_ORDER.map(function(name){
       var sj=(lastGrp.subjects||[]).find(function(s){return s.subject===name;});
@@ -399,6 +400,7 @@ function renderClassTrend(d,etype){
       var ana=radarAnalyze(standards);
       radarItems2=items;
       radarTag=ana.tags[0]||'';
+      radarBadgeImg=radarBadgeImgOf(ana.tags);
       radarStats={max:ana.max,min:ana.min,range:ana.range,avg:ana.avg};
     }
   }
@@ -466,13 +468,14 @@ function renderClassTrend(d,etype){
     +'</div>'
     +'<canvas class="hist-canvas" id="distCanvas"></canvas>'
     +'<div class="dist-eval"><div class="eval-badge">学情评价</div>'
+    +'<img class="dist-eval-decor" src="/imgs/decor/bg-right1.png" alt="">'
     +'<div class="dist-eval-text" style="color:'+evalColor+'">'+escapeHtml(evalText)+'</div>'
     +(evalNote?'<div class="dist-eval-note">'+escapeHtml(evalNote)+'</div>':'')
     +'</div>'
     +'</div>'
     +'<div class="card-large radar-card">'
     +'<div class="radar-card-title">科目均衡分析</div>'
-    +'<div class="radar-top"><div class="radar-eval-badge">'+escapeHtml(radarTag)+'</div></div>'
+    +'<div class="radar-top"><img class="radar-eval-badge" src="'+radarBadgeImg+'" alt=""></div>'
     +'<div class="radar-stats">'
     +'<div class="radar-stat"><div class="radar-stat-label">最高分</div><div class="radar-stat-value">'+radarStats.max+'</div></div>'
     +'<div class="radar-stat"><div class="radar-stat-label">最低分</div><div class="radar-stat-value">'+radarStats.min+'</div></div>'
@@ -536,6 +539,16 @@ function radarAnalyze(standards){
     if(avg<62)tags.push('文科短板');
   }
   return{max:max,min:min,range:range,avg:avg,tags:tags};
+}
+
+// 沿用雷达判断逻辑得出的 tags，按优先级取一个徽章图（偏科 > 文科优势 > 文科短板 > 全科均衡）
+function radarBadgeImgOf(tags){
+  var M={'偏科':'/imgs/badge/badge-unbalance.png','文科优势':'/imgs/badge/badge-liberal-good.png','文科短板':'/imgs/badge/badge-liberal-weak.png','全科均衡':'/imgs/badge/badge-balance.png'};
+  var key='全科均衡';
+  if(tags.indexOf('偏科')>=0)key='偏科';
+  else if(tags.indexOf('文科优势')>=0)key='文科优势';
+  else if(tags.indexOf('文科短板')>=0)key='文科短板';
+  return M[key];
 }
 
 /* ===== canvas 2d 绘制（与小程序 charts.js 一致） ===== */

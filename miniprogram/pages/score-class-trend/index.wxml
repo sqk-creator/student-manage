@@ -124,6 +124,7 @@
         </view>
         <canvas type="2d" id="distCanvas" class="hist-canvas"></canvas>
         <view class="dist-eval">
+          <image class="dist-eval-decor" src="/assets/imgs/decor/bg-right1.png" mode="aspectFit"></image>
           <view class="eval-badge">学情评价</view>
           <view class="dist-eval-text" style="color: {{evalColor}}">{{evalText}}</view>
           <view class="dist-eval-note" wx:if="{{evalNote}}">{{evalNote}}</view>
@@ -133,7 +134,7 @@
       <view class="card-large radar-card">
         <view class="radar-card-title">科目均衡分析</view>
         <view class="radar-top">
-          <view class="radar-eval-badge">{{radarTag}}</view>
+          <image class="radar-eval-badge" src="{{radarBadgeImg}}" mode="aspectFit"></image>
         </view>
         <view class="radar-stats">
           <view class="radar-stat">

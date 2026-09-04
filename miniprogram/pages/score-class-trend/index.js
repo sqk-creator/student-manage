@@ -33,6 +33,7 @@ Page({
     evalColor: '#14A89A',
     evalNote: '',
     radarTag: '',
+    radarBadgeImg: '',
     radarStats: { max: 0, min: 0, range: 0, avg: 0 },
     studentList: [],
     lineItems: [],
@@ -372,6 +373,7 @@ Page({
         const ana = this.radarAnalyze(standards);
         radarItems = items;
         radarTag = ana.tags[0] || '';
+        radarBadgeImg = this.radarBadgeImg(ana.tags);
         radarStats = { max: ana.max, min: ana.min, range: ana.range, avg: ana.avg };
       }
     }
@@ -438,6 +440,7 @@ Page({
         evalColor,
         evalNote,
         radarTag,
+        radarBadgeImg,
         radarStats,
         studentList,
         classInfo,
@@ -508,6 +511,21 @@ Page({
       if (avg < 62) tags.push('文科短板');
     }
     return { max, min, range, avg, tags };
+  },
+
+  // 沿用雷达判断逻辑得出的 tags，按优先级取一个徽章图（偏科 > 文科优势 > 文科短板 > 全科均衡）
+  radarBadgeImg(tags) {
+    const R = {
+      偏科: 'badge-unbalance',
+      全科均衡: 'badge-balance',
+      文科优势: 'badge-liberal-good',
+      文科短板: 'badge-liberal-weak'
+    };
+    let key = '全科均衡';
+    if (tags.indexOf('偏科') >= 0) key = '偏科';
+    else if (tags.indexOf('文科优势') >= 0) key = '文科优势';
+    else if (tags.indexOf('文科短板') >= 0) key = '文科短板';
+    return '/assets/imgs/badge/' + R[key] + '.png';
   },
 
   drawCharts() {
