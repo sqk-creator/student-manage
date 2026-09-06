@@ -687,14 +687,18 @@ function radarGeom(w, h, items) {
   return { cx, cy, r, count, standards, list, angs, axes, namePts, dataPts };
 }
 
-function drawRadarBase(ctx, w, h, g) {
+function drawRadarBase(ctx, w, h, g, sel, opts) {
   ctx.clearRect(0, 0, w, h);
   if (!g) return;
-  const { cx, cy, r, count, angs, axes, standards, list, namePts, dataPts } = g;
+  opts = opts || {};
+  const sc = opts.scale != null ? opts.scale : 1; // 加载动画：整体缩放
+  const alpha = opts.alpha != null ? opts.alpha : 1; // 加载动画：整体透明度
+  const { cx, cy, r, count, angs, list, namePts, dataPts } = g;
+  const R = r * sc;
   const split = 5;
 
   for (let k = split; k >= 1; k--) {
-    const rr = r * k / split;
+    const rr = R * k / split;
     ctx.beginPath();
     for (let i = 0; i < count; i++) {
       const x = cx + Math.cos(angs[i]) * rr;
@@ -712,123 +716,220 @@ function drawRadarBase(ctx, w, h, g) {
 
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1;
-  axes.forEach((a) => {
+  for (let i = 0; i < count; i++) {
+    const x = cx + Math.cos(angs[i]) * R;
+    const y = cy - Math.sin(angs[i]) * R;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.lineTo(a.x, a.y);
+    ctx.lineTo(x, y);
     ctx.stroke();
-  });
+  }
 
-  const grad = ctx.createLinearGradient(0, cy - r, 0, cy + r);
+  const grad = ctx.createLinearGradient(0, cy - R, 0, cy + R);
   grad.addColorStop(0, 'rgba(20,168,154,0.40)');
   grad.addColorStop(1, 'rgba(20,168,154,0.05)');
+  const pts = dataPts.map((p) => ({ x: cx + (p.x - cx) * sc, y: cy + (p.y - cy) * sc }));
   ctx.beginPath();
-  dataPts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
   ctx.closePath();
   ctx.fillStyle = grad;
   ctx.fill();
   ctx.beginPath();
-  dataPts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
   ctx.closePath();
   ctx.strokeStyle = MAIN_COLOR;
   ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
   ctx.stroke();
 
-  dataPts.forEach((p) => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = MAIN_COLOR;
-    ctx.stroke();
+  pts.forEach((p, i) => {
+    if (sel && i === sel.idx) {
+      // 选中维度端点：双层圆（内主色实心 + 外白色圆环），随动画进度显现
+      const a = sel.prog;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4 + 5 * a, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(20,168,154,' + (0.35 * a) + ')';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = MAIN_COLOR;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = MAIN_COLOR;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = MAIN_COLOR;
+      ctx.stroke();
+    }
   });
 
-  ctx.font = '14px ' + FONT_FAMILY;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#1A1A1A';
   namePts.forEach((p, i) => {
-    ctx.fillText(list[i].name, p.x, p.y);
+    const px = cx + (p.x - cx) * sc;
+    const py = cy + (p.y - cy) * sc;
+    if (sel && i === sel.idx) {
+      const a = sel.prog;
+      // 原黑色文字渐隐
+      ctx.globalAlpha = alpha * Math.max(0, 1 - a);
+      ctx.fillStyle = '#1A1A1A';
+      ctx.font = '14px ' + FONT_FAMILY;
+      ctx.fillText(list[i].name, px, py);
+      ctx.globalAlpha = 1;
+      // 主色放大文字渐显
+      if (a > 0) {
+        ctx.globalAlpha = alpha * a;
+        ctx.fillStyle = MAIN_COLOR;
+        ctx.font = 'bold 19px ' + FONT_FAMILY;
+        ctx.fillText(list[i].name, px, py);
+        ctx.globalAlpha = 1;
+      }
+    } else {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#1A1A1A';
+      ctx.font = '14px ' + FONT_FAMILY;
+      ctx.fillText(list[i].name, px, py);
+      ctx.globalAlpha = 1;
+    }
   });
 }
 
 function drawRadar(ctx, w, h, items) {
   const g = radarGeom(w, h, items);
-  drawRadarBase(ctx, w, h, g);
+  drawRadarBase(ctx, w, h, g, null);
   return g;
 }
 
-function drawRadarSelected(ctx, w, h, g, idx) {
-  drawRadarBase(ctx, w, h, g);
-  if (!g || idx == null || idx < 0 || idx >= g.count) return;
-  const a = g.axes[idx];
-  const np = g.namePts[idx];
+// 页面加载：雷达图加载动画（整体由内向外放大 + 渐显）
+function animateRadar(ctx, w, h, items, done) {
+  const g = radarGeom(w, h, items);
+  if (!g) {
+    if (done) done(g);
+    return g;
+  }
+  const duration = 420;
+  const start = Date.now();
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+  function emit(p) {
+    drawRadarBase(ctx, w, h, g, null, { scale: 0.5 + 0.5 * p, alpha: p });
+  }
+  function frame() {
+    const t = Math.min((Date.now() - start) / duration, 1);
+    emit(easeOutCubic(t));
+    if (t < 1) setTimeout(frame, 16);
+    else if (done) done(g);
+  }
+  emit(0);
+  setTimeout(frame, 16);
+  return g;
+}
 
+// 选中态（动画版）：prog 0→1，虚线从中心向该维度外端点延伸、主色字渐显、黑字渐隐、卡片渐现
+function drawRadarSelected(ctx, w, h, g, idx) {
+  return drawRadarSelectedAnim(ctx, w, h, g, idx, 1);
+}
+
+function drawRadarSelectedAnim(ctx, w, h, g, idx, prog) {
+  if (!g || idx == null || idx < 0 || idx >= g.count) return g;
+  const p = Math.max(0, Math.min(1, prog));
+  drawRadarBase(ctx, w, h, g, { idx, prog: p });
+  const a = g.axes[idx];
+  const len = p;
   ctx.setLineDash([6, 4]);
   ctx.strokeStyle = MAIN_COLOR;
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(g.cx, g.cy);
-  ctx.lineTo(a.x, a.y);
+  ctx.lineTo(g.cx + (a.x - g.cx) * len, g.cy + (a.y - g.cy) * len);
   ctx.stroke();
   ctx.setLineDash([]);
+  if (p >= 0.7) drawRadarTooltip(ctx, w, h, g, idx, (p - 0.7) / 0.3);
+  return g;
+}
 
-  ctx.save();
-  ctx.shadowColor = 'rgba(20,168,154,0.55)';
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = MAIN_COLOR;
-  ctx.font = 'bold 18px ' + FONT_FAMILY;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(g.list[idx].name, np.x, np.y);
-  ctx.restore();
-
+// 选中后弹出的卡片：自动避让选中维度（朝外偏移并含间距），排版与折线图卡片一致，标准分与底部留足间距
+function drawRadarTooltip(ctx, w, h, g, idx, alpha) {
   const it = g.list[idx];
   const std = g.standards[idx];
   const orig = Math.round((it.value || 0) * 10) / 10;
-  ctx.font = 'bold 13px ' + FONT_FAMILY;
-  const nameW = textWidth(ctx, it.name, it.name.length * 13);
-  ctx.font = '13px ' + FONT_FAMILY;
-  const w1 = textWidth(ctx, '原始分数 000.0分', 92);
-  const w2 = textWidth(ctx, '标准分 000.0', 74);
-  const rowW = Math.max(w1, w2);
-  const boxW = Math.max(nameW + 4, rowW) + 36;
-  const boxH = 76;
-  let bx = a.x + 14;
-  if (bx + boxW > w - 8) bx = Math.max(8, a.x - 14 - boxW);
-  let by = a.y + 14;
-  if (by + boxH > h - 8) by = Math.max(8, a.y - boxH - 14);
+  const nameFont = rx(26);
+  const labFont = rx(22);
+  const valFont = rx(24);
+  const padT = rx(24);
+  const padB = rx(30);
+  const contentPad = rx(30);
+  const rowGap = rx(10);
+  const nameRowH = nameFont + rx(4);
+  const rowH = valFont + rx(4);
+  const boxH = padT + nameRowH + rowGap + rowH + rowGap + rowH + padB;
+  ctx.font = labFont + 'px ' + FONT_FAMILY;
+  const labW = Math.max(textWidth(ctx, '原始分数', rx(64)), textWidth(ctx, '标准分', rx(64)));
+  ctx.font = 'bold ' + valFont + 'px ' + FONT_FAMILY;
+  const valW = Math.max(textWidth(ctx, orig + '分', rx(90)), textWidth(ctx, String(std), rx(80)));
+  const boxW = labW + contentPad + valW + contentPad;
 
+  // 自动避让：卡片朝雷达外偏移（远离中心），并夹紧在画布内，与选中维度保持间距
+  const a = g.axes[idx];
+  const dxu = (a.x - g.cx) / g.r;
+  const dyu = (a.y - g.cy) / g.r;
+  const gap = rx(28);
+  let bx = a.x + (dxu >= 0 ? gap : -boxW - gap);
+  if (bx < rx(8)) bx = rx(8);
+  if (bx + boxW > w - rx(8)) bx = w - boxW - rx(8);
+  let by = a.y + (dyu >= 0 ? gap : -boxH - gap);
+  if (by < rx(8)) by = rx(8);
+  if (by + boxH > h - rx(8)) by = h - boxH - rx(8);
+
+  const radius = rx(18);
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.15)';
-  ctx.shadowBlur = 16;
-  ctx.shadowOffsetY = 3;
+  ctx.shadowBlur = rx(32);
+  ctx.shadowOffsetY = rx(6);
   ctx.fillStyle = '#ffffff';
-  roundRectPath(ctx, bx, by, boxW, boxH, 12);
+  roundRectPath(ctx, bx, by, boxW, boxH, radius);
   ctx.fill();
   ctx.restore();
   ctx.strokeStyle = 'rgba(0,0,0,0.06)';
   ctx.lineWidth = 1;
-  roundRectPath(ctx, bx, by, boxW, boxH, 12);
+  roundRectPath(ctx, bx, by, boxW, boxH, radius);
   ctx.stroke();
+  ctx.globalAlpha = 1;
 
+  let ty = by + padT;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillStyle = '#1A1A1A';
-  ctx.font = 'bold 13px ' + FONT_FAMILY;
-  ctx.fillText(it.name, bx + 18, by + 14);
-  ctx.font = '13px ' + FONT_FAMILY;
+  ctx.font = 'bold ' + nameFont + 'px ' + FONT_FAMILY;
+  ctx.fillText(it.name, bx + contentPad, ty);
+  ty += nameRowH + rowGap;
   ctx.fillStyle = '#909399';
-  ctx.fillText('原始分数', bx + 18, by + 44);
-  ctx.fillText('标准分', bx + 18, by + 64);
-  ctx.textAlign = 'right';
+  ctx.font = labFont + 'px ' + FONT_FAMILY;
+  ctx.fillText('原始分数', bx + contentPad, ty);
   ctx.fillStyle = '#1A1A1A';
-  ctx.fillText(orig + '分', bx + boxW - 18, by + 44);
-  ctx.fillStyle = MAIN_COLOR;
-  ctx.fillText(String(std), bx + boxW - 18, by + 64);
+  ctx.font = 'bold ' + valFont + 'px ' + FONT_FAMILY;
+  ctx.textAlign = 'right';
+  ctx.fillText(orig + '分', bx + boxW - contentPad, ty);
+  ty += rowH + rowGap;
   ctx.textAlign = 'left';
+  ctx.fillStyle = '#909399';
+  ctx.font = labFont + 'px ' + FONT_FAMILY;
+  ctx.fillText('标准分', bx + contentPad, ty);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = MAIN_COLOR;
+  ctx.font = 'bold ' + valFont + 'px ' + FONT_FAMILY;
+  ctx.fillText(String(std), bx + boxW - contentPad, ty);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
 }
 
 function radarIdxFromXY(g, x, y) {
@@ -836,9 +937,16 @@ function radarIdxFromXY(g, x, y) {
   const dx = x - g.cx;
   const dy = y - g.cy;
   if (Math.sqrt(dx * dx + dy * dy) > g.r + 44) return -1;
-  const step = 360 / g.count;
-  const deg = ((Math.atan2(dy, dx) * 180 / Math.PI) + 90 + 360) % 360;
-  return Math.round(deg / step) % g.count;
+  const touch = Math.atan2(dy, dx) * 180 / Math.PI;
+  let best = -1;
+  let bestD = 1e9;
+  for (let i = 0; i < g.count; i++) {
+    const a = g.angs[i];
+    const vt = Math.atan2(-Math.sin(a), Math.cos(a)) * 180 / Math.PI;
+    const d = Math.abs(((touch - vt + 540) % 360) - 180);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
 }
 
 module.exports = {
@@ -852,6 +960,8 @@ module.exports = {
   drawHistogram,
   drawSparkline,
   drawRadar,
+  animateRadar,
   drawRadarSelected,
+  drawRadarSelectedAnim,
   radarIdxFromXY
 };

@@ -346,7 +346,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 16rpx 12rpx;
-  margin: 28rpx 0 8rpx;
+  margin: 16px 0 8rpx; /* 1.3.14：margin-top 调整为 16px */
 }
 
 .dist-rate-grid .gauge-stat {
@@ -389,7 +389,7 @@
   align-items: flex-start;
   margin-top: 28rpx;
   padding: 24rpx 28rpx;
-  background: linear-gradient(90deg, #E6F7F5, #FFFFFF);
+  background: linear-gradient(90deg, #D8F0EC, #E4F5F2, #FFFFFF); /* 1.3.14：背景渐变调整 */
   border-radius: 20rpx;
   overflow: hidden;
 }
@@ -450,12 +450,20 @@
 .radar-top {
   display: flex;
   justify-content: center; /* 1.3.13：徽章图居中 */
+  align-items: center;
+  gap: 20rpx; /* 1.3.14：出现两个徽章时的间距 */
   margin-bottom: 20rpx;
 }
 
 .radar-eval-badge {
   width: 300rpx; /* 宽高按图 420x490 原比例(≈0.86)设置，aspectFit 不变形 */
   height: 350rpx;
+}
+
+/* 1.3.14：.radar-top 出现两个徽章图时，每个图片缩小为原有的 70% */
+.radar-top.two-badges .radar-eval-badge {
+  width: 210rpx;
+  height: 245rpx;
 }
 
 .radar-stats {

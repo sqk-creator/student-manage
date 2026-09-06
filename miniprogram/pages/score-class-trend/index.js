@@ -33,7 +33,7 @@ Page({
     evalColor: '#14A89A',
     evalNote: '',
     radarTag: '',
-    radarBadgeImg: '',
+    radarBadgeImgs: [],
     radarStats: { max: 0, min: 0, range: 0, avg: 0 },
     studentList: [],
     lineItems: [],
@@ -235,17 +235,33 @@ Page({
   },
 
   renderRadarSelection(idx) {
+    // 同一画布上清除上一帧的选中动画计时器，避免切换维度时动画叠加
+    if (this._radarSelTimer) {
+      clearTimeout(this._radarSelTimer);
+      this._radarSelTimer = null;
+    }
     charts.getCanvas(this, 'radarCanvas').then((res) => {
-      if (!res) return;
-      if (idx >= 0 && this.radarGeom) {
-        this.radarGeom = charts.drawRadarSelected(
-          res.ctx,
-          res.w,
-          res.h,
-          this.radarGeom,
-          idx
-        );
-      } else if (this.radarItems) {
+      if (!res || !this.radarGeom || !this.radarItems) return;
+      if (idx >= 0 && idx < this.radarGeom.count) {
+        // 选中动画：prog 0→1，虚线延伸、端点双层圆、文字渐显/渐隐、卡片渐现
+        const duration = 420;
+        const start = Date.now();
+        const step = () => {
+          const t = Math.min((Date.now() - start) / duration, 1);
+          const p = 1 - Math.pow(1 - t, 3); // easeOutCubic
+          charts.getCanvas(this, 'radarCanvas').then((r2) => {
+            if (!r2) return;
+            this.radarGeom = charts.drawRadarSelectedAnim(r2.ctx, r2.w, r2.h, this.radarGeom, idx, p);
+            if (t < 1) {
+              this._radarSelTimer = setTimeout(step, 16);
+            } else {
+              // 选中动画结束后保持选中态，便于随手指滑动切换维度
+              this._radarSelTimer = null;
+            }
+          });
+        };
+        step();
+      } else {
         this.radarGeom = charts.drawRadar(res.ctx, res.w, res.h, this.radarItems);
       }
     });
@@ -373,7 +389,7 @@ Page({
         const ana = this.radarAnalyze(standards);
         radarItems = items;
         radarTag = ana.tags[0] || '';
-        radarBadgeImg = this.radarBadgeImg(ana.tags);
+        radarBadgeImgs = this.radarBadgeImg(ana.tags);
         radarStats = { max: ana.max, min: ana.min, range: ana.range, avg: ana.avg };
       }
     }
@@ -440,7 +456,7 @@ Page({
         evalColor,
         evalNote,
         radarTag,
-        radarBadgeImg,
+        radarBadgeImgs,
         radarStats,
         studentList,
         classInfo,
@@ -521,11 +537,10 @@ Page({
       文科优势: 'badge-liberal-good',
       文科短板: 'badge-liberal-weak'
     };
-    let key = '全科均衡';
-    if (tags.indexOf('偏科') >= 0) key = '偏科';
-    else if (tags.indexOf('文科优势') >= 0) key = '文科优势';
-    else if (tags.indexOf('文科短板') >= 0) key = '文科短板';
-    return '/assets/imgs/badge/' + R[key] + '.png';
+    // 一个标签对应一个徽章图；无标签时回退"全科均衡"。最多展示 2 个（当前分析结果至多两个标签）。
+    const list = (tags || []).filter((t) => R[t]);
+    if (!list.length) return ['/assets/imgs/badge/' + R['全科均衡'] + '.png'];
+    return list.slice(0, 2).map((t) => '/assets/imgs/badge/' + R[t] + '.png');
   },
 
   drawCharts() {
@@ -539,7 +554,8 @@ Page({
 
     charts.getCanvas(this, 'radarCanvas').then((res) => {
       if (!res) return;
-      this.radarGeom = charts.drawRadar(res.ctx, res.w, res.h, this.radarItems);
+      // 加载动画：整体由内向外放大 + 渐显
+      this.radarGeom = charts.animateRadar(res.ctx, res.w, res.h, this.radarItems);
     });
 
     studentList.forEach((st, i) => {
