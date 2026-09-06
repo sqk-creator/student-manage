@@ -657,12 +657,26 @@ function drawSparkline(ctx, w, h, trend) {
   ctx.stroke();
 }
 
+// 点到线段距离（用于卡片避让虚线的粗判）
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const l2 = dx * dx + dy * dy;
+  if (l2 === 0) return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+  let t = ((px - x1) * dx + (py - y1) * dy) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const projx = x1 + t * dx;
+  const projy = y1 + t * dy;
+  return Math.sqrt((px - projx) * (px - projx) + (py - projy) * (py - projy));
+}
+
 function radarGeom(w, h, items) {
   const list = (items || []).filter((it) => it.max > 0);
   if (!list.length) return null;
   const cx = w / 2;
   const cy = h / 2;
-  const r = Math.min(w, h) / 2 - 36;
+  // 1.3.15：半径预留更多边距（原先 -36），避免顶部/底部维度放大文字(19px)被容器边缘裁切
+  const r = Math.min(w, h) / 2 - 46;
   const count = list.length;
   const standards = list.map((it) =>
     it.max > 0 && it.value != null
@@ -744,21 +758,19 @@ function drawRadarBase(ctx, w, h, g, sel, opts) {
 
   pts.forEach((p, i) => {
     if (sel && i === sel.idx) {
-      // 选中维度端点：双层圆（内主色实心 + 外白色圆环），随动画进度显现
-      const a = sel.prog;
+      // 选中维度端点：双层圆（外白圆环+主色边框 + 内主色实心圆）
+      // 1.3.15：内部主色实心圆 = 外层圆的 70%
+      const outerR = 9;
+      const innerR = outerR * 0.7; // 6.3
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 4 + 5 * a, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(20,168,154,' + (0.35 * a) + ')';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, outerR, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = MAIN_COLOR;
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, innerR, 0, Math.PI * 2);
       ctx.fillStyle = MAIN_COLOR;
       ctx.fill();
     } else {
@@ -778,21 +790,12 @@ function drawRadarBase(ctx, w, h, g, sel, opts) {
     const px = cx + (p.x - cx) * sc;
     const py = cy + (p.y - cy) * sc;
     if (sel && i === sel.idx) {
-      const a = sel.prog;
-      // 原黑色文字渐隐
-      ctx.globalAlpha = alpha * Math.max(0, 1 - a);
-      ctx.fillStyle = '#1A1A1A';
-      ctx.font = '14px ' + FONT_FAMILY;
+      // 1.3.15：直接切换——选中显示主色放大文字，原黑色文字不绘制（无渐显渐隐）
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = MAIN_COLOR;
+      ctx.font = 'bold 19px ' + FONT_FAMILY;
       ctx.fillText(list[i].name, px, py);
       ctx.globalAlpha = 1;
-      // 主色放大文字渐显
-      if (a > 0) {
-        ctx.globalAlpha = alpha * a;
-        ctx.fillStyle = MAIN_COLOR;
-        ctx.font = 'bold 19px ' + FONT_FAMILY;
-        ctx.fillText(list[i].name, px, py);
-        ctx.globalAlpha = 1;
-      }
     } else {
       ctx.globalAlpha = alpha;
       ctx.fillStyle = '#1A1A1A';
@@ -852,6 +855,21 @@ function drawRadarSelectedAnim(ctx, w, h, g, idx, prog) {
   ctx.lineTo(g.cx + (a.x - g.cx) * len, g.cy + (a.y - g.cy) * len);
   ctx.stroke();
   ctx.setLineDash([]);
+  // 1.3.15：双层圆绘制在虚线上层（不被虚线盖住）——虚线画完后重绘选中数据点
+  const dp = g.dataPts[idx];
+  const outerR = 9;
+  const innerR = outerR * 0.7;
+  ctx.beginPath();
+  ctx.arc(dp.x, dp.y, outerR, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = MAIN_COLOR;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(dp.x, dp.y, innerR, 0, Math.PI * 2);
+  ctx.fillStyle = MAIN_COLOR;
+  ctx.fill();
   if (p >= 0.7) drawRadarTooltip(ctx, w, h, g, idx, (p - 0.7) / 0.3);
   return g;
 }
@@ -877,17 +895,66 @@ function drawRadarTooltip(ctx, w, h, g, idx, alpha) {
   const valW = Math.max(textWidth(ctx, orig + '分', rx(90)), textWidth(ctx, String(std), rx(80)));
   const boxW = labW + contentPad + valW + contentPad;
 
-  // 自动避让：卡片朝雷达外偏移（远离中心），并夹紧在画布内，与选中维度保持间距
-  const a = g.axes[idx];
-  const dxu = (a.x - g.cx) / g.r;
-  const dyu = (a.y - g.cy) / g.r;
-  const gap = rx(28);
-  let bx = a.x + (dxu >= 0 ? gap : -boxW - gap);
-  if (bx < rx(8)) bx = rx(8);
-  if (bx + boxW > w - rx(8)) bx = w - boxW - rx(8);
-  let by = a.y + (dyu >= 0 ? gap : -boxH - gap);
-  if (by < rx(8)) by = rx(8);
-  if (by + boxH > h - rx(8)) by = h - boxH - rx(8);
+  // 1.3.15：卡片自动避让——不能遮挡选中维度的主色放大文字、双层圆与虚线
+  const P = g.dataPts[idx];
+  const N = g.namePts[idx];
+  const A = g.axes[idx];
+  const gap = rx(24);
+  const margin = rx(8);
+
+  // 保护区域①：主色放大文字（bold 19px 居中）
+  ctx.font = 'bold 19px ' + FONT_FAMILY;
+  const textHW = textWidth(ctx, it.name, rx(80)) / 2 + rx(10);
+  const textHH = rx(20);
+  // 保护区域②：选中数据点双层圆
+  const dotHalf = rx(16);
+  // 保护区域③：虚线（中心→轴端点），用矩形角点+中心到线段的距离粗判
+  const lineRad = rx(14);
+
+  function hit(bx, by) {
+    const x1 = bx, y1 = by, x2 = bx + boxW, y2 = by + boxH;
+    // 主色放大文字
+    if (!(x2 < N.x - textHW || x1 > N.x + textHW || y2 < N.y - textHH || y1 > N.y + textHH)) return true;
+    // 双层圆
+    if (!(x2 < P.x - dotHalf || x1 > P.x + dotHalf || y2 < P.y - dotHalf || y1 > P.y + dotHalf)) return true;
+    // 虚线
+    const pts = [
+      [x1, y1], [x2, y1], [x1, y2], [x2, y2],
+      [bx + boxW / 2, by + boxH / 2]
+    ];
+    for (let k = 0; k < pts.length; k++) {
+      if (distToSegment(pts[k][0], pts[k][1], g.cx, g.cy, A.x, A.y) < lineRad) return true;
+    }
+    return false;
+  }
+
+  function fit(bx, by) {
+    if (bx < margin || bx + boxW > w - margin || by < margin || by + boxH > h - margin) return null;
+    if (hit(bx, by)) return null;
+    return { bx, by };
+  }
+
+  // 候选位置：数据点左右上下 + 沿轴朝外，取第一个不碰撞且在画布内者
+  const cands = [
+    { bx: P.x + gap, by: P.y - boxH / 2 },
+    { bx: P.x - boxW - gap, by: P.y - boxH / 2 },
+    { bx: P.x - boxW / 2, by: P.y + gap },
+    { bx: P.x - boxW / 2, by: P.y - boxH - gap },
+    { bx: A.x + (A.x >= g.cx ? gap : -boxW - gap), by: A.y + (A.y >= g.cy ? gap : -boxH - gap) }
+  ];
+  let pos = null;
+  for (let i = 0; i < cands.length && !pos; i++) {
+    pos = fit(cands[i].bx, cands[i].by);
+  }
+  if (!pos) {
+    // 兜底：围绕轴端点钳制在画布内
+    pos = {
+      bx: Math.max(margin, Math.min(A.x - boxW / 2, w - boxW - margin)),
+      by: Math.max(margin, Math.min(A.y - boxH / 2, h - boxH - margin))
+    };
+  }
+  const bx = pos.bx;
+  const by = pos.by;
 
   const radius = rx(18);
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));

@@ -668,12 +668,21 @@ function drawSparkline(ctx,w,h,trend){
 }
 
 /* ===== 雷达图（与小程序 charts.js drawRadar 一致） ===== */
+function distToSeg(px,py,x1,y1,x2,y2){
+  var dx=x2-x1,dy=y2-y1;
+  var l2=dx*dx+dy*dy;
+  if(l2===0)return Math.sqrt((px-x1)*(px-x1)+(py-y1)*(py-y1));
+  var t=((px-x1)*dx+(py-y1)*dy)/l2;
+  t=Math.max(0,Math.min(1,t));
+  var projx=x1+t*dx,projy=y1+t*dy;
+  return Math.sqrt((px-projx)*(px-projx)+(py-projy)*(py-projy));
+}
 function radarGeom(w,h,items){
   var list=(items||[]).filter(function(it){return it.max>0;});
   if(!list.length)return null;
   var cx=w/2;
   var cy=h/2;
-  var r=Math.min(w,h)/2-36;
+  var r=Math.min(w,h)/2-46; /* 1.3.15 半径预留更多边距，避免顶部维度放大文字被裁切 */
   var count=list.length;
   var standards=list.map(function(it){
     return it.max>0&&it.value!=null?Math.round(it.value/it.max*100*10)/10:0;
@@ -735,14 +744,12 @@ function drawRadarBase(ctx,w,h,g,sel,opts){
   ctx.stroke();
   pts.forEach(function(p,i){
     if(sel&&i===sel.idx){
-      // 选中维度端点：双层圆（内主色实心 + 外白色圆环），随动画进度显现
-      var sa=sel.prog;
-      ctx.beginPath();ctx.arc(p.x,p.y,4+5*sa,0,Math.PI*2);
-      ctx.fillStyle='rgba(20,168,154,'+(0.35*sa)+')';ctx.fill();
-      ctx.beginPath();ctx.arc(p.x,p.y,9,0,Math.PI*2);
+      // 选中维度端点：双层圆（外白圆环+主色边框 + 内主色实心圆）；1.3.15 内圆=外圆的70%
+      var outerR=9,innerR=outerR*0.7;
+      ctx.beginPath();ctx.arc(p.x,p.y,outerR,0,Math.PI*2);
       ctx.fillStyle='#ffffff';ctx.fill();
       ctx.lineWidth=2.5;ctx.strokeStyle='#14A89A';ctx.stroke();
-      ctx.beginPath();ctx.arc(p.x,p.y,4.5,0,Math.PI*2);
+      ctx.beginPath();ctx.arc(p.x,p.y,innerR,0,Math.PI*2);
       ctx.fillStyle='#14A89A';ctx.fill();
     }else{
       ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);
@@ -754,18 +761,11 @@ function drawRadarBase(ctx,w,h,g,sel,opts){
   namePts.forEach(function(p,i){
     var px=cx+(p.x-cx)*sc,py=cy+(p.y-cy)*sc;
     if(sel&&i===sel.idx){
-      var ta=sel.prog;
-      // 原黑色文字渐隐
-      ctx.globalAlpha=alpha*Math.max(0,1-ta);
-      ctx.fillStyle='#1A1A1A';ctx.font='14px sans-serif';
+      // 1.3.15 直接切换——选中显示主色放大文字，原黑色文字不绘制
+      ctx.globalAlpha=alpha;
+      ctx.fillStyle='#14A89A';ctx.font='bold 19px sans-serif';
       ctx.fillText(list[i].name,px,py);
       ctx.globalAlpha=1;
-      if(ta>0){
-        ctx.globalAlpha=alpha*ta;
-        ctx.fillStyle='#14A89A';ctx.font='bold 19px sans-serif';
-        ctx.fillText(list[i].name,px,py);
-        ctx.globalAlpha=1;
-      }
     }else{
       ctx.globalAlpha=alpha;
       ctx.fillStyle='#1A1A1A';ctx.font='14px sans-serif';
@@ -806,6 +806,14 @@ function drawRadarSelectedAnim(ctx,w,h,g,idx,prog){
   ctx.strokeStyle='#14A89A';ctx.lineWidth=3;
   ctx.beginPath();ctx.moveTo(g.cx,g.cy);ctx.lineTo(g.cx+(a.x-g.cx)*len,g.cy+(a.y-g.cy)*len);ctx.stroke();
   ctx.setLineDash([]);
+  // 1.3.15 双层圆绘制在虚线上层：虚线画完后重绘选中数据点
+  var dp=g.dataPts[idx];
+  var oR=9,iR=oR*0.7;
+  ctx.beginPath();ctx.arc(dp.x,dp.y,oR,0,Math.PI*2);
+  ctx.fillStyle='#ffffff';ctx.fill();
+  ctx.lineWidth=2.5;ctx.strokeStyle='#14A89A';ctx.stroke();
+  ctx.beginPath();ctx.arc(dp.x,dp.y,iR,0,Math.PI*2);
+  ctx.fillStyle='#14A89A';ctx.fill();
   if(p>=0.7)drawRadarTooltip(ctx,w,h,g,idx,(p-0.7)/0.3);
   return g;
 }
@@ -823,16 +831,43 @@ function drawRadarTooltip(ctx,w,h,g,idx,alpha){
   ctx.font='bold '+valFont+'px sans-serif';
   var valW=Math.max(textWidth(ctx,orig+'分',45),textWidth(ctx,String(std),40));
   var boxW=labW+contentPad+valW+contentPad;
-  // 自动避让：卡片朝雷达外偏移（远离中心），并夹紧在画布内，与选中维度保持间距
-  var a=g.axes[idx];
-  var dxu=(a.x-g.cx)/g.r,dyu=(a.y-g.cy)/g.r;
-  var gap=14;
-  var bx=a.x+(dxu>=0?gap:-boxW-gap);
-  if(bx<8)bx=8;
-  if(bx+boxW>w-8)bx=w-boxW-8;
-  var by=a.y+(dyu>=0?gap:-boxH-gap);
-  if(by<8)by=8;
-  if(by+boxH>h-8)by=h-boxH-8;
+  // 1.3.15 卡片自动避让：不遮挡选中维度的主色放大文字、双层圆与虚线
+  var P=g.dataPts[idx],N=g.namePts[idx],A=g.axes[idx];
+  var gap=12,margin=8;
+  ctx.font='bold 19px sans-serif';
+  var textHW=textWidth(ctx,it.name,60)/2+5,textHH=10;
+  var dotHalf=8,lineRad=7;
+  function hit(bx,by){
+    var x1=bx,y1=by,x2=bx+boxW,y2=by+boxH;
+    // 主色放大文字
+    if(!(x2<N.x-textHW||x1>N.x+textHW||y2<N.y-textHH||y1>N.y+textHH))return true;
+    // 双层圆
+    if(!(x2<P.x-dotHalf||x1>P.x+dotHalf||y2<P.y-dotHalf||y1>P.y+dotHalf))return true;
+    // 虚线
+    var pts=[[x1,y1],[x2,y1],[x1,y2],[x2,y2],[bx+boxW/2,by+boxH/2]];
+    for(var k=0;k<pts.length;k++){
+      if(distToSeg(pts[k][0],pts[k][1],g.cx,g.cy,A.x,A.y)<lineRad)return true;
+    }
+    return false;
+  }
+  function fit(bx,by){
+    if(bx<margin||bx+boxW>w-margin||by<margin||by+boxH>h-margin)return null;
+    if(hit(bx,by))return null;
+    return{bx:bx,by:by};
+  }
+  var cands=[
+    {bx:P.x+gap,by:P.y-boxH/2},
+    {bx:P.x-boxW-gap,by:P.y-boxH/2},
+    {bx:P.x-boxW/2,by:P.y+gap},
+    {bx:P.x-boxW/2,by:P.y-boxH-gap},
+    {bx:A.x+(A.x>=g.cx?gap:-boxW-gap),by:A.y+(A.y>=g.cy?gap:-boxH-gap)}
+  ];
+  var pos=null;
+  for(var ci=0;ci<cands.length&&!pos;ci++)pos=fit(cands[ci].bx,cands[ci].by);
+  if(!pos){
+    pos={bx:Math.max(margin,Math.min(A.x-boxW/2,w-boxW-margin)),by:Math.max(margin,Math.min(A.y-boxH/2,h-boxH-margin))};
+  }
+  var bx=pos.bx,by=pos.by;
   var radius=9;
   ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
   ctx.save();
