@@ -744,8 +744,8 @@ function drawRadarBase(ctx,w,h,g,sel,opts){
   ctx.stroke();
   pts.forEach(function(p,i){
     if(sel&&i===sel.idx){
-      // 选中维度端点：双层圆（外白圆环+主色边框 + 内主色实心圆）；1.3.15 内圆=外圆的70%
-      var outerR=9,innerR=outerR*0.7;
+      // 选中维度端点：双层圆（外白圆环+主色边框 + 内主色实心圆）；1.3.16 内圆=外圆的60%
+      var outerR=9,innerR=outerR*0.6;
       ctx.beginPath();ctx.arc(p.x,p.y,outerR,0,Math.PI*2);
       ctx.fillStyle='#ffffff';ctx.fill();
       ctx.lineWidth=2.5;ctx.strokeStyle='#14A89A';ctx.stroke();
@@ -808,7 +808,7 @@ function drawRadarSelectedAnim(ctx,w,h,g,idx,prog){
   ctx.setLineDash([]);
   // 1.3.15 双层圆绘制在虚线上层：虚线画完后重绘选中数据点
   var dp=g.dataPts[idx];
-  var oR=9,iR=oR*0.7;
+  var oR=9,iR=oR*0.6;
   ctx.beginPath();ctx.arc(dp.x,dp.y,oR,0,Math.PI*2);
   ctx.fillStyle='#ffffff';ctx.fill();
   ctx.lineWidth=2.5;ctx.strokeStyle='#14A89A';ctx.stroke();

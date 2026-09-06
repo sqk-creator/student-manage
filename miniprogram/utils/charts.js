@@ -759,9 +759,9 @@ function drawRadarBase(ctx, w, h, g, sel, opts) {
   pts.forEach((p, i) => {
     if (sel && i === sel.idx) {
       // 选中维度端点：双层圆（外白圆环+主色边框 + 内主色实心圆）
-      // 1.3.15：内部主色实心圆 = 外层圆的 70%
+      // 1.3.16：内部主色实心圆 = 外层圆的 60%
       const outerR = 9;
-      const innerR = outerR * 0.7; // 6.3
+      const innerR = outerR * 0.6; // 5.4
       ctx.beginPath();
       ctx.arc(p.x, p.y, outerR, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
@@ -858,7 +858,7 @@ function drawRadarSelectedAnim(ctx, w, h, g, idx, prog) {
   // 1.3.15：双层圆绘制在虚线上层（不被虚线盖住）——虚线画完后重绘选中数据点
   const dp = g.dataPts[idx];
   const outerR = 9;
-  const innerR = outerR * 0.7;
+  const innerR = outerR * 0.6;
   ctx.beginPath();
   ctx.arc(dp.x, dp.y, outerR, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
