@@ -670,6 +670,20 @@ function distToSegment(px, py, x1, y1, x2, y2) {
   return Math.sqrt((px - projx) * (px - projx) + (py - projy) * (py - projy));
 }
 
+// 射线法判断点是否在多边形内（雷达卡片避让数据绘图区用）
+function isPointInPolygon(px, py, pts) {
+  if (!pts || pts.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const xi = pts[i].x, yi = pts[i].y;
+    const xj = pts[j].x, yj = pts[j].y;
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 function radarGeom(w, h, items) {
   const list = (items || []).filter((it) => it.max > 0);
   if (!list.length) return null;
@@ -879,20 +893,21 @@ function drawRadarTooltip(ctx, w, h, g, idx, alpha) {
   const it = g.list[idx];
   const std = g.standards[idx];
   const orig = Math.round((it.value || 0) * 10) / 10;
-  const nameFont = rx(26);
-  const labFont = rx(22);
-  const valFont = rx(24);
-  const padT = rx(24);
-  const padB = rx(30);
-  const contentPad = rx(30);
-  const rowGap = rx(10);
-  const nameRowH = nameFont + rx(4);
-  const rowH = valFont + rx(4);
+  // 1.3.17：卡片参数对齐折线图卡片基准
+  const nameFont = rx(28); // 第一行名称 28rpx bold
+  const labFont = rx(24);  // 标签(原始分数/标准分) 24rpx，对齐折线 pctFont
+  const valFont = rx(44);  // 值大字 44rpx bold，对齐折线 valueFont
+  const padT = rx(28);     // 卡片内边距统一 28rpx
+  const padB = rx(28);
+  const contentPad = rx(28);
+  const rowGap = rx(8);    // 第一行与第二行间距，对齐折线
+  const nameRowH = nameFont + rx(6); // 行高 = 名称字号 + 6rpx
+  const rowH = valFont + rx(6);      // 值行高，对齐折线 valueRowH
   const boxH = padT + nameRowH + rowGap + rowH + rowGap + rowH + padB;
   ctx.font = labFont + 'px ' + FONT_FAMILY;
-  const labW = Math.max(textWidth(ctx, '原始分数', rx(64)), textWidth(ctx, '标准分', rx(64)));
+  const labW = Math.max(textWidth(ctx, '原始分数', rx(80)), textWidth(ctx, '标准分', rx(80)));
   ctx.font = 'bold ' + valFont + 'px ' + FONT_FAMILY;
-  const valW = Math.max(textWidth(ctx, orig + '分', rx(90)), textWidth(ctx, String(std), rx(80)));
+  const valW = Math.max(textWidth(ctx, orig + '分', rx(110)), textWidth(ctx, String(std), rx(90)));
   const boxW = labW + contentPad + valW + contentPad;
 
   // 1.3.15：卡片自动避让——不能遮挡选中维度的主色放大文字、双层圆与虚线
@@ -911,8 +926,12 @@ function drawRadarTooltip(ctx, w, h, g, idx, alpha) {
   // 保护区域③：虚线（中心→轴端点），用矩形角点+中心到线段的距离粗判
   const lineRad = rx(14);
 
+  // 1.3.17：卡片避让选中维度的主色放大文字、双层圆、虚线，且不遮挡雷达数据绘图区域（数据多边形内部）
+  // 以候选卡片中心是否落入选中数据多边形为判据，强制卡片主体跳出雷达数据区
+  const poly = (g.dataPts || []).map((p) => ({ x: p.x, y: p.y }));
   function hit(bx, by) {
     const x1 = bx, y1 = by, x2 = bx + boxW, y2 = by + boxH;
+    if (poly.length >= 3 && isPointInPolygon(bx + boxW / 2, by + boxH / 2, poly)) return true;
     // 主色放大文字
     if (!(x2 < N.x - textHW || x1 > N.x + textHW || y2 < N.y - textHH || y1 > N.y + textHH)) return true;
     // 双层圆
