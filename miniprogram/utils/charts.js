@@ -895,20 +895,28 @@ function drawRadarTooltip(ctx, w, h, g, idx, alpha) {
   const orig = Math.round((it.value || 0) * 10) / 10;
   // 1.3.17：卡片参数对齐折线图卡片基准
   const nameFont = rx(28); // 第一行名称 28rpx bold
-  const labFont = rx(24);  // 标签(原始分数/标准分) 24rpx，对齐折线 pctFont
-  const valFont = rx(44);  // 值大字 44rpx bold，对齐折线 valueFont
+  const labFont = rx(24);  // 标签(原始分/标准分) 24rpx
+  const valFont = rx(40);  // 分值 40rpx bold（分值换行单独成行）
   const padT = rx(28);     // 卡片内边距统一 28rpx
   const padB = rx(28);
   const contentPad = rx(28);
-  const rowGap = rx(8);    // 第一行与第二行间距，对齐折线
-  const nameRowH = nameFont + rx(6); // 行高 = 名称字号 + 6rpx
-  const rowH = valFont + rx(6);      // 值行高，对齐折线 valueRowH
-  const boxH = padT + nameRowH + rowGap + rowH + rowGap + rowH + padB;
+  const rowGap = rx(8);        // 名称行与标签行间距
+  const nameRowH = nameFont + rx(6); // 34rpx
+  const labRowH = labFont + rx(6);   // 30rpx
+  const valRowH = valFont + rx(6);   // 46rpx
+  const boxH = padT + nameRowH + rowGap + labRowH + rowGap + valRowH + padB;
+
+  // 两列右对齐布局：左列=原始分值，右列=标准分值（标签与分值各占一行，右缘对齐）
   ctx.font = labFont + 'px ' + FONT_FAMILY;
-  const labW = Math.max(textWidth(ctx, '原始分数', rx(80)), textWidth(ctx, '标准分', rx(80)));
+  const origLabW = textWidth(ctx, '原始分', rx(80));
+  const stdLabW = textWidth(ctx, '标准分', rx(80));
   ctx.font = 'bold ' + valFont + 'px ' + FONT_FAMILY;
-  const valW = Math.max(textWidth(ctx, orig + '分', rx(110)), textWidth(ctx, String(std), rx(90)));
-  const boxW = labW + contentPad + valW + contentPad;
+  const origValW = textWidth(ctx, orig + '分', rx(110));
+  const stdValW = textWidth(ctx, String(std), rx(90));
+  const origColW = Math.max(origLabW, origValW);
+  const stdColW = Math.max(stdLabW, stdValW);
+  const colGap = rx(24); // 两列间距
+  const boxW = contentPad * 2 + origColW + colGap + stdColW;
 
   // 1.3.15：卡片自动避让——不能遮挡选中维度的主色放大文字、双层圆与虚线
   const P = g.dataPts[idx];
@@ -994,26 +1002,31 @@ function drawRadarTooltip(ctx, w, h, g, idx, alpha) {
   let ty = by + padT;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
+  // 第一行：科目名称（28rpx bold 左对齐）
   ctx.fillStyle = '#1A1A1A';
   ctx.font = 'bold ' + nameFont + 'px ' + FONT_FAMILY;
   ctx.fillText(it.name, bx + contentPad, ty);
   ty += nameRowH + rowGap;
+
+  // 右列右缘与左列右缘（两列均 right 对齐，间留 colGap）
+  const xR = bx + boxW - contentPad;
+  const xOrig = xR - stdColW - colGap;
+
+  // 第二行：标签行（原始分 / 标准分 同行，同字号24rpx，右对齐）
   ctx.fillStyle = '#909399';
   ctx.font = labFont + 'px ' + FONT_FAMILY;
-  ctx.fillText('原始分数', bx + contentPad, ty);
-  ctx.fillStyle = '#1A1A1A';
+  ctx.textAlign = 'right';
+  ctx.fillText('标准分', xR, ty);
+  ctx.fillText('原始分', xOrig, ty);
+  ty += labRowH + rowGap;
+
+  // 第三行：分值行（分值换行单独成行，40rpx bold，右对齐）
   ctx.font = 'bold ' + valFont + 'px ' + FONT_FAMILY;
-  ctx.textAlign = 'right';
-  ctx.fillText(orig + '分', bx + boxW - contentPad, ty);
-  ty += rowH + rowGap;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#909399';
-  ctx.font = labFont + 'px ' + FONT_FAMILY;
-  ctx.fillText('标准分', bx + contentPad, ty);
-  ctx.textAlign = 'right';
   ctx.fillStyle = MAIN_COLOR;
-  ctx.font = 'bold ' + valFont + 'px ' + FONT_FAMILY;
-  ctx.fillText(String(std), bx + boxW - contentPad, ty);
+  ctx.fillText(String(std), xR, ty);
+  ctx.fillStyle = '#1A1A1A';
+  ctx.fillText(orig + '分', xOrig, ty);
+
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 }
