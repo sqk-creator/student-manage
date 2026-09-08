@@ -818,18 +818,29 @@ function drawRadarSelectedAnim(ctx,w,h,g,idx,prog){
   return g;
 }
 function drawRadarSelected(ctx,w,h,g,idx){return drawRadarSelectedAnim(ctx,w,h,g,idx,1);}
+// 射线法判断点是否在多边形内（雷达卡片避让数据绘图区用，1.3.17）
+function isPointInPolygon(px,py,pts){
+  if(!pts||pts.length<3)return false;
+  var inside=false;
+  for(var i=0,j=pts.length-1;i<pts.length;j=i++){
+    var xi=pts[i].x,yi=pts[i].y,xj=pts[j].x,yj=pts[j].y;
+    if((yi>py)!==(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)inside=!inside;
+  }
+  return inside;
+}
 // 选中后弹出的卡片：自动避让选中维度，排版与折线图卡片一致，标准分与底部留足间距
 function drawRadarTooltip(ctx,w,h,g,idx,alpha){
   var it=g.list[idx],std=g.standards[idx];
   var orig=Math.round((it.value||0)*10)/10;
-  var nameFont=13,labFont=11,valFont=12;
-  var padT=12,padB=15,contentPad=15;
-  var rowGap=5,nameRowH=nameFont+2,rowH=valFont+2;
+  // 1.3.17 对齐小程序：内边距统一28rpx、第一行28rpx bold、第二行 44rpx/24rpx（此处 px = rpx/2）
+  var nameFont=14,labFont=12,valFont=22;
+  var padT=14,padB=14,contentPad=14;
+  var rowGap=4,nameRowH=nameFont+3,rowH=valFont+3;
   var boxH=padT+nameRowH+rowGap+rowH+rowGap+rowH+padB;
   ctx.font=labFont+'px sans-serif';
-  var labW=Math.max(textWidth(ctx,'原始分数',32),textWidth(ctx,'标准分',32));
+  var labW=Math.max(textWidth(ctx,'原始分数',40),textWidth(ctx,'标准分',40));
   ctx.font='bold '+valFont+'px sans-serif';
-  var valW=Math.max(textWidth(ctx,orig+'分',45),textWidth(ctx,String(std),40));
+  var valW=Math.max(textWidth(ctx,orig+'分',55),textWidth(ctx,String(std),45));
   var boxW=labW+contentPad+valW+contentPad;
   // 1.3.15 卡片自动避让：不遮挡选中维度的主色放大文字、双层圆与虚线
   var P=g.dataPts[idx],N=g.namePts[idx],A=g.axes[idx];
@@ -837,8 +848,11 @@ function drawRadarTooltip(ctx,w,h,g,idx,alpha){
   ctx.font='bold 19px sans-serif';
   var textHW=textWidth(ctx,it.name,60)/2+5,textHH=10;
   var dotHalf=8,lineRad=7;
+  // 1.3.17 不遮挡雷达数据绘图区域：卡片中心落入数据多边形则拒绝该落位
+  var poly=(g.dataPts||[]).map(function(p){return{x:p.x,y:p.y};});
   function hit(bx,by){
     var x1=bx,y1=by,x2=bx+boxW,y2=by+boxH;
+    if(poly.length>=3&&isPointInPolygon(bx+boxW/2,by+boxH/2,poly))return true;
     // 主色放大文字
     if(!(x2<N.x-textHW||x1>N.x+textHW||y2<N.y-textHH||y1>N.y+textHH))return true;
     // 双层圆
