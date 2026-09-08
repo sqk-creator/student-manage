@@ -896,14 +896,14 @@ function drawRadarTooltip(ctx, w, h, g, idx, alpha) {
   // 1.3.17：卡片参数对齐折线图卡片基准
   const nameFont = rx(28); // 第一行名称 28rpx bold
   const labFont = rx(24);  // 标签(原始分/标准分) 24rpx
-  const valFont = rx(40);  // 分值 40rpx bold（分值换行单独成行）
+  const valFont = rx(36);  // 原始/标准分取值 36rpx bold
   const padT = rx(28);     // 卡片内边距统一 28rpx
-  const padB = rx(28);
+  const padB = rx(22);     // 值文本底到卡底 = padT（与第一行文字到卡顶一致）
   const contentPad = rx(28);
-  const rowGap = rx(8);        // 名称行与标签行间距
+  const rowGap = rx(8);        // 名称行与标签行间距，对齐折线图 rowGap=8rpx
   const nameRowH = nameFont + rx(6); // 34rpx
   const labRowH = labFont + rx(6);   // 30rpx
-  const valRowH = valFont + rx(6);   // 46rpx
+  const valRowH = valFont + rx(6);   // 42rpx
   const boxH = padT + nameRowH + rowGap + labRowH + rowGap + valRowH + padB;
 
   // 两列右对齐布局：左列=原始分值，右列=标准分值（标签与分值各占一行，右缘对齐）
@@ -1008,24 +1008,27 @@ function drawRadarTooltip(ctx, w, h, g, idx, alpha) {
   ctx.fillText(it.name, bx + contentPad, ty);
   ty += nameRowH + rowGap;
 
-  // 右列右缘与左列右缘（两列均 right 对齐，间留 colGap）
+  // 标准分标签/值右贴 contentPad；原始分/原始值左贴 contentPad（与第一行左对齐）
   const xR = bx + boxW - contentPad;
-  const xOrig = xR - stdColW - colGap;
+  const xL = bx + contentPad;
 
-  // 第二行：标签行（原始分 / 标准分 同行，同字号24rpx，右对齐）
+  // 第二行：标签行（原始分与第一行左对齐，标准分右对齐，同行同字号24rpx）
   ctx.fillStyle = '#909399';
   ctx.font = labFont + 'px ' + FONT_FAMILY;
+  ctx.textAlign = 'left';
+  ctx.fillText('原始分', xL, ty);
   ctx.textAlign = 'right';
   ctx.fillText('标准分', xR, ty);
-  ctx.fillText('原始分', xOrig, ty);
   ty += labRowH + rowGap;
 
-  // 第三行：分值行（分值换行单独成行，40rpx bold，右对齐）
+  // 第三行：分值行（36rpx bold；原始分取值与第一行左对齐，标准分取值右对齐）
   ctx.font = 'bold ' + valFont + 'px ' + FONT_FAMILY;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#1A1A1A';
+  ctx.fillText(orig + '分', xL, ty);
+  ctx.textAlign = 'right';
   ctx.fillStyle = MAIN_COLOR;
   ctx.fillText(String(std), xR, ty);
-  ctx.fillStyle = '#1A1A1A';
-  ctx.fillText(orig + '分', xOrig, ty);
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';

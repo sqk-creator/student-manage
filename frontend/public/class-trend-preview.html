@@ -831,9 +831,9 @@ function isPointInPolygon(px,py,pts){
 function drawRadarTooltip(ctx,w,h,g,idx,alpha){
   var it=g.list[idx],std=g.standards[idx];
   var orig=Math.round((it.value||0)*10)/10;
-  // 1.3.17 对齐小程序：内边距28rpx、第一行28rpx bold、标签24rpx、分值40rpx（px = rpx/2）
-  var nameFont=14,labFont=12,valFont=20;
-  var padT=14,padB=14,contentPad=14;
+  // 1.3.20 对齐小程序：内边距28rpx、值36rpx、padB=22rpx、原始分/值左对齐名称行（px = rpx/2）
+  var nameFont=14,labFont=12,valFont=18;
+  var padT=14,padB=11,contentPad=14;
   var rowGap=4,nameRowH=nameFont+3,labRowH=labFont+3,valRowH=valFont+3;
   var boxH=padT+nameRowH+rowGap+labRowH+rowGap+valRowH+padB;
   // 两列右对齐布局：左列=原始分值，右列=标准分值
@@ -901,20 +901,22 @@ function drawRadarTooltip(ctx,w,h,g,idx,alpha){
   ctx.fillStyle='#1A1A1A';ctx.font='bold '+nameFont+'px sans-serif';
   ctx.fillText(it.name,bx+contentPad,ty);
   ty+=nameRowH+rowGap;
-  // 两列右缘（均 right 对齐，间留 colGap）
+  // 标准分标签/值右贴 contentPad；原始分/原始值左贴 contentPad（与第一行左对齐）
   var xR=bx+boxW-contentPad;
-  var xOrig=xR-stdColW-colGap;
-  // 第二行：标签行（原始分 / 标准分 同行，24rpx，右对齐）
-  ctx.fillStyle='#909399';ctx.font=labFont+'px sans-serif';ctx.textAlign='right';
+  var xL=bx+contentPad;
+  // 第二行：标签行（原始分与第一行左对齐，标准分右对齐，同行共24rpx）
+  ctx.fillStyle='#909399';ctx.font=labFont+'px sans-serif';ctx.textAlign='left';
+  ctx.fillText('原始分',xL,ty);
+  ctx.textAlign='right';
   ctx.fillText('标准分',xR,ty);
-  ctx.fillText('原始分',xOrig,ty);
   ty+=labRowH+rowGap;
-  // 第三行：分值行（40rpx bold，右对齐）
-  ctx.font='bold '+valFont+'px sans-serif';ctx.textAlign='right';
+  // 第三行：分值行（36rpx bold；原始分取值与第一行左对齐，标准分取值右对齐）
+  ctx.font='bold '+valFont+'px sans-serif';ctx.textAlign='left';
+  ctx.fillStyle='#1A1A1A';
+  ctx.fillText(orig+'分',xL,ty);
+  ctx.textAlign='right';
   ctx.fillStyle='#14A89A';
   ctx.fillText(String(std),xR,ty);
-  ctx.fillStyle='#1A1A1A';
-  ctx.fillText(orig+'分',xOrig,ty);
   ctx.textAlign='left';ctx.textBaseline='top';
 }
 function radarIdxFromXY(g,x,y){
