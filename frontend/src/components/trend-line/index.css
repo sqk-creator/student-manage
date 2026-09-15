@@ -27,3 +27,18 @@
   height: 232px;
   touch-action: none;
 }
+
+/* 空数据兜底：居中置灰提示，不报错白屏（复用坐标系，不影响包裹盒布局） */
+.trend-line-chart__empty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 14px;
+  pointer-events: none;
+}

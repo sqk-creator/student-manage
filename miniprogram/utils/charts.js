@@ -121,10 +121,17 @@ function animateGauge({ ctx, node, w, h, targetRate, onFrame, onComplete }) {
 }
 
 function lineTrendGeom(w, h, items) {
-  const padL = 30;
-  const padR = 10;
+  // 布局：padL/padR 为坐标轴留白；首末数据点各再缩进 boundaryGap[l]/boundaryGap[r]，
+  // 保证第一点距左缘 == 最后一点距右缘（对称留白、不贴解析放），对应 ECharts boundaryGap 数组语义。
+  const padL = 20;
+  const padR = 20;
   const padT = 18;
   const padB = 18;
+  // boundaryGap 数组形式：boundaryGap[0]=左侧留白，boundaryGap[1]=右侧留白，默认左右相等（禁止布尔）。
+  // 底层布局收敛在组件内部，业务调用方不可覆盖。
+  const boundaryGap = [26, 26];
+  const padInL = boundaryGap[0];
+  const padInR = boundaryGap[1];
   const values = (items || []).map((it) => Math.round((it.value || 0) * 10) / 10);
   const names = (items || []).map((it) => it.name || '');
   const maxs = (items || []).map((it) => it.max || 0);
@@ -155,10 +162,9 @@ function lineTrendGeom(w, h, items) {
 
   const chartW = w - padL - padR;
   const chartH = h - padT - padB;
-  const padIn = 26;
-  const innerW = chartW - padIn * 2;
+  const innerW = chartW - padInL - padInR;
   const xs = values.map((_, i) =>
-    values.length > 1 ? padL + padIn + (i / (values.length - 1)) * innerW : padL + chartW / 2
+    values.length > 1 ? padL + padInL + (i / (values.length - 1)) * innerW : padL + chartW / 2
   );
   const ys = values.map((v) => padT + (yMax - v) / (yMax - yMin) * chartH);
 
@@ -169,7 +175,9 @@ function lineTrendGeom(w, h, items) {
     padR,
     padT,
     padB,
-    padIn,
+    padInL,
+    padInR,
+    boundaryGap,
     chartW,
     chartH,
     innerW,
@@ -185,10 +193,31 @@ function lineTrendGeom(w, h, items) {
   };
 }
 
-function drawTrendLayer(ctx, w, h, g, prog) {
+// #14A89A → '20,168,154'，供主色衍生半透明色（渐变/高亮蒙版等）使用。
+function hexToRgb(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return '20,168,154'; // 兜底主色 #14A89A
+  const n = parseInt(m[1], 16);
+  return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+}
+
+// 主色解析：显式 color 优先、其次 geometry 已注入色、最后兜底 MAIN_COLOR；把结果写回 g.color/g.cRgb 供后续聚焦复用。
+function resolveTrendColor(g, color) {
+  const c = color || (g && g.color) || MAIN_COLOR;
+  if (g) {
+    g.color = c;
+    g.cRgb = hexToRgb(c);
+  }
+  return c;
+}
+
+// color：可选主色，默认 MAIN_COLOR。业务调用方不传时行为与原先完全一致。
+function drawTrendLayer(ctx, w, h, g, prog, color) {
   ctx.clearRect(0, 0, w, h);
   if (!g || !g.xs || !g.xs.length) return;
   const { padL, padR, padT, chartH, yMax, yMin, xs, ys } = g;
+  const c = resolveTrendColor(g, color);
+  const cRgb = g.cRgb;
 
   ctx.font = '11px ' + FONT_FAMILY;
   ctx.strokeStyle = GRID_COLOR;
@@ -207,8 +236,8 @@ function drawTrendLayer(ctx, w, h, g, prog) {
   }
 
   const grad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
-  grad.addColorStop(0, 'rgba(20,168,154,0.40)');
-  grad.addColorStop(1, 'rgba(20,168,154,0)');
+  grad.addColorStop(0, 'rgba(' + cRgb + ',0.40)');
+  grad.addColorStop(1, 'rgba(' + cRgb + ',0)');
   ctx.beginPath();
   ctx.moveTo(xs[0], padT + chartH);
   xs.forEach((x, i) => ctx.lineTo(x, ys[i]));
@@ -233,7 +262,7 @@ function drawTrendLayer(ctx, w, h, g, prog) {
       ys[lastSeg] + (ys[lastSeg + 1] - ys[lastSeg]) * frac
     );
   }
-  ctx.strokeStyle = MAIN_COLOR;
+  ctx.strokeStyle = c;
   ctx.lineWidth = 4;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -247,39 +276,53 @@ function drawTrendLayer(ctx, w, h, g, prog) {
     ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = MAIN_COLOR;
+    ctx.strokeStyle = c;
     ctx.stroke();
   }
 }
 
-function drawTrendBase(ctx, w, h, g) {
-  drawTrendLayer(ctx, w, h, g, 1);
+function drawTrendBase(ctx, w, h, g, color) {
+  drawTrendLayer(ctx, w, h, g, 1, color);
 }
 
-function animateLineTrend(ctx, node, w, h, items, cb) {
+// 折线动画定时器跟踪：offset 防止实例 detached 后定时器仍在后台空跑重绘（内存/性能防护）。
+let _trendAnimGen = 0;
+let _trendTimer = 0;
+function clearTrendTimers() {
+  _trendAnimGen += 1;
+  if (_trendTimer) {
+    clearTimeout(_trendTimer);
+    _trendTimer = 0;
+  }
+}
+
+function animateLineTrend(ctx, node, w, h, items, cb, color) {
   const g = lineTrendGeom(w, h, items);
+  if (g) g.color = color || g.color || MAIN_COLOR;
   if (!g) {
     if (cb) cb(g);
     return g;
   }
+  const gen = ++_trendAnimGen; // 新一轮动画的世代号，供 tick 校验是否已被新动画/销毁取代
   const duration = 600;
   const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
   const start = Date.now();
   // 首帧同步绘制，保证页面加载时画布立即有内容（即使后续定时器被节流也能看到网格与起点）
   drawTrendLayer(ctx, w, h, g, 0);
   const tick = () => {
+    if (gen !== _trendAnimGen) return; // 已被新动画或组件销毁取代：立即停止，不重绘
     const elapsed = Date.now() - start;
     const progress = Math.min(elapsed / duration, 1);
     drawTrendLayer(ctx, w, h, g, easeOutCubic(progress));
     if (progress < 1) {
       // 用 setTimeout 驱动动画：canvas 2d 节点的 requestAnimationFrame 在部分环境不可靠，
       // 会导致页面加载时折线图一直不显示、仅交互后才绘制。改用定时器保证动画必然走完。
-      setTimeout(tick, 16);
+      _trendTimer = setTimeout(tick, 16);
     } else if (cb) {
       cb(g);
     }
   };
-  setTimeout(tick, 16);
+  _trendTimer = setTimeout(tick, 16);
   return g;
 }
 
@@ -291,9 +334,10 @@ function textWidth(ctx, str, fallback) {
   }
 }
 
-function drawLineTrend(ctx, w, h, items) {
+function drawLineTrend(ctx, w, h, items, color) {
   const g = lineTrendGeom(w, h, items);
-  drawTrendBase(ctx, w, h, g);
+  if (g) g.color = color || g.color || MAIN_COLOR;
+  drawTrendBase(ctx, w, h, g, g && g.color);
   return g;
 }
 
@@ -316,16 +360,19 @@ function trendIdxFromXY(g, x, y) {
 function drawTrendSelected(ctx, w, h, g, idx) {
   drawTrendBase(ctx, w, h, g);
   if (!g || idx == null || idx < 0 || idx >= g.xs.length) return;
+  const c = resolveTrendColor(g, g.color);
+  const cRgb = g.cRgb;
   const x = g.xs[idx];
   const y = g.ys[idx];
   const colW = g.xs.length > 1 ? g.chartW / (g.xs.length - 1) : g.chartW;
   const maskW = colW * 0.5;
 
-  ctx.fillStyle = 'rgba(20,168,154,0.1)';
+  // 选中高亮色：淡蒙版 + 虚线 + 外圈，统一沿用传入主题色 c
+  ctx.fillStyle = 'rgba(' + cRgb + ',0.1)';
   ctx.fillRect(x - maskW / 2, g.padT, maskW, g.chartH);
 
   ctx.setLineDash([6, 4]);
-  ctx.strokeStyle = MAIN_COLOR;
+  ctx.strokeStyle = c;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(x, g.padT);
@@ -335,20 +382,21 @@ function drawTrendSelected(ctx, w, h, g, idx) {
 
   ctx.beginPath();
   ctx.arc(x, y, 10, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(20,168,154,0.25)';
+  ctx.fillStyle = 'rgba(' + cRgb + ',0.25)';
   ctx.fill();
   ctx.beginPath();
   ctx.arc(x, y, 7, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.lineWidth = 4;
-  ctx.strokeStyle = MAIN_COLOR;
+  ctx.strokeStyle = c;
   ctx.stroke();
 
-  drawTrendTooltip(ctx, w, h, g, idx);
+  drawTrendTooltip(ctx, w, h, g, idx, c);
 }
 
-function drawTrendTooltip(ctx, w, h, g, idx) {
+function drawTrendTooltip(ctx, w, h, g, idx, color) {
+  const c = resolveTrendColor(g, color);
   const name = g.names[idx] || '';
   const val = g.values[idx];
   const maxV = g.maxs[idx] || 0;
@@ -435,7 +483,7 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   const rightX = bx + boxW - contentPad;
   ctx.textAlign = 'right';
   ctx.font = 'bold ' + valueFont + 'px ' + FONT_FAMILY;
-  ctx.fillStyle = MAIN_COLOR;
+  ctx.fillStyle = c;
   ctx.fillText(String(rate), rightX - symGap - pctW, valueBase);
   ctx.font = pctFont + 'px ' + FONT_FAMILY;
   ctx.fillStyle = AXIS_COLOR;
@@ -1059,6 +1107,7 @@ module.exports = {
   animateLineTrend,
   drawTrendSelected,
   trendIdxFromXY,
+  clearTrendTimers,
   drawHistogram,
   drawSparkline,
   drawRadar,

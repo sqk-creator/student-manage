@@ -1,20 +1,31 @@
 /**
  * 等效预览端公共折线图组件（浏览器版 trend-line，标准可导入组件）
- * 迁移自 frontend/public/js/trend-line.js，统一放置于 frontend/src/components/trend-line。
- * 以"看年级页"为样板，抽取全部样式与交互标准：
- *  - 几何：padL30/padR10/padT18/padB18/padIn26（首末点距画布缘 56/36，不贴边）
- *  - 动画：渐变区域先整块呈现，再折线自左向右渐进（600ms easeOutCubic，setTimeout 16ms 驱动）
- *  - 未点击数据点：白 r4 + 主色描边 2
- *  - 选中：淡绿竖条(0.1) + 虚线(6,4) + 外圈10/白7/描边4 + 悬浮卡片
- *  - 悬浮卡片：rpx 自适应，上方优先/下方翻转，水平钳制画布内
- * 外层包裹盒与图表容器样式统一抽离在 index.css，不在 JS 内联。
+ * 与微信小程序 miniprogram/components/trend-line 语义完全对齐（双端通用化标准）。
+ *
+ * 对外 props：
+ *  - series:       Array<{name?,value,max?}> 标准化数据点
+ *  - xAxisData:    string[]  X 轴刻度名（优先级高于 series[].name）
+ *  - chartTitle:   string   图表标题（空则不显示）
+ *  - primaryColor: string   主题色（折线/高亮/tooltip 强调色统一引用；未传兜底 #14A89A）
+ *  - items:        Array<{name,value,max}>  旧版数据入参（兼容存量页面，与 series 互斥，series 优先）
+ *
+ * 底层布局约束（grid/boundaryGap/tooltip 偏移）全部收敛在本组件内，业务调用方不可覆盖。
+ * 内存管理：监听 mousemove/touch 时创建实例，组件卸载时 unbind 事件、取消动画定时器、释放引用。
  */
-import React, { useEffect, useRef, useId } from 'react';
+import React, { useEffect, useRef } from 'react';
 import './index.css';
 
-var MAIN = '#14A89A';
+const DEFAULT_COLOR = '#14A89A';
 
-// ---- 画布获取/DPR ----
+// #14A89A → '20,168,154'，供主色衍生半透明色（渐变/高亮蒙版等）使用。
+function hexToRgb(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return '20,168,154'; // 兜底主色 #14A89A
+  const n = parseInt(m[1], 16);
+  return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+}
+
+// ---- 画布获取/DPR（每次宽高重置会重置变换，故 scale 不会累积） ----
 function getCtx(cvs) {
   if (!cvs) return null;
   var dpr = window.devicePixelRatio || 1;
@@ -38,9 +49,20 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// ---- 几何基准（含 padIn 内侧缩进，保证折线两端不贴画布左右缘） ----
-function lineTrendGeom(w, h, items) {
-  var padL = 30, padR = 10, padT = 18, padB = 18;
+// 主色解析：写入 g.color/g.cRgb，供系列线条/高亮/tooltip 强调统一引用。
+function resolveTrendColor(g, color) {
+  var c = color || (g && g.color) || DEFAULT_COLOR;
+  if (g) { g.color = c; g.cRgb = hexToRgb(c); }
+  return c;
+}
+
+// ---- 几何基准（含 boundaryGap 数组留白，首末数据点距左右缘等距且不贴画布边界） ----
+function lineTrendGeom(w, h, items, color) {
+  // 坐标轴留白：padL/padR；首末数据点再缩进 boundaryGap[l]/boundaryGap[r]，对称相等、不贴解析放。
+  var padL = 20, padR = 20, padT = 18, padB = 18;
+  // boundaryGap 数组语义：boundaryGap[0]=左留白，boundaryGap[1]=右留白，默认相等（禁止布尔）。布局收敛在组件内。
+  var boundaryGap = [26, 26];
+  var padInL = boundaryGap[0], padInR = boundaryGap[1];
   var values = (items || []).map(function (it) { return Math.round((it.value || 0) * 10) / 10; });
   if (!values.length) return null;
   var yMinOrig = Math.min.apply(null, values), yMaxOrig = Math.max.apply(null, values);
@@ -57,25 +79,29 @@ function lineTrendGeom(w, h, items) {
   yMin = Math.floor(yMin / step) * step;
   yMax = Math.ceil(yMax / step) * step;
   var chartW = w - padL - padR, chartH = h - padT - padB;
-  var padIn = 26, innerW = chartW - padIn * 2;
+  var innerW = chartW - padInL - padInR;
   var xs = values.map(function (_, i) {
-    return values.length > 1 ? padL + padIn + i * (innerW / (values.length - 1)) : padL + chartW / 2;
+    return values.length > 1 ? padL + padInL + i * (innerW / (values.length - 1)) : padL + chartW / 2;
   });
   var ys = values.map(function (v) { return padT + (yMax - v) / (yMax - yMin) * chartH; });
-  return {
+  var g = {
     w: w, h: h, padL: padL, padR: padR, padT: padT, padB: padB,
+    padInL: padInL, padInR: padInR, boundaryGap: boundaryGap,
     chartW: chartW, chartH: chartH, innerW: innerW,
     values: values,
     names: (items || []).map(function (it) { return it.name || ''; }),
     maxs: (items || []).map(function (it) { return it.max || 0; }),
     yMin: yMin, yMax: yMax, step: step, yIsFlat: yIsFlat, xs: xs, ys: ys
   };
+  resolveTrendColor(g, color);
+  return g;
 }
 
-// ---- 单帧绘制：渐变区域整块先呈现，折线与数据点按 prog 渐进 ----
-function drawTrendLayer(ctx, w, h, g, prog) {
+// ---- 单帧绘制：渐变区域整块先呈现，折线按 prog 渐进 ----
+function drawTrendLayer(ctx, w, h, g, prog, color) {
   ctx.clearRect(0, 0, w, h);
   if (!g || !g.xs || !g.xs.length) return;
+  var c = resolveTrendColor(g, color), cRgb = g.cRgb;
   var i, gy, gv;
   ctx.font = '11px sans-serif';
   ctx.strokeStyle = '#E5E6EB'; ctx.lineWidth = 1;
@@ -86,15 +112,13 @@ function drawTrendLayer(ctx, w, h, g, prog) {
     ctx.beginPath(); ctx.moveTo(g.padL, gy); ctx.lineTo(w - g.padR, gy); ctx.stroke();
     ctx.fillText(Math.round(gv), g.padL - 6, gy);
   }
-  if (!g._grad) {
-    g._grad = ctx.createLinearGradient(0, g.padT, 0, g.padT + g.chartH);
-    g._grad.addColorStop(0, 'rgba(20,168,154,0.40)');
-    g._grad.addColorStop(1, 'rgba(20,168,154,0)');
-  }
+  var grad = ctx.createLinearGradient(0, g.padT, 0, g.padT + g.chartH);
+  grad.addColorStop(0, 'rgba(' + cRgb + ',0.40)');
+  grad.addColorStop(1, 'rgba(' + cRgb + ',0)');
   ctx.beginPath(); ctx.moveTo(g.xs[0], g.padT + g.chartH);
   g.xs.forEach(function (x, j) { ctx.lineTo(x, g.ys[j]); });
   ctx.lineTo(g.xs[g.xs.length - 1], g.padT + g.chartH); ctx.closePath();
-  ctx.fillStyle = g._grad; ctx.fill();
+  ctx.fillStyle = grad; ctx.fill();
   var n = g.xs.length;
   var done = Math.max(0, Math.min(1, prog == null ? 1 : prog)) * (n - 1);
   var lastSeg = Math.floor(done);
@@ -104,12 +128,12 @@ function drawTrendLayer(ctx, w, h, g, prog) {
     var frac = done - lastSeg;
     ctx.lineTo(g.xs[lastSeg] + (g.xs[lastSeg + 1] - g.xs[lastSeg]) * frac, g.ys[lastSeg] + (g.ys[lastSeg + 1] - g.ys[lastSeg]) * frac);
   }
-  ctx.strokeStyle = MAIN; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
   for (i = 0; i < n; i++) {
     if (i > done) break;
     ctx.beginPath(); ctx.arc(g.xs[i], g.ys[i], 4, 0, Math.PI * 2);
     ctx.fillStyle = '#fff'; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = MAIN; ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = c; ctx.stroke();
   }
 }
 
@@ -118,27 +142,29 @@ function drawTrendBase(ctx, w, h, g) { drawTrendLayer(ctx, w, h, g, 1); }
 function drawTrendSelected(ctx, w, h, g, idx) {
   drawTrendBase(ctx, w, h, g);
   if (!g || idx == null || idx < 0 || idx >= g.xs.length) return;
+  var c = resolveTrendColor(g, g.color), cRgb = g.cRgb;
   var x = g.xs[idx], y = g.ys[idx];
   var colW = g.xs.length > 1 ? g.chartW / (g.xs.length - 1) : g.chartW;
   var maskW = colW * 0.5;
-  ctx.fillStyle = 'rgba(20,168,154,0.1)';
+  ctx.fillStyle = 'rgba(' + cRgb + ',0.1)';
   ctx.fillRect(x - maskW / 2, g.padT, maskW, g.chartH);
   ctx.setLineDash([6, 4]);
-  ctx.strokeStyle = MAIN; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = c; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(x, g.padT); ctx.lineTo(x, g.padT + g.chartH); ctx.stroke();
   ctx.setLineDash([]);
   ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(20,168,154,0.25)'; ctx.fill();
+  ctx.fillStyle = 'rgba(' + cRgb + ',0.25)'; ctx.fill();
   ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2);
   ctx.fillStyle = '#fff'; ctx.fill();
-  ctx.lineWidth = 4; ctx.strokeStyle = MAIN; ctx.stroke();
-  drawTrendTooltip(ctx, w, h, g, idx);
+  ctx.lineWidth = 4; ctx.strokeStyle = c; ctx.stroke();
+  drawTrendTooltip(ctx, w, h, g, idx, c);
 }
 
 function textWidth(ctx, str, fb) { try { return ctx.measureText(str).width; } catch (e) { return fb || 0; } }
 
 // ---- 悬浮卡片（rpx 自适应，上方优先） ----
-function drawTrendTooltip(ctx, w, h, g, idx) {
+function drawTrendTooltip(ctx, w, h, g, idx, color) {
+  var c = resolveTrendColor(g, color);
   var name = g.names[idx] || '', val = g.values[idx], maxV = g.maxs[idx] || 0;
   var rate = maxV > 0 ? Math.round(val / maxV * 100) : 0;
   var x = g.xs[idx];
@@ -196,7 +222,7 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   if (maxV > 0) { ctx.fillText(String(maxV), curX, valueBase); }
   var rightX = bx + boxW - contentPad;
   ctx.textAlign = 'right';
-  ctx.font = 'bold ' + valueFont + 'px sans-serif'; ctx.fillStyle = MAIN;
+  ctx.font = 'bold ' + valueFont + 'px sans-serif'; ctx.fillStyle = c;
   ctx.fillText(String(rate), rightX - symGap - pctW, valueBase);
   ctx.font = pctFont + 'px sans-serif'; ctx.fillStyle = '#909399';
   ctx.fillText('%', rightX, valueBase);
@@ -210,13 +236,22 @@ function drawTrendTooltip(ctx, w, h, g, idx) {
   }
 }
 
-// ---- 组件实例 ----
-function create(canvasEl) {
+// ---- 组件实例（含一次性初始化 + 销毁清理） ----
+function create(canvasEl, primaryColor) {
+  var handlers = {};
   var inst = {
     geom: null,
     currItems: [],
+    color: primaryColor || DEFAULT_COLOR,
     bound: false,
     _disposed: false,
+    _timer: 0,
+    _animGen: 0,
+    setColor: function (color) {
+      this.color = color || DEFAULT_COLOR;
+      if (this.geom) { this.geom.color = this.color; this.geom.cRgb = hexToRgb(this.color); }
+      if (this.currItems.length) { this.setItems(this.currItems); }
+    },
     setItems: function (items) { return animateLineTrend(this, canvasEl, items); },
     renderSelection: function (idx) {
       var g = getCtx(canvasEl);
@@ -228,9 +263,29 @@ function create(canvasEl) {
       var g = getCtx(canvasEl);
       if (!g || !this.geom) return;
       drawTrendLayer(g.ctx, g.w, g.h, this.geom, 1);
+    },
+    resize: function () {
+      if (!this.currItems.length || this._disposed) return;
+      this.setItems(this.currItems);
+    },
+    /* 内存泄漏防护：解除事件监听、取消动画定时器、释放画布引用 */
+    dispose: function () {
+      this._disposed = true;
+      this._animGen += 1;
+      if (this._timer) { clearTimeout(this._timer); this._timer = 0; }
+      if (canvasEl) {
+        canvasEl.removeEventListener('mousemove', handlers.mousemove);
+        canvasEl.removeEventListener('mouseleave', handlers.mouseleave);
+        canvasEl.removeEventListener('touchstart', handlers.touchstart);
+        canvasEl.removeEventListener('touchmove', handlers.touchmove);
+        canvasEl.removeEventListener('touchend', handlers.touchend);
+        canvasEl.removeEventListener('touchcancel', handlers.touchcancel);
+      }
+      handlers = {};
+      this.geom = null;
     }
   };
-  bindEvents(inst, canvasEl);
+  bindEvents(inst, canvasEl, handlers);
   return inst;
 }
 
@@ -238,24 +293,30 @@ function animateLineTrend(inst, cvs, items) {
   var g = getCtx(cvs);
   if (!g) return inst.geom;
   inst.currItems = items;
-  var geom = lineTrendGeom(g.w, g.h, items);
+  inst._animGen += 1;
+  var gen = inst._animGen;
+  if (inst._timer) { clearTimeout(inst._timer); inst._timer = 0; }
+  var geom = lineTrendGeom(g.w, g.h, items, inst.color);
   inst.geom = geom;
   if (!geom) return geom;
-  drawTrendLayer(g.ctx, g.w, g.h, geom, 0);
+  drawTrendLayer(g.ctx, g.w, g.h, geom, 0, inst.color);
   var duration = 600;
   function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
   var start = null;
   function frame() {
-    if (inst._disposed) return;
+    if (gen !== inst._animGen || inst._disposed) return;
     var c = getCtx(cvs);
-    if (!inst._disposed) return;
+    if (gen !== inst._animGen || inst._disposed) return;
     var progress = start == null ? 0 : Math.min((Date.now() - start) / duration, 1);
     if (start == null) start = Date.now();
-    drawTrendLayer(c.ctx, c.w, c.h, geom, easeOutCubic(progress));
-    if (progress < 1) setTimeout(frame, 16);
-    else if (!inst._disposed) drawTrendLayer(c.ctx, c.w, c.h, geom, 1);
+    drawTrendLayer(c.ctx, c.w, c.h, geom, easeOutCubic(progress), inst.color);
+    if (progress < 1) {
+      inst._timer = setTimeout(frame, 16);
+    } else if (!inst._disposed) {
+      drawTrendLayer(c.ctx, c.w, c.h, geom, 1, inst.color);
+    }
   }
-  setTimeout(frame, 16);
+  inst._timer = setTimeout(frame, 16);
   return geom;
 }
 
@@ -267,7 +328,7 @@ function trendIdxFromXY(inst, x, y) {
   return best;
 }
 
-function bindEvents(inst, cvs) {
+function bindEvents(inst, cvs, handlers) {
   if (inst.bound || !cvs) return;
   inst.bound = true;
   function toIdx(e) {
@@ -275,56 +336,80 @@ function bindEvents(inst, cvs) {
     var t = e.touches ? e.touches[0] : e;
     return trendIdxFromXY(inst, t.clientX - rect.left, t.clientY - rect.top);
   }
-  cvs.addEventListener('mousemove', function (e) { if (!inst._disposed) inst.renderSelection(toIdx(e)); });
-  cvs.addEventListener('mouseleave', function () { if (!inst._disposed) inst.renderSelection(-1); });
-  cvs.addEventListener('touchstart', function (e) { if (e.touches[0]) inst.renderSelection(toIdx(e)); });
-  cvs.addEventListener('touchmove', function (e) { if (e.touches[0]) inst.renderSelection(toIdx(e)); });
-  cvs.addEventListener('touchend', function () { if (!inst._disposed) inst.renderSelection(-1); });
-  cvs.addEventListener('touchcancel', function () { if (!inst._disposed) inst.renderSelection(-1); });
+  handlers.mousemove = function (e) { if (!inst._disposed) inst.renderSelection(toIdx(e)); };
+  handlers.mouseleave = function () { if (!inst._disposed) inst.renderSelection(-1); };
+  handlers.touchstart = function (e) { if (e.touches[0]) inst.renderSelection(toIdx(e)); };
+  handlers.touchmove = function (e) { if (e.touches[0]) inst.renderSelection(toIdx(e)); };
+  handlers.touchend = function () { if (!inst._disposed) inst.renderSelection(-1); };
+  handlers.touchcancel = function () { if (!inst._disposed) inst.renderSelection(-1); };
+  cvs.addEventListener('mousemove', handlers.mousemove);
+  cvs.addEventListener('mouseleave', handlers.mouseleave);
+  cvs.addEventListener('touchstart', handlers.touchstart);
+  cvs.addEventListener('touchmove', handlers.touchmove);
+  cvs.addEventListener('touchend', handlers.touchend);
+  cvs.addEventListener('touchcancel', handlers.touchcancel);
 }
 
 /**
  * 标准 React 组件。
- * 对外暴露 props：
- *  - series: Array<{ name?, value: number, max?: number }> 折线数据点
- *  - xAxisData: string[]  X 轴刻度名（优先级高于 series[].name）
- *  - chartTitle: string  图表标题（置于包裹盒顶部）
+ * 对外暴露 props：series / xAxisData / chartTitle / primaryColor / items。
  */
-function TrendLine({ series = [], xAxisData = [], chartTitle = '' }) {
+function TrendLine({ series = [], xAxisData = [], chartTitle = '', primaryColor = DEFAULT_COLOR, items = [] }) {
   const canvasRef = useRef(null);
+  const bodyRef = useRef(null);
   const instRef = useRef(null);
-  const uid = useId();
 
+  // 挂载时建立实例，卸载时销毁（dispose：解绑事件 + 取消动画 + 释放引用）
   useEffect(() => {
     const cvs = canvasRef.current;
     if (!cvs) return;
-    const inst = create(cvs);
-    inst._disposed = false;
+    const inst = create(cvs, primaryColor);
     instRef.current = inst;
-    return () => {
-      inst._disposed = true;
-    };
-    // 仅在挂载时建立实例
+    return () => inst.dispose();
+    // 仅挂载/卸载各执行一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 数据变化：归一化后 setOption（此处为 setItems 重绘），不重复初始化实例
   useEffect(() => {
     const inst = instRef.current;
     if (!inst) return;
-    const items = series.map((s, i) => ({
+    const src = series.length ? series : items;
+    const out = src.map((s, i) => ({
       name: (xAxisData && xAxisData[i]) || s.name || '',
       value: s.value != null ? s.value : 0,
       max: s.max != null ? s.max : 0
     }));
-    inst.setItems(items);
+    inst.setItems(out);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [series, xAxisData]);
+  }, [series, xAxisData, items]);
+
+  // 主题色变化：仅更新线/高亮/tooltip 色，无需重建实例
+  useEffect(() => {
+    const inst = instRef.current;
+    if (inst) inst.setColor(primaryColor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryColor]);
+
+  // 容器尺寸变化自适应：ResizeObserver 触发重绘
+  useEffect(() => {
+    const body = bodyRef.current;
+    const inst = instRef.current;
+    if (!body || !inst || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => inst.resize());
+    ro.observe(body);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const hasData = Boolean(series.length || items.length);
 
   return (
     <div className="trend-line-chart">
       {chartTitle ? <div className="trend-line-chart__title">{chartTitle}</div> : null}
-      <div className="trend-line-chart__body">
+      <div className="trend-line-chart__body" ref={bodyRef}>
         <canvas ref={canvasRef} className="trend-line-chart__canvas" aria-label={chartTitle || '折线趋势图'} />
+        {hasData ? null : <div className="trend-line-chart__empty">暂无数据</div>}
       </div>
     </div>
   );
